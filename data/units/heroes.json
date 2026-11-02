@@ -12,26 +12,26 @@
     "opportunityAttacksPerCycle": 2, // passif : plus d'attaques d'opportunité que les autres
     "behavior": null,
     "skills": [
-      { "id": "punch", "weight": "light", "range": 1, "minDamage": 12, "maxDamage": 16, "cooldownMs": 0 },
+      { "id": "punch", "name": "Coup de poing", "weight": "light", "range": 1, "minDamage": 12, "maxDamage": 16, "cooldownMs": 0 },
       {
-        "id": "dome", // Bouclier de zone : bloque la prochaine attaque contre les alliés dessous, tombe à sa prochaine action
+        "id": "dome", "name": "Bouclier de zone", // Bouclier de zone : bloque la prochaine attaque contre les alliés dessous, tombe à sa prochaine action
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false },
         "createsDome": true
       },
       {
-        "id": "leap", // Saut : atterrit sur une case libre et frappe tout le monde autour
+        "id": "leap", "name": "Saut", // Saut : atterrit sur une case libre et frappe tout le monde autour
         "weight": "light", "range": 4, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
         "selfMove": "leap",
         "zone": { "shape": "square", "size": 1, "throughWalls": false }
       },
       {
-        "id": "projection", // frappe et projette la cible ; dégâts de collision contre un mur ou une unité
+        "id": "projection", "name": "Projection", // frappe et projette la cible ; dégâts de collision contre un mur ou une unité
         "weight": "light", "range": 1, "minDamage": 10, "maxDamage": 14, "cooldownMs": 10000,
         "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 8, "collisionMaxDamage": 12 }
       },
       {
-        "id": "shockwave", // Onde de choc : frappe au sol, vague en ligne, esquivable
+        "id": "shockwave", "name": "Onde de choc", // Onde de choc : frappe au sol, vague en ligne, esquivable
         "weight": "heavy", "range": 1, "minDamage": 20, "maxDamage": 26, "cooldownMs": 12000,
         "chargeMs": 1500,
         "zone": { "shape": "line", "size": 4, "throughWalls": false },
@@ -49,25 +49,25 @@
     "behavior": null,
     "passive": "ignoresOpportunityAttacks",
     "skills": [
-      { "id": "flurry", "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 },
+      { "id": "flurry", "name": "Rafale de coups", "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 },
       {
-        "id": "whirlwind", // Tourbillon : déséquilibre toutes les unités de la zone
+        "id": "whirlwind", "name": "Tourbillon", // Tourbillon : déséquilibre toutes les unités de la zone
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false },
         "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
       },
       {
-        "id": "breakthrough", // Percée : course en ligne droite qui frappe tout ce qu'elle traverse (alliés compris)
+        "id": "breakthrough", "name": "Percée", // Percée : course en ligne droite qui frappe tout ce qu'elle traverse (alliés compris)
         "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 12, "cooldownMs": 8000,
         "selfMove": "pierce"
       },
       {
-        "id": "flash-rescue", // Sauvetage éclair : va chercher un allié à terre ou un civil (6 cases à pied) et le pose à l'abri (rayon 4)
+        "id": "flash-rescue", "name": "Sauvetage éclair", // Sauvetage éclair : va chercher un allié à terre ou un civil (6 cases à pied) et le pose à l'abri (rayon 4)
         "target": "ally", "weight": "light", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "rescueDropRadius": 4
       },
       {
-        "id": "hyperspeed", // Hypervitesse : sa jauge se remplit beaucoup plus vite pendant quelques secondes
+        "id": "hyperspeed", "name": "Hypervitesse", // Hypervitesse : sa jauge se remplit beaucoup plus vite pendant quelques secondes
         "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
         "effects": [ { "status": "hasted", "durationMs": 5000 } ]
       }
@@ -83,16 +83,16 @@
     "behavior": null,
     "passive": "weakPoint", // Point faible : la cible frappée devient vulnérable
     "skills": [
-      { "id": "combo", "weight": "light", "range": 1, "minDamage": 11, "maxDamage": 15, "cooldownMs": 0 },
-      { "id": "precise-strike", "weight": "light", "range": 1, "minDamage": 22, "maxDamage": 28, "cooldownMs": 8000 },
-      { "id": "throwing-blades", "weight": "light", "range": 4, "minDamage": 8, "maxDamage": 11, "cooldownMs": 4000 },
+      { "id": "combo", "name": "Enchaînement", "weight": "light", "range": 1, "minDamage": 11, "maxDamage": 15, "cooldownMs": 0 },
+      { "id": "precise-strike", "name": "Frappe précise", "weight": "light", "range": 1, "minDamage": 22, "maxDamage": 28, "cooldownMs": 8000 },
+      { "id": "throwing-blades", "name": "Lames de lancer", "weight": "light", "range": 4, "minDamage": 8, "maxDamage": 11, "cooldownMs": 4000 },
       {
-        "id": "stunning-blow",
+        "id": "stunning-blow", "name": "Coup étourdissant",
         "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 12000,
         "effects": [ { "status": "stunned", "durationMs": 2000 } ]
       },
       {
-        "id": "execution", // achève une cible sous 30 % de PV (pas un boss), sinon très gros dégâts
+        "id": "execution", "name": "Exécution", // achève une cible sous 30 % de PV (pas un boss), sinon très gros dégâts
         "weight": "heavy", "range": 1, "minDamage": 30, "maxDamage": 38, "cooldownMs": 20000,
         "executeAtOrBelowPercent": 30
       }
@@ -107,25 +107,25 @@
     "opportunityAttacksPerCycle": 1,
     "behavior": null,
     "skills": [
-      { "id": "bolt", "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 13, "cooldownMs": 0 },
+      { "id": "bolt", "name": "Trait d'énergie", "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 13, "cooldownMs": 0 },
       {
-        "id": "beam", // Rayon : traverse les ennemis et le décor
+        "id": "beam", "name": "Rayon", // Rayon : traverse les ennemis et le décor
         "weight": "light", "range": 1, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,
         "zone": { "shape": "line", "size": 6, "throughWalls": true }
       },
       {
-        "id": "blast", // Déflagration : zone chargée à distance
+        "id": "blast", "name": "Déflagration", // Déflagration : zone chargée à distance
         "weight": "heavy", "range": 6, "minDamage": 22, "maxDamage": 28, "cooldownMs": 12000,
         "chargeMs": 1500,
         "zone": { "shape": "square", "size": 1, "throughWalls": false }
       },
       {
-        "id": "nova", // explosion autour de lui pour se dégager
+        "id": "nova", "name": "Nova", // explosion autour de lui pour se dégager
         "weight": "light", "range": 0, "minDamage": 12, "maxDamage": 16, "cooldownMs": 8000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false }
       },
       {
-        "id": "energy-form", // Forme d'énergie pure : plus de dégâts pendant 2-3 actions
+        "id": "energy-form", "name": "Forme d'énergie pure", // Forme d'énergie pure : plus de dégâts pendant 2-3 actions
         "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
         // 11,5 s : lancée (lourde), elle couvre 3 actions légères (à 5 s, 8 s et 11 s) ou 2 si l'une est lourde.
         "effects": [ { "status": "empowered", "durationMs": 11500 } ]
@@ -141,9 +141,9 @@
     "opportunityAttacksPerCycle": 1,
     "behavior": null,
     "skills": [
-      { "id": "shot", "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 0 },
+      { "id": "shot", "name": "Tir", "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 0 },
       {
-        "id": "turret", // pose une tourelle qui tire seule sur les ennemis à portée (une à la fois)
+        "id": "turret", "name": "Tourelle", // pose une tourelle qui tire seule sur les ennemis à portée (une à la fois)
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "summon": {
           "id": "turret", "name": "Tourelle",
@@ -151,12 +151,12 @@
           "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
           "behavior": "basic",
           "skills": [
-            { "id": "turret-shot", "weight": "light", "range": 5, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 }
+            { "id": "turret-shot", "name": "Tir de tourelle", "weight": "light", "range": 5, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 }
           ]
         }
       },
       {
-        "id": "nano-heal", // pose une balise qui soigne les alliés autour d'elle, 3 fois au plus (une à la fois)
+        "id": "nano-heal", "name": "Balise de nano-soin", // pose une balise qui soigne les alliés autour d'elle, 3 fois au plus (une à la fois)
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
         "summon": {
           "id": "nano-beacon", "name": "Balise de nano-soin",
@@ -166,7 +166,7 @@
           "maxActivations": 3,
           "skills": [
             {
-              "id": "nano-pulse", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0,
+              "id": "nano-pulse", "name": "Impulsion de soin", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0,
               "minHeal": 10, "maxHeal": 14,
               "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "allies" }
             }
@@ -174,14 +174,14 @@
         }
       },
       {
-        "id": "tactical-order", // Ordre tactique : remplit une partie de la jauge d'un allié
+        "id": "tactical-order", "name": "Ordre tactique", // Ordre tactique : remplit une partie de la jauge d'un allié
         "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "gaugeGainPercent": 50
       },
       {
         // Impulsion électromagnétique : étourdit les ennemis d'une grande zone, mais aussi les gadgets du tech
         // qui s'y trouvent (dilemme) ; dévastatrice contre les robots (plus longtemps, et des dégâts).
-        "id": "emp",
+        "id": "emp", "name": "Impulsion électromagnétique",
         "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
         "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "enemies", "alsoHitsOwnSummons": true },
         "effects": [ { "status": "stunned", "durationMs": 2000 } ],
@@ -199,24 +199,24 @@
     "behavior": null,
     "passive": "grip", // Emprise : ses états néfastes durent plus longtemps
     "skills": [
-      { "id": "psi-dart", "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 8, "cooldownMs": 0 },
+      { "id": "psi-dart", "name": "Dard psychique", "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 8, "cooldownMs": 0 },
       {
-        "id": "paralysis", // étourdit plus longtemps que le coup du combattant
+        "id": "paralysis", "name": "Paralysie", // étourdit plus longtemps que le coup du combattant
         "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
         "effects": [ { "status": "stunned", "durationMs": 3000 } ]
       },
       {
-        "id": "confusion", // la cible attaque l'unité la plus proche, alliée ou non
+        "id": "confusion", "name": "Confusion", // la cible attaque l'unité la plus proche, alliée ou non
         "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
         "effects": [ { "status": "confused", "durationMs": 4000 } ]
       },
       {
-        "id": "domination", // prend le contrôle d'un ennemi (hors boss) quelques secondes
+        "id": "domination", "name": "Domination", // prend le contrôle d'un ennemi (hors boss) quelques secondes
         "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 30000, "isMental": true,
         "effects": [ { "status": "dominated", "durationMs": 5000 } ]
       },
       {
-        "id": "telekinesis", // déplace un allié ou un ennemi sur une case libre choisie
+        "id": "telekinesis", "name": "Télékinésie", // déplace un allié ou un ennemi sur une case libre choisie
         "target": "any", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
         "forcedMove": { "type": "place", "distance": 3 }
       }

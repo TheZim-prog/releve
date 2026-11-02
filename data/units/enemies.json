@@ -10,7 +10,7 @@
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
     "skills": [
-      { "id": "punch", "weight": "light", "range": 1, "minDamage": 8, "maxDamage": 12, "cooldownMs": 0 }
+      { "id": "punch", "name": "Coup de poing", "weight": "light", "range": 1, "minDamage": 8, "maxDamage": 12, "cooldownMs": 0 }
     ]
   },
   {
@@ -22,9 +22,9 @@
     "opportunityAttacksPerCycle": 1,
     "behavior": "gunner",
     "skills": [
-      { "id": "shot", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 },
+      { "id": "shot", "name": "Tir", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 },
       {
-        "id": "aimed-burst", // Tir appuyé : ligne chargée, esquivable
+        "id": "aimed-burst", "name": "Tir appuyé", // Tir appuyé : ligne chargée, esquivable
         "weight": "heavy", "range": 1, "minDamage": 16, "maxDamage": 20, "cooldownMs": 10000,
         "chargeMs": 1000,
         "zone": { "shape": "line", "size": 6, "throughWalls": false }
@@ -40,9 +40,9 @@
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
     "skills": [
-      { "id": "heavy-blow", "weight": "heavy", "range": 1, "minDamage": 18, "maxDamage": 24, "cooldownMs": 0 },
+      { "id": "heavy-blow", "name": "Gros coup", "weight": "heavy", "range": 1, "minDamage": 18, "maxDamage": 24, "cooldownMs": 0 },
       {
-        "id": "seismic-strike", // Frappe sismique : zone chargée autour d'elle
+        "id": "seismic-strike", "name": "Frappe sismique", // Frappe sismique : zone chargée autour d'elle
         "weight": "heavy", "range": 0, "minDamage": 25, "maxDamage": 30, "cooldownMs": 14000,
         "chargeMs": 2000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false }
@@ -60,15 +60,15 @@
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
     "skills": [
-      { "id": "power-punch", "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 20, "cooldownMs": 0 },
+      { "id": "power-punch", "name": "Coup puissant", "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 20, "cooldownMs": 0 },
       {
-        "id": "charge", // Charge : fonce sur un ennemi aligné, percute la première unité de sa ligne et la déséquilibre
+        "id": "charge", "name": "Charge", // Charge : fonce sur un ennemi aligné, percute la première unité de sa ligne et la déséquilibre
         "weight": "light", "range": 5, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
         "selfMove": "rush",
         "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
       },
       {
-        "id": "impact-wave", // Onde d'impact : dégâts autour de lui
+        "id": "impact-wave", "name": "Onde d'impact", // Onde d'impact : dégâts autour de lui
         "weight": "light", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false }
       }

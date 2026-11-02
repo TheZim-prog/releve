@@ -84,6 +84,22 @@ public class ContentTests
     }
 
     [Fact]
+    public void TheStreetScenario_LoadsAndPlays()
+    {
+        var catalog = Heroes.Concat(Enemies).Concat(Civilians).ToDictionary();
+        var scenario = ScenarioDefinition.FromJson(Data(Path.Combine("scenarios", "street.json")));
+        var setup = scenario.ToSetup(Rules, catalog);
+
+        // Les héros attendent (personne ne les commande) : l'IA ennemie et les civils jouent.
+        var sim = new CombatSimulation(setup);
+        for (var i = 0; i < Rules.TicksPerSecond * 30; i++)
+            sim.Tick();
+
+        Assert.Contains(sim.EventLog, e => e is SkillUsed);
+        Assert.Contains(sim.EventLog, e => e is UnitEscaped);
+    }
+
+    [Fact]
     public void Civilians_AreNeutralAndFlee()
     {
         var civilian = Civilians["civilian"];
@@ -137,6 +153,5 @@ public class ContentTests
         Assert.Equal(sim.EventLog, replayed.EventLog);
     }
 
-    private static List<int> StandingTeams(CombatSimulation sim) =>
-        sim.Units.Where(u => u.Status == UnitStatus.Active && !u.IsCivilian).Select(u => u.Team).Distinct().ToList();
+    private static List<int> StandingTeams(CombatSimulation sim) => sim.TeamsStillFighting().Order().ToList();
 }

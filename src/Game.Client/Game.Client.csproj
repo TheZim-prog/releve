@@ -1,0 +1,16 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <!-- Affichage Godot : il ne fait qu'afficher l'état du combat et capter les entrées ; toute la logique est dans Game.Core. -->
+
+  <PropertyGroup>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Game.Client</RootNamespace>
+    <!-- Explicite : sinon l'éditeur Godot impose net8.0, incompatible avec Game.Core (net10.0). -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Game.Core\Game.Core.csproj" />
+  </ItemGroup>
+
+</Project>

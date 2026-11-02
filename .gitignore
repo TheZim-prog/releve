@@ -9,3 +9,4 @@ TestResults/
 .godot/
 .mono/
 *.translation
+*.csproj.old

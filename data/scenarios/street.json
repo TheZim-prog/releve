@@ -1,0 +1,38 @@
+// Combat libre du prototype : les héros (à gauche) contre une bande de rue (à droite), des civils
+// pris au milieu. Carte : '.' sol, '#' mur, 'o' obstacle bas (muret, voiture : couverture).
+{
+  "id": "street",
+  "name": "Règlement de comptes dans la rue",
+  "seed": 2026,
+  "map": [
+    "..................",
+    "..o.......##......",
+    "..o...........o...",
+    "......###.........",
+    "..............o...",
+    ".........o........",
+    "....##............",
+    "..........###.....",
+    "..o...............",
+    ".................."
+  ],
+  "units": [
+    { "unit": "colossus", "team": 0, "x": 1, "y": 3 },
+    { "unit": "fighter", "team": 0, "x": 1, "y": 4 },
+    { "unit": "speedster", "team": 0, "x": 1, "y": 5 },
+    { "unit": "energetic", "team": 0, "x": 0, "y": 6 },
+    { "unit": "tech", "team": 0, "x": 0, "y": 2 },
+    { "unit": "telepath", "team": 0, "x": 0, "y": 4 },
+
+    { "unit": "brawler", "team": 1, "x": 15, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 15, "y": 5 },
+    { "unit": "brawler", "team": 1, "x": 14, "y": 7 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 1 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 8 },
+    { "unit": "brute", "team": 1, "x": 16, "y": 4 },
+
+    { "unit": "civilian", "team": 2, "x": 8, "y": 2 },
+    { "unit": "civilian", "team": 2, "x": 9, "y": 4 },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 6 }
+  ]
+}

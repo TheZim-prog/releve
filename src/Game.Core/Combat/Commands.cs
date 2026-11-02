@@ -11,6 +11,17 @@ public abstract record CombatCommand(UnitId Unit);
 /// </summary>
 public sealed record SkillUse(string SkillId, UnitId? Target, Cell? Cell = null);
 
+/// <summary>
+/// Résultat d'une prévisualisation d'action (<see cref="CombatSimulation.PreviewAction"/>) : refusée
+/// (<paramref name="Reason"/>), ou ce qu'elle viserait : une unité, des cases (zone, course), une case (arrivée,
+/// dépôt, gadget).
+/// </summary>
+public sealed record ActionPreview(RejectionReason? Reason, UnitId? Target = null, IReadOnlyList<Cell>? Cells = null,
+    Cell? Destination = null)
+{
+    public bool IsValid => Reason is null;
+}
+
 /// <summary>Ce que permet l'action « interagir » (commune à tous les héros, légère, au contact).</summary>
 public enum InteractionKind
 {

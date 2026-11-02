@@ -134,6 +134,11 @@ public sealed record SkillDefinition
     /// </summary>
     public int ExecuteAtOrBelowPercent { get; init; }
 
+    /// <summary>Nom affiché (facultatif ; à défaut, l'identifiant).</summary>
+    public string? Name { get; init; }
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Id : Name;
+
     /// <summary>Effet renforcé sur les robots (ex. IEM : états plus longs, dégâts en plus), ou <c>null</c>.</summary>
     public RobotBonusDefinition? VsRobots { get; init; }
 

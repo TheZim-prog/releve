@@ -317,18 +317,71 @@ public sealed class CombatSimulation
 
     private void ApplyActivate(ActivateCommand command)
     {
-        // Commande d'un joueur : refusée pour une unité commandée par l'IA.
-        if (FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null)
-        {
-            Reject(command, RejectionReason.NotControllable);
-            return;
-        }
-
-        var (plan, reason) = ValidateActivation(command);
+        var (plan, reason) = ValidatePlayerCommand(command);
         if (plan is null)
             Reject(command, reason!.Value);
         else
             ApplyActivation(plan);
+    }
+
+    /// <summary>Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation.</summary>
+    private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command) =>
+        FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null
+            ? (null, RejectionReason.NotControllable)
+            : ValidateActivation(command);
+
+    /// <summary>L'unité obéit-elle aux joueurs (ni IA, ni confuse, ni dominée par l'IA, ni civil) ?</summary>
+    public bool IsPlayerControlled(UnitId unit) => FindUnit(unit) is { } found && ControllerOf(found) is null;
+
+    /// <summary>
+    /// Prévisualisation : la commande d'un joueur serait-elle acceptée dans l'état actuel ? <c>null</c> si oui, sinon la
+    /// raison du refus. Rien n'est changé. (Le prochain tick peut encore changer la donne : fin d'un état ou d'une
+    /// recharge, commande d'un autre joueur validée avant.)
+    /// </summary>
+    public RejectionReason? Check(ActivateCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        return ValidatePlayerCommand(command).Reason;
+    }
+
+    /// <summary>Cases où l'unité peut aller par un déplacement (sa case comprise), avec leur distance à pied.</summary>
+    public IReadOnlyDictionary<Cell, int> ReachableCells(UnitId unitId) =>
+        FindUnit(unitId) is { } unit
+            ? Pathfinder.ReachableCells(_grid, unit.Position, unit.Mobility, cell => OccupantFor(unit, cell))
+            : new Dictionary<Cell, int>();
+
+    /// <summary>Chemin qu'emprunterait un déplacement de l'unité vers <paramref name="destination"/>, ou <c>null</c>.</summary>
+    public IReadOnlyList<Cell>? PathFor(UnitId unitId, Cell destination) =>
+        FindUnit(unitId) is { } unit ? PathFor(unit, destination) : null;
+
+    private IReadOnlyList<Cell>? PathFor(Unit unit, Cell destination) =>
+        Pathfinder.FindPath(_grid, unit.Position, destination, unit.Mobility, cell => OccupantFor(unit, cell));
+
+    /// <summary>
+    /// Équipes encore en lice : celles (d'origine : une unité dominée compte pour la sienne) qui ont au moins une unité
+    /// debout, sans compter les civils ni les gadgets. Le combat libre se termine quand il n'en reste qu'une.
+    /// </summary>
+    public IReadOnlySet<int> TeamsStillFighting() =>
+        _units.Where(u => u.Status == UnitStatus.Active && !u.IsCivilian && u.SummonedBy is null)
+            .Select(u => u.OriginalTeam)
+            .ToHashSet();
+
+    /// <summary>
+    /// Prévisualisation d'une action de <paramref name="unitId"/> lancée depuis <paramref name="from"/> (sa case, ou celle
+    /// du fantôme) : ce qu'elle viserait (unité, cases de la zone ou de la course, case d'arrivée ou de dépôt), ou la
+    /// raison du refus. Ne regarde ni la jauge ni la recharge (voir <see cref="Check"/> pour la commande entière).
+    /// </summary>
+    public ActionPreview PreviewAction(UnitId unitId, Cell from, SkillUse use)
+    {
+        ArgumentNullException.ThrowIfNull(use);
+        if (FindUnit(unitId) is not { } unit)
+            return new ActionPreview(RejectionReason.UnknownUnit);
+        if (unit.FindSkill(use.SkillId) is not { } skill)
+            return new ActionPreview(RejectionReason.UnknownSkill);
+        var (action, reason) = PlanAction(unit, from, skill, use);
+        return action is null
+            ? new ActionPreview(reason)
+            : new ActionPreview(null, action.Target?.Id, action.Zone, action.Destination);
     }
 
     /// <summary>Activation validée, prête à être appliquée telle quelle.</summary>
@@ -363,7 +416,7 @@ public sealed class CombatSimulation
         {
             if (destination == unit.Position)
                 return (null, RejectionReason.InvalidDestination);
-            path = Pathfinder.FindPath(_grid, unit.Position, destination, unit.Mobility, cell => OccupantFor(unit, cell));
+            path = PathFor(unit, destination);
             if (path is null)
                 return (null, RejectionReason.Unreachable);
             position = destination;
