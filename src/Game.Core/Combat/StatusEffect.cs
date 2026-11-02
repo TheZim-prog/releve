@@ -17,6 +17,12 @@ public enum StatusKind
 
     /// <summary>Dégâts subis augmentés, de toutes les sources (Point faible ; <see cref="CombatRules.ExposedDamageTakenPercent"/>).</summary>
     Exposed,
+
+    /// <summary>Agit seule et attaque l'unité debout la plus proche, quel que soit son camp (Confusion).</summary>
+    Confused,
+
+    /// <summary>Passe dans le camp de celui qui l'a dominée, et est commandée comme lui (Domination).</summary>
+    Dominated,
 }
 
 public static class StatusKindExtensions
@@ -27,7 +33,7 @@ public static class StatusKindExtensions
     /// </summary>
     public static bool IsHarmful(this StatusKind status) => status switch
     {
-        StatusKind.Stunned or StatusKind.OffBalance or StatusKind.Exposed => true,
+        StatusKind.Stunned or StatusKind.OffBalance or StatusKind.Exposed or StatusKind.Confused or StatusKind.Dominated => true,
         StatusKind.Hasted or StatusKind.Empowered => false,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Status not classified as harmful or beneficial."),
     };

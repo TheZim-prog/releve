@@ -103,8 +103,8 @@ public sealed class CombatSimulation
         for (var i = 0; i < _units.Count; i++)
         {
             var unit = _units[i];
-            if (unit.Behavior is not null && unit.IsReady)
-                RunAi(unit, Behaviors.Find(unit.Behavior)!);
+            if (unit.IsReady && ControllerOf(unit) is { } behavior)
+                RunAi(unit, behavior);
         }
 
         foreach (var unit in _units)
@@ -138,7 +138,7 @@ public sealed class CombatSimulation
         // Même validation que pour un joueur : le comportement ne contourne aucune règle.
         var (plan, reason) = ValidateActivation(command);
         if (plan is null)
-            throw new InvalidOperationException($"Behavior '{unit.Behavior}' produced an invalid command ({reason}): {command}.");
+            throw new InvalidOperationException($"{behavior.GetType().Name} produced an invalid command ({reason}) for unit {unit.Id}: {command}.");
         ApplyActivation(plan);
     }
 
@@ -151,15 +151,28 @@ public sealed class CombatSimulation
         var threshold = Rules.GaugeAt(Rules.IntentionThresholdPercent);
         foreach (var unit in _units)
         {
-            if (unit.Behavior is null || unit.Status != UnitStatus.Active || unit.Charge is not null)
+            if (unit.Status != UnitStatus.Active || unit.Charge is not null || ControllerOf(unit) is not { } behavior)
                 continue;
 
             var needsIntention = unit.Intention is null
                 ? unit.Gauge >= threshold
                 : FindUnit(unit.Intention.Target) is not { Status: UnitStatus.Active };
             if (needsIntention)
-                SetIntention(unit, Behaviors.Find(unit.Behavior)!.ChooseIntention(this, unit));
+                SetIntention(unit, behavior.ChooseIntention(this, unit));
         }
+    }
+
+    /// <summary>
+    /// Qui commande l'unité : <c>null</c> pour un joueur, sinon le comportement d'IA. Une unité confuse agit seule
+    /// (elle attaque l'unité la plus proche) ; une unité dominée est commandée comme celle qui la domine (par les
+    /// joueurs, ou par l'IA de base) ; sinon, son propre comportement.
+    /// </summary>
+    internal IUnitBehavior? ControllerOf(Unit unit)
+    {
+        if (unit.HasStatus(StatusKind.Confused))
+            return Behaviors.ConfusedInstance;
+        var behavior = unit.DominatedBy is { } dominator ? FindUnit(dominator)?.Behavior : unit.Behavior;
+        return behavior is null ? null : Behaviors.Find(behavior);
     }
 
     private void SetIntention(Unit unit, Intention? intention)
@@ -222,8 +235,30 @@ public sealed class CombatSimulation
         var wasReady = unit.IsReady;
         unit.ClearStatus(status);
         _events.Add(new StatusEnded(CurrentTick, unit.Id, status));
+
+        // Fin d'une confusion ou d'une domination : l'unité retrouve son camp et ses propres décisions ; ce qu'elle
+        // avait lancé sous contrôle (intention, charge) est perdu.
+        if (status is StatusKind.Confused or StatusKind.Dominated)
+        {
+            SetIntention(unit, null);
+            InterruptCharge(unit);
+        }
+        if (status == StatusKind.Dominated)
+        {
+            unit.DominatedBy = null;
+            ChangeTeam(unit, unit.OriginalTeam);
+        }
+
         if (!wasReady && unit.IsReady)
             _events.Add(new UnitReady(CurrentTick, unit.Id));
+    }
+
+    private void ChangeTeam(Unit unit, int team)
+    {
+        if (unit.Team == team)
+            return;
+        unit.Team = team;
+        _events.Add(new TeamChanged(CurrentTick, unit.Id, team));
     }
 
     /// <summary>
@@ -264,7 +299,7 @@ public sealed class CombatSimulation
     private void ApplyActivate(ActivateCommand command)
     {
         // Commande d'un joueur : refusée pour une unité commandée par l'IA.
-        if (FindUnit(command.Unit) is { Behavior: not null })
+        if (FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null)
         {
             Reject(command, RejectionReason.NotControllable);
             return;
@@ -561,12 +596,25 @@ public sealed class CombatSimulation
         // Remplir une jauge déjà pleine, ou bloquée à 0 par une charge, ne servirait à rien.
         if (!skill.IsOffensive && !HasSupportEffect(skill, target))
             return (null, RejectionReason.NoEffect);
+        if (IsImmune(skill, target))
+            return (null, RejectionReason.NoEffect);
+        // On ne domine pas un allié (une unité confuse pourrait le viser).
+        if (target.Team == unit.Team && skill.Effects.Any(e => e.Status == StatusKind.Dominated))
+            return (null, RejectionReason.InvalidTarget);
         if (CheckTarget(unit, position, target, skill) is { } reason)
             return (null, reason);
         if (places && !CanPlace(unit, position, target, use.Cell!.Value, skill.ForcedMove!.Distance))
             return (null, RejectionReason.InvalidDestination);
         return (new PlannedAction(skill, target, null, use.Cell), null);
     }
+
+    /// <summary>
+    /// Immunités : les robots aux pouvoirs mentaux, les boss à la domination. Une cible directe immunisée est refusée ;
+    /// dans une zone, elle résiste.
+    /// </summary>
+    private static bool IsImmune(SkillDefinition skill, Unit target) =>
+        (skill.IsMental && target.Definition.IsRobot)
+        || (target.Definition.IsBoss && skill.Effects.Any(e => e.Status == StatusKind.Dominated));
 
     /// <summary>
     /// Une compétence de soutien aurait-elle un effet sur cette cible ? Un état ou un déplacement en a toujours ;
@@ -584,7 +632,8 @@ public sealed class CombatSimulation
     /// </summary>
     private static bool IsRightSide(Unit caster, Unit target, SkillDefinition skill) => skill.Target switch
     {
-        SkillTargeting.Enemy => target.Team != caster.Team,
+        // Une unité confuse frappe n'importe qui (sauf elle-même).
+        SkillTargeting.Enemy => target.Team != caster.Team || (caster.HasStatus(StatusKind.Confused) && target != caster),
         SkillTargeting.Ally => target != caster && target.Team == caster.Team,
         SkillTargeting.Any => target != caster,
         _ => throw new InvalidOperationException($"Unknown target kind {skill.Target}."),
@@ -961,6 +1010,12 @@ public sealed class CombatSimulation
     {
         if (IsBlockedByDome(skill, target))
             return false;
+        // Immunisée (robot face à un pouvoir mental, prise dans une zone : une cible directe est refusée avant).
+        if (IsImmune(skill, target))
+        {
+            _events.Add(new UnitResisted(CurrentTick, target.Id));
+            return false;
+        }
 
         if (skill.DealsDamage)
         {
@@ -979,14 +1034,14 @@ public sealed class CombatSimulation
             // Point faible : un coup qui a vraiment fait des dégâts à un ennemi le rend vulnérable.
             if (dealt > 0 && target.Status == UnitStatus.Active && target.Team != attacker.Team
                 && attacker.HasPassive(PassiveKind.WeakPoint))
-                ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs });
+                ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs }, attacker);
         }
         if (target.Status != UnitStatus.Active)
             return true;
         if (skill.Heals)
             Heal(target, _random.NextInt(skill.MinHeal, skill.MaxHeal));
         foreach (var effect in skill.Effects)
-            ApplyStatus(target, effect);
+            ApplyStatus(target, effect, attacker);
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         return true;
@@ -1111,17 +1166,39 @@ public sealed class CombatSimulation
         _events.Add(new UnitHealed(CurrentTick, unit.Id, healed, unit.Hp));
     }
 
-    /// <summary>Applique un état ; s'il est déjà là, garde la plus longue des deux durées.</summary>
-    private void ApplyStatus(Unit target, StatusEffect effect)
+    /// <summary>
+    /// Applique un état posé par <paramref name="source"/> ; s'il est déjà là, garde la plus longue des deux durées.
+    /// Emprise : un état néfaste posé par une unité qui a ce passif dure plus longtemps.
+    /// Étourdi : interrompt la charge. Confus ou dominé : l'unité change de décisions (et de camp, si dominée).
+    /// </summary>
+    private void ApplyStatus(Unit target, StatusEffect effect, Unit source)
     {
-        var endTick = CurrentTick + Rules.MillisecondsToTicks(effect.DurationMs);
+        var durationMs = (long)effect.DurationMs;
+        if (effect.Status.IsHarmful() && source.HasPassive(PassiveKind.Grip))
+            durationMs = durationMs * Rules.GripDurationPercent / 100;
+        var endTick = CurrentTick + Rules.MillisecondsToTicks((int)durationMs);
         if (target.StatusEndTicks.TryGetValue(effect.Status, out var currentEnd))
             endTick = Math.Max(endTick, currentEnd);
 
         target.SetStatus(effect.Status, endTick);
         _events.Add(new StatusApplied(CurrentTick, target.Id, effect.Status, endTick));
-        if (effect.Status == StatusKind.Stunned)
-            InterruptCharge(target);
+
+        switch (effect.Status)
+        {
+            case StatusKind.Stunned:
+                InterruptCharge(target);
+                break;
+            case StatusKind.Confused:
+                InterruptCharge(target);
+                SetIntention(target, null);
+                break;
+            case StatusKind.Dominated:
+                InterruptCharge(target);
+                SetIntention(target, null);
+                target.DominatedBy = source.Id;
+                ChangeTeam(target, source.Team);
+                break;
+        }
     }
 
     /// <summary>Change la jauge et annonce l'unité prête si elle vient de se remplir.</summary>

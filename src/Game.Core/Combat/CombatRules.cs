@@ -36,6 +36,9 @@ public sealed record CombatRules
     /// <summary>Durée de la vulnérabilité posée par le passif Point faible, en millisecondes de combat.</summary>
     public required int WeakPointExposedMs { get; init; }
 
+    /// <summary>Durée des états néfastes posés par une unité qui a le passif Emprise, en % de la durée normale.</summary>
+    public required int GripDurationPercent { get; init; }
+
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
@@ -73,6 +76,8 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(ExposedDamageTakenPercent)} must be between 100 and 1000.");
         if (WeakPointExposedMs <= 0)
             throw new ArgumentException($"{nameof(WeakPointExposedMs)} must be positive.");
+        if (GripDurationPercent is < 100 or > 1000)
+            throw new ArgumentException($"{nameof(GripDurationPercent)} must be between 100 and 1000.");
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

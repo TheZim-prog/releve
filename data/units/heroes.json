@@ -1,6 +1,6 @@
 // Héros jouables (kits du prologue, docs/design.md section 3).
 // Seules les compétences faisables avec le moteur actuel sont présentes ; les autres viendront
-// avec leurs mécaniques (confusion, domination, sauvetage…).
+// avec leurs mécaniques (sauvetage éclair…).
 // Durées en millisecondes de combat. L'initiative est en points de jauge par tick (voir combat-rules.json
 // pour la capacité de la jauge, les ticks par seconde et le point de reprise selon le poids de l'action).
 [
@@ -190,12 +190,23 @@
     "basicAttack": "psi-dart",
     "opportunityAttacksPerCycle": 1,
     "behavior": null,
+    "passive": "grip", // Emprise : ses états néfastes durent plus longtemps
     "skills": [
       { "id": "psi-dart", "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 8, "cooldownMs": 0 },
       {
         "id": "paralysis", // étourdit plus longtemps que le coup du combattant
-        "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+        "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
         "effects": [ { "status": "stunned", "durationMs": 3000 } ]
+      },
+      {
+        "id": "confusion", // la cible attaque l'unité la plus proche, alliée ou non
+        "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
+        "effects": [ { "status": "confused", "durationMs": 4000 } ]
+      },
+      {
+        "id": "domination", // prend le contrôle d'un ennemi (hors boss) quelques secondes
+        "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 30000, "isMental": true,
+        "effects": [ { "status": "dominated", "durationMs": 5000 } ]
       },
       {
         "id": "telekinesis", // déplace un allié ou un ennemi sur une case libre choisie

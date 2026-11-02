@@ -14,4 +14,7 @@ public enum PassiveKind
     /// (<see cref="StatusKind.Exposed"/>, durée <see cref="CombatRules.WeakPointExposedMs"/>).
     /// </summary>
     WeakPoint,
+
+    /// <summary>Emprise (télépathe) : ses états néfastes durent plus longtemps (<see cref="CombatRules.GripDurationPercent"/>).</summary>
+    Grip,
 }

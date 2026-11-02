@@ -53,6 +53,9 @@ public sealed record UnitDefinition
     /// <summary>Boss : ne peut pas être exécuté (ni, plus tard, dominé). Faux par défaut.</summary>
     public bool IsBoss { get; init; }
 
+    /// <summary>Robot : insensible aux pouvoirs mentaux (pas à la télékinésie). Faux par défaut.</summary>
+    public bool IsRobot { get; init; }
+
     /// <summary>Nombre d'activations après lequel l'unité disparaît (ex. balise : 3), ou <c>null</c> (illimité).</summary>
     public int? MaxActivations { get; init; }
 

@@ -18,6 +18,7 @@ public class CombatRulesTests
           "empoweredDamagePercent": 150,
           "exposedDamageTakenPercent": 125,
           "weakPointExposedMs": 4000,
+          "gripDurationPercent": 150,
           "intentionThresholdPercent": 50,
         }
         """;

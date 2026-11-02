@@ -102,6 +102,9 @@ public sealed record SkillDefinition
 
     public bool Heals => MaxHeal > 0;
 
+    /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
+    public bool IsMental { get; init; }
+
     /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge), ou <c>null</c>.</summary>
     public SelfMoveType? SelfMove { get; init; }
 
@@ -219,6 +222,14 @@ public sealed record SkillDefinition
                 throw new ArgumentException(
                     $"Skill '{Id}': a summoned unit acts on its own, does not move, makes no opportunity attack and is removed when destroyed.");
         }
+
+        // Pouvoirs mentaux : offensifs. La domination (un changement de camp) vise une seule unité.
+        if (IsMental && !IsOffensive)
+            throw new ArgumentException($"Skill '{Id}': a mental power targets enemies.");
+        if (!IsMental && Effects.Any(e => e.Status is StatusKind.Confused or StatusKind.Dominated))
+            throw new ArgumentException($"Skill '{Id}': confusion and domination are mental powers (isMental).");
+        if (Effects.Any(e => e.Status == StatusKind.Dominated) && (Zone is not null || SelfMove is not null))
+            throw new ArgumentException($"Skill '{Id}': a domination targets a single unit.");
 
         // Mouvements spéciaux : offensifs, instantanés, sans autre mouvement ; seul le saut a une zone (carrée).
         if (SelfMove is { } selfMove)

@@ -123,6 +123,7 @@
 - **Domination** (lourde) : le joueur **prend le contrôle** d'un ennemi (hors boss) pendant quelques secondes.
 - **Passif : Emprise** : ses effets de contrôle durent plus longtemps.
 - *Règle : les **robots** sont insensibles aux pouvoirs **mentaux** (paralysie, confusion, domination), pas à la télékinésie.*
+- ✅ **Précisions** : une unité **confuse** agit seule et attaque l'unité debout **la plus proche**, quel que soit son camp. Une unité **dominée** **change de camp** pendant la durée : commandée par les joueurs, elle frappe ses anciens alliés, qui la traitent en ennemie ; elle revient ensuite à son camp et à son IA. Au début comme à la fin d'une confusion ou d'une domination, la **charge en cours est perdue** (rien de ce qui est lancé sous contrôle ne se déclenche après). On ne domine pas un allié. Un pouvoir mental sur un **robot** (ou une domination sur un **boss**) est **refusé** ; dans une zone mentale, les robots sont épargnés. **Emprise** : tous les états néfastes posés par le télépathe durent plus longtemps (bonus en données).
 
 *Passifs alternatifs notés pour les arbres : **Riposte** (combattant : contre-attaque quand il est attaqué au corps à corps, une fois par cycle) ; **Garde du corps** (colosse : intercepte une attaque visant un allié adjacent, une fois par cycle).*
 

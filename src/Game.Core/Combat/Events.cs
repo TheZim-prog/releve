@@ -98,6 +98,12 @@ public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatE
 /// </summary>
 public sealed record UnitSummoned(int Tick, UnitId Unit, string DefinitionId, UnitId Owner, int Team, Cell Position) : CombatEvent(Tick);
 
+/// <summary>L'unité change de camp (dominée, ou fin de la domination) : elle est maintenant dans l'équipe <paramref name="Team"/>.</summary>
+public sealed record TeamChanged(int Tick, UnitId Unit, int Team) : CombatEvent(Tick);
+
+/// <summary>Un robot pris dans une zone mentale y résiste : elle n'a aucun effet sur lui.</summary>
+public sealed record UnitResisted(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 /// <summary>L'unité regagne <paramref name="Amount"/> PV ; elle en a maintenant <paramref name="Hp"/>.</summary>
 public sealed record UnitHealed(int Tick, UnitId Unit, int Amount, int Hp) : CombatEvent(Tick);
 

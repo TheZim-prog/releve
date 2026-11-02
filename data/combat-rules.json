@@ -24,6 +24,9 @@
   "exposedDamageTakenPercent": 125,
   "weakPointExposedMs": 4000,
 
+  // Emprise (passif du télépathe) : ses états néfastes durent ce % de leur durée normale.
+  "gripDurationPercent": 150,
+
   // Une unité IA fixe son intention (action + cible) quand sa jauge atteint ce pourcentage.
   "intentionThresholdPercent": 50
 }

@@ -34,8 +34,11 @@ public static class Behaviors
     /// </summary>
     public const string Beacon = "beacon";
 
-    private static readonly IUnitBehavior BasicInstance = new BasicBehavior();
+    internal static readonly IUnitBehavior BasicInstance = new BasicBehavior(confused: false);
     private static readonly IUnitBehavior BeaconInstance = new BeaconBehavior();
+
+    /// <summary>Unité confuse (état, pas une donnée) : attaque l'unité debout la plus proche, quel que soit son camp.</summary>
+    internal static readonly IUnitBehavior ConfusedInstance = new BasicBehavior(confused: true);
 
     public static bool IsKnown(string id) => Find(id) is not null;
 
@@ -69,16 +72,29 @@ internal sealed class BeaconBehavior : IUnitBehavior
         unit.Skills.FirstOrDefault(s => s.Heals && s.Zone is { Affects: ZoneTargets.Allies });
 }
 
-internal sealed class BasicBehavior : IUnitBehavior
+/// <summary>
+/// Comportement de base. En mode confus, les « ennemis » sont toutes les autres unités debout, et la cible est
+/// toujours la plus proche (la plus forte compétence qui l'atteint).
+/// </summary>
+internal sealed class BasicBehavior(bool confused) : IUnitBehavior
 {
     public Intention? ChooseIntention(CombatSimulation sim, Unit unit)
     {
-        var enemies = sim.Units.Where(e => e.Team != unit.Team && e.Status == UnitStatus.Active).ToList();
+        var enemies = sim.Units
+            .Where(e => e != unit && e.Status == UnitStatus.Active && (confused || e.Team != unit.Team))
+            .ToList();
         if (enemies.Count == 0)
             return null;
 
         var skills = UsableSkills(sim, unit);
         var reachable = ReachableCells(sim, unit);
+
+        if (confused)
+        {
+            var nearest = Nearest(sim, unit, enemies);
+            var reaching = skills.FirstOrDefault(s => FindAttack(sim, unit, s, nearest, reachable) is not null);
+            return new Intention((reaching ?? skills.FirstOrDefault())?.Id, nearest.Id);
+        }
 
         // L'ennemi le plus fragile qu'au moins une compétence atteint (OrderBy est stable : à égalité, l'ordre
         // des unités), puis la plus forte compétence qui l'atteint.
@@ -154,7 +170,7 @@ internal sealed class BasicBehavior : IUnitBehavior
     /// (cases atteignables par distance croissante, la case actuelle d'abord), ou <c>null</c>. Une zone carrée est
     /// centrée sur la cible, ou sur l'unité si sa portée est 0 ; elle doit toucher la cible et aucun allié.
     /// </summary>
-    private static ActivateCommand? FindAttack(CombatSimulation sim, Unit unit, SkillDefinition skill, Unit target,
+    private ActivateCommand? FindAttack(CombatSimulation sim, Unit unit, SkillDefinition skill, Unit target,
         IReadOnlyList<Cell> reachable)
     {
         foreach (var cell in reachable)
@@ -167,8 +183,10 @@ internal sealed class BasicBehavior : IUnitBehavior
             // atteignent la cible.
             if (action is null || (skill.SelfMove == SelfMoveType.Rush && action.Target != target))
                 continue;
+            // Une zone doit vraiment toucher la cible (selon qui elle touche) ; hors confusion, sans prendre d'allié.
             if (action.Zone is { } zone
-                && (!zone.Contains(target.Position) || (skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))
+                && (!sim.UnitsAffectedBy(unit, skill, zone).Contains(target)
+                    || (!confused && skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))
                 continue;
             return new ActivateCommand(unit.Id, cell == unit.Position ? null : cell, use);
         }

@@ -56,6 +56,7 @@ public sealed class Unit
         var definition = setup.Definition;
         Id = setup.Id;
         Team = setup.Team;
+        OriginalTeam = setup.Team;
         Position = setup.Position;
         Definition = definition;
         Initiative = definition.Initiative;
@@ -75,7 +76,15 @@ public sealed class Unit
     }
 
     public UnitId Id { get; }
-    public int Team { get; }
+
+    /// <summary>Camp actuel (change pendant une domination).</summary>
+    public int Team { get; internal set; }
+
+    /// <summary>Camp d'origine, retrouvé à la fin d'une domination.</summary>
+    public int OriginalTeam { get; }
+
+    /// <summary>Unité qui la domine, ou <c>null</c>.</summary>
+    public UnitId? DominatedBy { get; internal set; }
     public Cell Position { get; internal set; }
 
     /// <summary>Type de l'unité (données) : nom, stats et compétences de départ.</summary>
