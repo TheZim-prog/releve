@@ -1,6 +1,6 @@
 // Héros jouables (kits du prologue, docs/design.md section 3).
 // Seules les compétences faisables avec le moteur actuel sont présentes ; les autres viendront
-// avec leurs mécaniques (dôme, projection, tourelle, confusion…).
+// avec leurs mécaniques (dôme, tourelle, confusion…).
 // Durées en millisecondes de combat. L'initiative est en points de jauge par tick (voir combat-rules.json
 // pour la capacité de la jauge, les ticks par seconde et le point de reprise selon le poids de l'action).
 [
@@ -14,6 +14,11 @@
     "behavior": null,
     "skills": [
       { "id": "punch", "weight": "light", "range": 1, "minDamage": 12, "maxDamage": 16, "cooldownMs": 0 },
+      {
+        "id": "projection", // frappe et projette la cible ; dégâts de collision contre un mur ou une unité
+        "weight": "light", "range": 1, "minDamage": 10, "maxDamage": 14, "cooldownMs": 10000,
+        "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 8, "collisionMaxDamage": 12 }
+      },
       {
         "id": "shockwave", // Onde de choc : frappe au sol, vague en ligne, esquivable
         "weight": "heavy", "range": 1, "minDamage": 20, "maxDamage": 26, "cooldownMs": 12000,
@@ -137,6 +142,11 @@
         "id": "paralysis", // étourdit plus longtemps que le coup du combattant
         "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "effects": [ { "status": "stunned", "durationMs": 3000 } ]
+      },
+      {
+        "id": "telekinesis", // déplace un allié ou un ennemi sur une case libre choisie
+        "target": "any", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+        "forcedMove": { "type": "place", "distance": 3 }
       }
     ]
   }

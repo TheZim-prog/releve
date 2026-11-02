@@ -17,6 +17,11 @@ public enum SkillTargeting
 
     /// <summary>Le lanceur lui-même (ex. Hypervitesse) : pas de cible à donner, portée 0, renforcements seulement.</summary>
     Self,
+
+    /// <summary>
+    /// N'importe quelle unité debout sauf le lanceur, alliée ou ennemie (ex. Télékinésie) : déplacement forcé seulement.
+    /// </summary>
+    Any,
 }
 
 /// <summary>
@@ -65,6 +70,9 @@ public sealed record SkillDefinition
     /// <summary>Part de la jauge (en % de la capacité) remplie instantanément chez la cible (0 = aucune).</summary>
     public int GaugeGainPercent { get; init; }
 
+    /// <summary>Déplacement forcé de la cible, après les dégâts et les états (facultatif).</summary>
+    public ForcedMoveDefinition? ForcedMove { get; init; }
+
     public static IReadOnlyList<SkillDefinition> ListFromJson(string json) =>
         ValidateAll(DataJson.Deserialize<List<SkillDefinition?>>(json));
 
@@ -108,7 +116,21 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}': harmful statuses go on enemies, beneficial ones on allies or self.");
         if (GaugeGainPercent > 0 && Target != SkillTargeting.Ally)
             throw new ArgumentException($"Skill '{Id}': only a skill targeting an ally can fill a gauge.");
-        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0)
-            throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status or gauge gain).");
+
+        // Déplacements forcés : une projection vise un ennemi ; une télékinésie n'est pas chargée (la cible bougerait
+        // avant le déclenchement) ; une compétence sur « n'importe qui » ne fait que déplacer.
+        ForcedMove?.Validate(Id);
+        if (ForcedMove is not null && Zone is not null)
+            throw new ArgumentException($"Skill '{Id}': a forced move needs a single target, not a zone.");
+        // Au contact, la direction lanceur → cible est l'une des 8 directions : la poussée va bien en ligne droite.
+        if (ForcedMove?.Type == ForcedMoveType.Push && (Target != SkillTargeting.Enemy || Range != 1))
+            throw new ArgumentException($"Skill '{Id}': a push targets an adjacent enemy (range 1).");
+        if (ForcedMove?.Type == ForcedMoveType.Place && IsCharged)
+            throw new ArgumentException($"Skill '{Id}': a placement cannot be charged.");
+        if (Target == SkillTargeting.Any && (ForcedMove?.Type != ForcedMoveType.Place || Effects.Count > 0 || GaugeGainPercent > 0))
+            throw new ArgumentException($"Skill '{Id}' targets anyone: it can only place its target.");
+
+        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null)
+            throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }

@@ -75,7 +75,7 @@
 **Colosse** :
 - **Bouclier de zone** : un **dôme** sur une zone, qui bloque **une source de dégâts** (le premier coup reçu par n'importe quelle unité alliée à l'intérieur) ; il disparaît dès qu'il a absorbé, ou, s'il n'a rien absorbé, à la **prochaine action du colosse** (il peut choisir de ne pas jouer pour le garder, mais il saute vite). *Variante possible pour les joueurs : boucliers individuels (à voir avec les arbres complets).*
 - **Saut** : se déplace sur une case et inflige des dégâts autour de son point d'atterrissage (peut fissurer le sol).
-- **Projection** : frappe et projette la cible de quelques cases ; dégâts bonus si elle percute un mur ou un autre ennemi ; peut l'envoyer dans une zone d'attaque alliée ou à travers le décor.
+- **Projection** : frappe et projette la cible de quelques cases ; dégâts bonus si elle percute un mur ou un autre ennemi ; peut l'envoyer dans une zone d'attaque alliée ou à travers le décor. ✅ La cible est poussée **en ligne droite** (direction lanceur → cible) et s'arrête avant un mur, le bord ou une unité ; en cas de collision, **la cible et l'unité percutée** (alliée ou ennemie, si elle est debout) prennent les dégâts de collision. *(À travers le décor : avec le décor destructible, plus tard.)*
 - **Onde de choc** (lourde, jauge à 0 %) : attaque **chargée**, frappe au sol dont la vague avance en ligne sur quelques cases ; dégâts + **déséquilibre / étourdissement** ; esquivable.
 - **Passif équipé** : plus d'attaques d'opportunité par cycle que les autres.
 
@@ -116,7 +116,8 @@
 - **Attaque de base** : dard psychique à distance, petits dégâts.
 - **Paralysie** : **étourdit** une cible, plus longtemps que le coup du combattant.
 - **Confusion** : un ennemi attaque l'unité la plus proche, alliée ou non, pendant quelques secondes.
-- **Télékinésie** : déplace une unité (ennemi ou allié) de quelques cases.
+- **Télékinésie** : déplace une unité (ennemi ou allié) de quelques cases. ✅ Le télépathe choisit une **case libre** à N cases au plus de la cible et **visible depuis la cible** (les murs bloquent) ; l'unité y est posée sans suivre de chemin. Cibles : **alliés et ennemis debout** (pas lui-même, pas les unités à terre).
+- ✅ **Déplacements forcés** (projection, télékinésie) : **pas d'attaque d'opportunité** pour l'unité déplacée ; une unité **en train de charger** voit sa charge **interrompue**. Une projection se donne au contact (portée 1) ; l'unité projetée ne coupe pas les angles (murs et ennemis, comme un déplacement). Les dégâts de collision profitent du bonus de dégâts du lanceur (surpuissant).
 - **Domination** (lourde) : le joueur **prend le contrôle** d'un ennemi (hors boss) pendant quelques secondes.
 - **Passif : Emprise** : ses effets de contrôle durent plus longtemps.
 - *Règle : les **robots** sont insensibles aux pouvoirs **mentaux** (paralysie, confusion, domination), pas à la télékinésie.*

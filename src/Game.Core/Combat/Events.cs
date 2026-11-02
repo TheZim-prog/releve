@@ -92,6 +92,18 @@ public sealed record OpportunityAttack(int Tick, UnitId Attacker, UnitId Target,
 /// </summary>
 public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
+/// <summary>
+/// L'unité est déplacée de force (projection : en ligne droite ; télékinésie : posée directement), sans attaque
+/// d'opportunité.
+/// </summary>
+public sealed record UnitDisplaced(int Tick, UnitId Unit, Cell From, Cell To) : CombatEvent(Tick);
+
+/// <summary>
+/// L'unité projetée percute un obstacle : une autre unité (<paramref name="With"/>), ou un mur ou le bord (<c>null</c>).
+/// Les dégâts de collision suivent.
+/// </summary>
+public sealed record UnitCollided(int Tick, UnitId Unit, UnitId? With) : CombatEvent(Tick);
+
 /// <summary>La jauge de l'unité gagne <paramref name="Amount"/> points d'un coup (ex. Ordre tactique) et vaut <paramref name="Gauge"/>.</summary>
 public sealed record GaugeGained(int Tick, UnitId Unit, int Amount, int Gauge) : CombatEvent(Tick);
 
@@ -128,7 +140,10 @@ public enum RejectionReason
     /// <summary>Ni déplacement ni action.</summary>
     Empty,
 
-    /// <summary>Déplacement vers la case où l'unité se trouve déjà.</summary>
+    /// <summary>
+    /// Déplacement vers la case où l'unité se trouve déjà, ou case de télékinésie impossible (sa propre case,
+    /// trop loin, occupée, mur, ou pas en vue depuis la cible).
+    /// </summary>
     InvalidDestination,
 
     /// <summary>Case d'arrivée bloquée, occupée, inaccessible ou hors de portée de la mobilité.</summary>

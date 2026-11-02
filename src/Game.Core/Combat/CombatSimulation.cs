@@ -361,15 +361,18 @@ public sealed class CombatSimulation
             return;
         }
 
-        Execute(unit, actionSkill, action.Target, action.Zone, DamagePercentOf(unit));
+        Execute(unit, actionSkill, action.Target, action.Zone, DamagePercentOf(unit), action.Destination);
         SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
     }
 
     /// <summary>Multiplicateur des dégâts infligés par l'unité, en % (surpuissant ou non).</summary>
     private int DamagePercentOf(Unit unit) => unit.HasStatus(StatusKind.Empowered) ? Rules.EmpoweredDamagePercent : 100;
 
-    /// <summary>Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>).</summary>
-    internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone);
+    /// <summary>
+    /// Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>) ;
+    /// <paramref name="Destination"/> : case où la télékinésie pose sa cible.
+    /// </summary>
+    internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone, Cell? Destination = null);
 
     /// <summary>
     /// Valide la cible d'une compétence utilisée depuis <paramref name="position"/> (case d'arrivée du lanceur).
@@ -400,7 +403,9 @@ public sealed class CombatSimulation
             return (new PlannedAction(skill, unit, null), null);
         }
 
-        if (use.Target is not { } targetId || use.Cell is not null)
+        // Une unité, plus une case de destination pour une télékinésie (et seulement pour elle).
+        var places = skill.ForcedMove?.Type == ForcedMoveType.Place;
+        if (use.Target is not { } targetId || (use.Cell is not null) != places)
             return (null, RejectionReason.InvalidTarget);
         var target = FindUnit(targetId);
         if (target is null || !IsRightSide(unit, target, skill))
@@ -408,18 +413,36 @@ public sealed class CombatSimulation
         // Remplir une jauge déjà pleine, ou bloquée à 0 par une charge, ne servirait à rien.
         if (skill.GaugeGainPercent > 0 && skill.Effects.Count == 0 && (target.IsGaugeFull || target.Charge is not null))
             return (null, RejectionReason.NoEffect);
-        return CheckTarget(unit, position, target, skill) is { } reason
-            ? (null, reason)
-            : (new PlannedAction(skill, target, null), null);
+        if (CheckTarget(unit, position, target, skill) is { } reason)
+            return (null, reason);
+        if (places && !CanPlace(unit, position, target, use.Cell!.Value, skill.ForcedMove!.Distance))
+            return (null, RejectionReason.InvalidDestination);
+        return (new PlannedAction(skill, target, null, use.Cell), null);
     }
 
-    /// <summary>Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur.</summary>
+    /// <summary>
+    /// Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur ; une télékinésie,
+    /// n'importe quelle unité sauf le lanceur.
+    /// </summary>
     private static bool IsRightSide(Unit caster, Unit target, SkillDefinition skill) => skill.Target switch
     {
         SkillTargeting.Enemy => target.Team != caster.Team,
         SkillTargeting.Ally => target != caster && target.Team == caster.Team,
+        SkillTargeting.Any => target != caster,
         _ => throw new InvalidOperationException($"Unknown target kind {skill.Target}."),
     };
+
+    /// <summary>
+    /// Télékinésie : case autre que celle de la cible, à <paramref name="distance"/> au plus d'elle, vue depuis elle
+    /// (ce qui exclut aussi les murs), et libre une fois le lanceur arrivé en <paramref name="casterPosition"/>
+    /// (il a pu quitter sa case, ou arriver sur celle visée, dans la même commande).
+    /// </summary>
+    private bool CanPlace(Unit caster, Cell casterPosition, Unit target, Cell destination, int distance) =>
+        destination != target.Position
+        && destination != casterPosition
+        && target.Position.DistanceTo(destination) <= distance
+        && (UnitAt(destination) is null || UnitAt(destination) == caster)
+        && LineOfSight.IsClear(_grid, target.Position, destination);
 
     /// <summary>
     /// Une attaque ciblée de <paramref name="unit"/>, depuis <paramref name="from"/>, peut-elle toucher
@@ -441,13 +464,22 @@ public sealed class CombatSimulation
     /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ;
     /// un coup ne touche que sa cible, donc la liste ne change pas en cours de route).
     /// <paramref name="damagePercent"/> : multiplicateur de dégâts du lanceur (voir <see cref="DamagePercentOf"/>).
+    /// <paramref name="destination"/> : case où une télékinésie pose sa cible.
     /// </summary>
-    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damagePercent)
+    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damagePercent,
+        Cell? destination = null)
     {
         if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
             ResolveHit(skill, target, damagePercent);
+            if (target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
+            {
+                if (move.Type == ForcedMoveType.Push)
+                    Push(caster.Position, target, move, damagePercent);
+                else
+                    Displace(target, destination!.Value);
+            }
             return;
         }
 
@@ -459,6 +491,65 @@ public sealed class CombatSimulation
             .ToList();
         foreach (var unit in affected)
             ResolveHit(skill, unit, damagePercent);
+    }
+
+    /// <summary>
+    /// Projection : pousse <paramref name="target"/> en ligne droite, depuis <paramref name="origin"/>, sur la distance
+    /// prévue. Elle s'arrête avant une unité, ou avant un mur, le bord ou une diagonale bloquée (même règle de coupe
+    /// d'angle qu'un déplacement de la cible) ; une collision fait des dégâts à la cible et à l'unité percutée si
+    /// elle est debout.
+    /// </summary>
+    private void Push(Cell origin, Unit target, ForcedMoveDefinition move, int damagePercent)
+    {
+        var step = (X: Math.Sign(target.Position.X - origin.X), Y: Math.Sign(target.Position.Y - origin.Y));
+        if (step == (0, 0))
+            return;
+
+        var position = target.Position;
+        var collided = false;
+        Unit? obstacle = null;
+        for (var i = 0; i < move.Distance; i++)
+        {
+            var next = new Cell(position.X + step.X, position.Y + step.Y);
+            if (UnitAt(next) is { } other && other != target)
+            {
+                collided = true;
+                obstacle = other;
+                break;
+            }
+            if (!_grid.CanStep(position, next, cell => OccupantFor(target, cell)))
+            {
+                collided = true;
+                break;
+            }
+            position = next;
+        }
+
+        if (position != target.Position)
+            Displace(target, position);
+        if (!collided)
+            return;
+
+        _events.Add(new UnitCollided(CurrentTick, target.Id, obstacle?.Id));
+        if (move.CollisionMaxDamage == 0)
+            return;
+        foreach (var hit in new[] { target, obstacle })
+        {
+            if (hit is { Status: UnitStatus.Active })
+            {
+                var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
+                Damage(hit, (int)((long)damage * damagePercent / 100), fallbackCell: null);
+            }
+        }
+    }
+
+    /// <summary>Déplacement forcé (sans chemin ni attaque d'opportunité) ; il interrompt une charge en cours.</summary>
+    private void Displace(Unit unit, Cell to)
+    {
+        var from = unit.Position;
+        unit.Position = to;
+        _events.Add(new UnitDisplaced(CurrentTick, unit.Id, from, to));
+        InterruptCharge(unit);
     }
 
     private int RestartPercentAfter(SkillDefinition skill) =>

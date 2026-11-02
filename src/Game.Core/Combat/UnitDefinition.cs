@@ -92,8 +92,8 @@ public sealed record UnitDefinition
             var basic = Skills.FirstOrDefault(s => s.Id == BasicAttack)
                 ?? throw new ArgumentException($"Unit '{Id}': basic attack '{BasicAttack}' is not one of its skills.");
             // Elle sert aux attaques d'opportunité, instantanées et sur un seul ennemi.
-            if (basic.IsCharged || basic.Zone is not null || basic.Target != SkillTargeting.Enemy)
-                throw new ArgumentException($"Unit '{Id}': basic attack '{basic.Id}' must be instant, without zone, on an enemy.");
+            if (basic.IsCharged || basic.Zone is not null || basic.Target != SkillTargeting.Enemy || basic.ForcedMove is not null)
+                throw new ArgumentException($"Unit '{Id}': basic attack '{basic.Id}' must be instant, on one enemy, without zone or forced move.");
         }
     }
 
