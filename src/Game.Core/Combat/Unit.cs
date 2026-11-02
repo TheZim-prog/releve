@@ -41,8 +41,10 @@ public sealed record Intention(string? SkillId, UnitId Target);
 /// Attaque en cours de charge : cible (attaque ciblée) ou cases fixées au sol (zone), et tick de déclenchement.
 /// Exactement l'un de <paramref name="Target"/> et <paramref name="Zone"/> est renseigné.
 /// <paramref name="DamagePercent"/> : multiplicateur de dégâts du lanceur, fixé au lancement (ex. surpuissant).
+/// <paramref name="ZoneOrigin"/> : d'où part la zone (centre d'un carré, lanceur pour une ligne), pour la couverture.
 /// </summary>
-public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick, int DamagePercent);
+public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick, int DamagePercent,
+    Cell? ZoneOrigin = null);
 
 /// <summary>État courant d'une unité. Seule la <see cref="CombatSimulation"/> le modifie.</summary>
 public sealed class Unit

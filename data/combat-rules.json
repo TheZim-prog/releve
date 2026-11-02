@@ -33,5 +33,10 @@
   // Relever un allié à terre (action « interagir ») : il revient avec ce % de ses PV max ;
   // le releveur repart selon ce poids.
   "reviveHpPercent": 25,
-  "reviveWeight": "light"
+  "reviveWeight": "light",
+
+  // Couverture : un coup venu de loin dont la ligne passe par un obstacle bas collé à la cible perd ce %
+  // de ses dégâts ; l'obstacle encaisse la part absorbée et devient du sol à 0 PV.
+  "coverDamageReductionPercent": 50,
+  "lowObstacleHp": 40
 }

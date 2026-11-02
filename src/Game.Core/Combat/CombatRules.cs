@@ -48,6 +48,12 @@ public sealed record CombatRules
     /// <summary>Poids de l'action « relever » (reprise de jauge du releveur, comme une compétence).</summary>
     public required SkillWeight ReviveWeight { get; init; }
 
+    /// <summary>Part des dégâts qu'absorbe un obstacle bas pour l'unité à couvert derrière lui, en %.</summary>
+    public required int CoverDamageReductionPercent { get; init; }
+
+    /// <summary>PV d'un obstacle bas : il encaisse les dégâts qu'il absorbe et devient du sol à 0.</summary>
+    public required int LowObstacleHp { get; init; }
+
     public static CombatRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<CombatRules>(json);
@@ -76,6 +82,9 @@ public sealed record CombatRules
         ValidatePercent(ReviveHpPercent, nameof(ReviveHpPercent), max: 100, min: 1);
         if (!Enum.IsDefined(ReviveWeight))
             throw new ArgumentException($"{nameof(ReviveWeight)} is unknown.");
+        ValidatePercent(CoverDamageReductionPercent, nameof(CoverDamageReductionPercent), max: 100); // 0 : pas de couverture
+        if (LowObstacleHp <= 0)
+            throw new ArgumentException($"{nameof(LowObstacleHp)} must be positive.");
         // Renforcements : au moins 100 % (sinon ce serait un affaiblissement), au plus x10 pour rester raisonnable.
         if (HastedFillPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(HastedFillPercent)} must be between 100 and 1000.");

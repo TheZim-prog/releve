@@ -131,6 +131,15 @@ public sealed record HitBlocked(int Tick, UnitId Unit, UnitId Owner) : CombatEve
 /// <summary>Le dôme de <paramref name="Owner"/> disparaît (il a absorbé une attaque, son lanceur a agi ou est tombé).</summary>
 public sealed record DomeEnded(int Tick, UnitId Owner) : CombatEvent(Tick);
 
+/// <summary>
+/// L'unité est à couvert derrière l'obstacle bas <paramref name="Cover"/> : il absorbe <paramref name="Absorbed"/> dégâts
+/// du coup (les dégâts restants suivent) et n'a plus que <paramref name="CoverHp"/> PV.
+/// </summary>
+public sealed record HitCovered(int Tick, UnitId Unit, Cell Cover, int Absorbed, int CoverHp) : CombatEvent(Tick);
+
+/// <summary>L'obstacle bas <paramref name="Cell"/> est détruit : c'est désormais du sol.</summary>
+public sealed record CoverDestroyed(int Tick, Cell Cell) : CombatEvent(Tick);
+
 /// <summary>L'unité est achevée par une exécution (ses PV restants suivent en dégâts).</summary>
 public sealed record UnitExecuted(int Tick, UnitId Attacker, UnitId Target) : CombatEvent(Tick);
 

@@ -28,6 +28,9 @@ public sealed class CombatSimulation
     private readonly DeterministicRandom _random;
     private readonly List<Dome> _domes = new();
 
+    // PV des obstacles bas déjà abîmés (les autres sont intacts, à LowObstacleHp).
+    private readonly Dictionary<Cell, int> _coverHp = new();
+
     // Copie privée : le décor ne doit changer que par la simulation, sinon le rejeu diverge.
     // Le client connaît la grille initiale ; ses changements futurs passeront par des événements.
     private readonly Grid _grid;
@@ -497,13 +500,13 @@ public sealed class CombatSimulation
             // Immobilisée, jauge à 0 jusqu'au déclenchement (ReleaseCharges). Les dégâts sont fixés maintenant :
             // c'est l'attaque que le joueur a lancée et vue au sol.
             var charge = new PendingCharge(actionSkill, action.Target?.Id, action.Zone,
-                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs), DamagePercentOf(unit));
+                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs), DamagePercentOf(unit), action.Origin);
             unit.Charge = charge;
             _events.Add(new ChargeStarted(CurrentTick, unit.Id, actionSkill.Id, charge.Target, charge.Zone, charge.ReleaseTick));
             return;
         }
 
-        Execute(unit, actionSkill, action.Target, action.Zone, DamagePercentOf(unit), action.Destination);
+        Execute(unit, actionSkill, action.Target, action.Zone, DamagePercentOf(unit), action.Destination, action.Origin);
         SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
     }
 
@@ -512,9 +515,11 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>) ;
-    /// <paramref name="Destination"/> : case où la télékinésie pose sa cible.
+    /// <paramref name="Destination"/> : case où la télékinésie pose sa cible ; <paramref name="Origin"/> : d'où part une
+    /// zone ordinaire (centre d'un carré, lanceur pour une ligne), pour la couverture.
     /// </summary>
-    internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone, Cell? Destination = null);
+    internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone, Cell? Destination = null,
+        Cell? Origin = null);
 
     /// <summary>
     /// Sauvetage, depuis <paramref name="position"/> : un allié <b>à terre</b> à <see cref="SkillDefinition.Range"/> pas au
@@ -724,7 +729,7 @@ public sealed class CombatSimulation
                 return (null, RejectionReason.InvalidTarget);
             if (zone.Shape == ZoneShape.Square && cell != position && !HasLineOfSight(unit, position, cell))
                 return (null, RejectionReason.NoLineOfSight);
-            return (new PlannedAction(skill, null, cells), null);
+            return (new PlannedAction(skill, null, cells, Origin: zone.Shape == ZoneShape.Square ? cell : position), null);
         }
 
         if (skill.Target == SkillTargeting.Self)
@@ -820,10 +825,11 @@ public sealed class CombatSimulation
     /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ;
     /// un coup ne touche que sa cible, donc la liste ne change pas en cours de route).
     /// <paramref name="damagePercent"/> : multiplicateur de dégâts du lanceur (voir <see cref="DamagePercentOf"/>).
-    /// <paramref name="destination"/> : case où une télékinésie pose sa cible.
+    /// <paramref name="destination"/> : case où une télékinésie pose sa cible ; <paramref name="zoneOrigin"/> : d'où part
+    /// une zone ordinaire (pour la couverture ; une attaque ciblée part du lanceur).
     /// </summary>
     private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damagePercent,
-        Cell? destination = null)
+        Cell? destination = null, Cell? zoneOrigin = null)
     {
         // Une compétence exécutée est une « source » : un dôme bloque toute la source, pour tous ses protégés.
         if (skill.SelfMove is { } selfMove)
@@ -842,7 +848,7 @@ public sealed class CombatSimulation
         else if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
-            var landed = ResolveHit(caster, skill, target, damagePercent);
+            var landed = ResolveHit(caster, skill, target, damagePercent, origin: caster.Position);
             if (landed && target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
             {
                 if (move.Type == ForcedMoveType.Push)
@@ -861,7 +867,7 @@ public sealed class CombatSimulation
             else
             {
                 foreach (var unit in UnitsAffectedBy(caster, skill, zone))
-                    ResolveHit(caster, skill, unit, damagePercent);
+                    ResolveHit(caster, skill, unit, damagePercent, origin: zoneOrigin);
             }
         }
         EndSource();
@@ -892,7 +898,7 @@ public sealed class CombatSimulation
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, cells));
                 Displace(caster, destination);
                 foreach (var unit in UnitsAffectedBy(caster, skill, cells!))
-                    ResolveHit(caster, skill, unit, damagePercent);
+                    ResolveHit(caster, skill, unit, damagePercent, origin: destination); // l'onde part de l'atterrissage
                 break;
             case SelfMoveType.Rush:
                 // Même ordre que les autres : la compétence, la course, puis le coup (s'il a percuté quelqu'un).
@@ -1054,7 +1060,7 @@ public sealed class CombatSimulation
             unit.Charge = null;
             var skill = charge.Skill;
             if (charge.Zone is not null)
-                Execute(unit, skill, null, charge.Zone, charge.DamagePercent);
+                Execute(unit, skill, null, charge.Zone, charge.DamagePercent, zoneOrigin: charge.ZoneOrigin);
             else if (charge.Target is { } targetId && FindUnit(targetId) is { } target
                      && CheckTarget(unit, unit.Position, target, skill) is null)
                 Execute(unit, skill, target, null, charge.DamagePercent);
@@ -1164,9 +1170,12 @@ public sealed class CombatSimulation
     /// de la cible), Point faible de l'attaquant, puis états si la cible est encore debout, puis gain de jauge.
     /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
     /// (seulement possible en plein déplacement, en traversant un allié).
+    /// <paramref name="origin"/> : d'où vient le coup (tireur, centre d'une zone), si la couverture peut jouer ; une
+    /// exécution l'ignore.
     /// Renvoie faux si un dôme a bloqué le coup (il n'a alors aucun effet).
     /// </summary>
-    private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null)
+    private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null,
+        Cell? origin = null)
     {
         if (IsBlockedByDome(skill, target))
             return false;
@@ -1194,6 +1203,8 @@ public sealed class CombatSimulation
                 if (robotBonus is { DealsDamage: true })
                     roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
                 dealt = Scaled(roll, damagePercent, target);
+                if (origin is { } from && CoverFor(from, target.Position) is { } cover)
+                    dealt = AbsorbByCover(target, cover, dealt);
             }
             Damage(target, dealt, fallbackCell);
 
@@ -1211,6 +1222,45 @@ public sealed class CombatSimulation
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         return true;
+    }
+
+    /// <summary>
+    /// Obstacle bas qui couvre <paramref name="target"/> contre un coup venu de <paramref name="origin"/> : le premier
+    /// que traverse la ligne (centre à centre, coins compris) parmi ceux collés à la cible. Aucun pour un coup au
+    /// contact (ou parti de la case même de la cible).
+    /// </summary>
+    private Cell? CoverFor(Cell origin, Cell target)
+    {
+        if (origin == target || origin.IsAdjacentTo(target))
+            return null;
+        foreach (var cell in LineOfSight.CrossedCells(origin, target))
+        {
+            if (_grid.TerrainAt(cell) == Terrain.LowObstacle && cell.IsAdjacentTo(target))
+                return cell;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// L'obstacle <paramref name="cover"/> absorbe sa part des dégâts (arrondie en dessous), dans la limite de ses PV, et
+    /// l'encaisse ; à 0 PV, il devient du sol. Renvoie les dégâts qui passent.
+    /// </summary>
+    private int AbsorbByCover(Unit target, Cell cover, int damage)
+    {
+        var hp = _coverHp.GetValueOrDefault(cover, Rules.LowObstacleHp);
+        var absorbed = Math.Min(hp, (int)((long)damage * Rules.CoverDamageReductionPercent / 100));
+        if (absorbed == 0)
+            return damage;
+        hp -= absorbed;
+        _coverHp[cover] = hp;
+        _events.Add(new HitCovered(CurrentTick, target.Id, cover, absorbed, hp));
+        if (hp == 0)
+        {
+            _grid.SetTerrain(cover, Terrain.Floor);
+            _coverHp.Remove(cover);
+            _events.Add(new CoverDestroyed(CurrentTick, cover));
+        }
+        return damage - absorbed;
     }
 
     /// <summary>Exécution : la cible est au plus au seuil de PV de la compétence, et ce n'est pas un boss.</summary>

@@ -28,6 +28,8 @@ internal static class CombatTestKit
         IntentionThresholdPercent = 50,
         ReviveHpPercent = 25,
         ReviveWeight = SkillWeight.Light,
+        CoverDamageReductionPercent = 50,
+        LowObstacleHp = 40,
     };
 
     /// <summary>Attaque légère, 10 dégâts fixes, sans recharge.</summary>
