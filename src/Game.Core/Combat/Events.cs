@@ -155,6 +155,12 @@ public sealed record UnitDowned(int Tick, UnitId Unit, Cell Position) : CombatEv
 /// <summary>L'unité est retirée de la grille : vaincue, remplacée (gadget) ou épuisée (activations).</summary>
 public sealed record UnitRemoved(int Tick, UnitId Unit) : CombatEvent(Tick);
 
+/// <summary>L'unité passe sous son seuil de fuite : elle ne fait plus que courir vers le bord de carte.</summary>
+public sealed record UnitFleeing(int Tick, UnitId Unit) : CombatEvent(Tick);
+
+/// <summary>L'unité en fuite atteint le bord de carte et quitte la grille : enfuie, pas vaincue.</summary>
+public sealed record UnitEscaped(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 /// <summary>Commande refusée : rien n'a changé, la jauge de l'unité reste pleine.</summary>
 public sealed record CommandRejected(int Tick, CombatCommand Command, RejectionReason Reason) : CombatEvent(Tick);
 

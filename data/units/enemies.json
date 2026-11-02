@@ -1,6 +1,5 @@
-// Ennemis du prologue (docs/design.md section 3). Comportement de base pour tous en attendant
-// leurs comportements propres (le tireur qui garde ses distances, le caïd qui fuit…). L'IA de base
-// n'utilise pas encore les zones en ligne (Tir appuyé).
+// Ennemis du prologue (docs/design.md section 3). Comportement de base, sauf le tireur qui garde
+// ses distances et utilise son Tir appuyé ; le caïd fuit sous son seuil de PV.
 [
   {
     "id": "brawler",
@@ -21,11 +20,11 @@
     "onDefeat": "removed",
     "basicAttack": "shot",
     "opportunityAttacksPerCycle": 1,
-    "behavior": "basic",
+    "behavior": "gunner",
     "skills": [
       { "id": "shot", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 },
       {
-        "id": "aimed-burst", // Tir appuyé : ligne chargée, esquivable (pas encore utilisé par l'IA de base)
+        "id": "aimed-burst", // Tir appuyé : ligne chargée, esquivable
         "weight": "heavy", "range": 1, "minDamage": 16, "maxDamage": 20, "cooldownMs": 10000,
         "chargeMs": 1000,
         "zone": { "shape": "line", "size": 6, "throughWalls": false }
@@ -55,6 +54,7 @@
     "name": "Le caïd",
     "isBoss": true,
     "maxHp": 220, "initiative": 9, "mobility": 4,
+    "fleeAtHpPercent": 30, // sous ce seuil, il court vers le bord de carte et quitte le combat
     "onDefeat": "removed",
     "basicAttack": "power-punch",
     "opportunityAttacksPerCycle": 1,

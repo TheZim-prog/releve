@@ -126,6 +126,12 @@ public sealed class Unit
     /// <summary>Mise à l'abri à terre par un coéquipier (Sauvetage éclair) : compte pour la règle de campagne des chutes.</summary>
     public bool WasRescued { get; internal set; }
 
+    /// <summary>En fuite (sous son seuil de PV) : ne fait plus que courir vers le bord de carte, jusqu'à la fin du combat.</summary>
+    public bool IsFleeing { get; internal set; }
+
+    /// <summary>Enfuie : a quitté le combat par le bord de carte (retirée, mais pas vaincue).</summary>
+    public bool Escaped { get; internal set; }
+
     /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
     public int Activations { get; internal set; }
 

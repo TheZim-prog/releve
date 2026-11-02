@@ -75,8 +75,9 @@ public class ContentTests
         Assert.Equal(new[] { "brawler", "brute", "gunner", "kingpin" }, Enemies.Keys.Order());
         Assert.All(Enemies.Values, e =>
         {
-            Assert.Equal(Behaviors.Basic, e.Behavior);
+            Assert.Equal(e.Id == "gunner" ? Behaviors.Gunner : Behaviors.Basic, e.Behavior);
             Assert.Equal(DefeatOutcome.Removed, e.OnDefeat);
+            Assert.Equal(e.Id == "kingpin" ? 30 : null, e.FleeAtHpPercent);
             e.ValidateAgainst(Rules);
         });
     }
@@ -116,7 +117,7 @@ public class ContentTests
         var winners = StandingTeams(sim);
         _output.WriteLine($"[{name}] durée : {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, équipe(s) debout : {string.Join(",", winners)}");
         foreach (var unit in sim.Units)
-            _output.WriteLine($"  {unit.Definition.Name,-12} équipe {unit.Team}  {unit.Status,-8} {unit.Hp,4}/{unit.MaxHp} PV");
+            _output.WriteLine($"  {unit.Definition.Name,-12} équipe {unit.Team}  {unit.Status,-8} {unit.Hp,4}/{unit.MaxHp} PV{(unit.IsFleeing ? " en fuite" : "")}{(unit.Escaped ? ", enfui" : "")}");
 
         Assert.True(winners.Count <= 1, $"Combat '{name}' still running after {maxTicks} ticks.");
         var replayed = CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick);

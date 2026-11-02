@@ -125,6 +125,13 @@ public sealed class CombatSimulation
     /// </summary>
     private void RunAi(Unit unit, IUnitBehavior behavior)
     {
+        // Une unité en fuite déjà au bord quitte le combat au lieu d'agir.
+        if (behavior == Behaviors.FleeInstance && _grid.IsEdge(unit.Position))
+        {
+            Escape(unit);
+            return;
+        }
+
         var command = unit.Intention is { } intention ? behavior.Execute(this, unit, intention) : null;
         if (command is null)
         {
@@ -140,6 +147,10 @@ public sealed class CombatSimulation
         if (plan is null)
             throw new InvalidOperationException($"{behavior.GetType().Name} produced an invalid command ({reason}) for unit {unit.Id}: {command}.");
         ApplyActivation(plan);
+
+        // En fuite (déjà, ou depuis une attaque d'opportunité en chemin) et arrivée au bord : elle s'enfuit aussitôt.
+        if (unit.Status == UnitStatus.Active && ControllerOf(unit) == Behaviors.FleeInstance && _grid.IsEdge(unit.Position))
+            Escape(unit);
     }
 
     /// <summary>
@@ -165,12 +176,14 @@ public sealed class CombatSimulation
     /// <summary>
     /// Qui commande l'unité : <c>null</c> pour un joueur, sinon le comportement d'IA. Une unité confuse agit seule
     /// (elle attaque l'unité la plus proche) ; une unité dominée est commandée comme celle qui la domine (par les
-    /// joueurs, ou par l'IA de base) ; sinon, son propre comportement.
+    /// joueurs, ou par l'IA de base) ; une unité en fuite ne fait que courir ; sinon, son propre comportement.
     /// </summary>
     internal IUnitBehavior? ControllerOf(Unit unit)
     {
         if (unit.HasStatus(StatusKind.Confused))
             return Behaviors.ConfusedInstance;
+        if (unit.DominatedBy is null && unit.IsFleeing)
+            return Behaviors.FleeInstance;
         var behavior = unit.DominatedBy is { } dominator ? FindUnit(dominator)?.Behavior : unit.Behavior;
         return behavior is null ? null : Behaviors.Find(behavior);
     }
@@ -398,7 +411,8 @@ public sealed class CombatSimulation
             return;
         }
 
-        if (action is null)
+        // Passée en fuite en chemin (attaque d'opportunité) : elle ne fait plus que courir, l'action est annulée.
+        if (action is null || ControllerOf(unit) == Behaviors.FleeInstance)
         {
             SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
             return;
@@ -1053,6 +1067,7 @@ public sealed class CombatSimulation
         && enemy.Charge is null
         && enemy.BasicAttack is not null
         && enemy.OpportunityAttacksLeft > 0
+        && ControllerOf(enemy) != Behaviors.FleeInstance // en fuite, elle ne fait que courir
         && IsInMeleeReach(enemy, mover.Position)
         && !IsInMeleeReach(enemy, next);
 
@@ -1169,7 +1184,12 @@ public sealed class CombatSimulation
         target.Hp = Math.Max(0, target.Hp - amount);
         _events.Add(new UnitDamaged(CurrentTick, target.Id, amount, target.Hp));
         if (target.Hp > 0)
+        {
+            if (!target.IsFleeing && target.Definition.FleeAtHpPercent is { } percent
+                && (long)target.Hp * 100 < (long)target.MaxHp * percent)
+                StartFleeing(target);
             return;
+        }
 
         // Son dôme éventuel tombe à la fin de la source en cours (EndSource).
         TakeOutOfAction(target, target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed);
@@ -1198,6 +1218,29 @@ public sealed class CombatSimulation
             EndStatus(unit, effect);
         InterruptCharge(unit);
         unit.Intention = null;
+    }
+
+    /// <summary>
+    /// L'unité passe en fuite, pour le reste du combat. Si c'est désormais la fuite qui la commande (ni confuse ni
+    /// dominée), elle abandonne sa charge et son intention.
+    /// </summary>
+    private void StartFleeing(Unit unit)
+    {
+        unit.IsFleeing = true;
+        _events.Add(new UnitFleeing(CurrentTick, unit.Id));
+        if (ControllerOf(unit) != Behaviors.FleeInstance)
+            return;
+        InterruptCharge(unit);
+        SetIntention(unit, null);
+    }
+
+    /// <summary>L'unité en fuite quitte le combat par le bord de carte : retirée, mais enfuie et non vaincue.</summary>
+    private void Escape(Unit unit)
+    {
+        unit.Escaped = true;
+        TakeOutOfAction(unit, UnitStatus.Removed);
+        RemoveDome(unit);
+        _events.Add(new UnitEscaped(CurrentTick, unit.Id));
     }
 
     /// <summary>Retire une unité sans qu'elle soit vaincue (gadget remplacé ou épuisé).</summary>

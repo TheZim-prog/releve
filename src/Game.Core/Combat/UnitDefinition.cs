@@ -59,6 +59,13 @@ public sealed record UnitDefinition
     /// <summary>Nombre d'activations après lequel l'unité disparaît (ex. balise : 3), ou <c>null</c> (illimité).</summary>
     public int? MaxActivations { get; init; }
 
+    /// <summary>
+    /// Seuil de fuite en pourcentage des PV max (ex. caïd : 30), ou <c>null</c> (ne fuit jamais). Une fois passée
+    /// sous ce seuil, l'unité ne fait plus que courir vers le bord de carte et quitte le combat en l'atteignant.
+    /// Réservé aux unités IA.
+    /// </summary>
+    public int? FleeAtHpPercent { get; init; }
+
     /// <summary>Instance de cette unité pour un combat.</summary>
     public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0) => new(id, team, position, this, initialGauge);
 
@@ -88,6 +95,10 @@ public sealed record UnitDefinition
             throw new ArgumentException($"Unit '{Id}' has an unknown passive.");
         if (MaxActivations is < 1)
             throw new ArgumentException($"Unit '{Id}' needs at least one activation.");
+        if (FleeAtHpPercent is < 1 or > 99)
+            throw new ArgumentException($"Unit '{Id}' needs a flee threshold between 1 and 99 percent.");
+        if (FleeAtHpPercent is not null && Behavior is null)
+            throw new ArgumentException($"Unit '{Id}': only AI units can flee.");
 
         try
         {

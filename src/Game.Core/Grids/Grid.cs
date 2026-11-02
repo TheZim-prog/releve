@@ -89,6 +89,10 @@ public sealed class Grid
     public bool Contains(Cell cell) =>
         cell.X >= 0 && cell.X < Width && cell.Y >= 0 && cell.Y < Height;
 
+    /// <summary>Vrai si la case est sur le bord de la grille (quel que soit son terrain).</summary>
+    public bool IsEdge(Cell cell) =>
+        Contains(cell) && (cell.X == 0 || cell.Y == 0 || cell.X == Width - 1 || cell.Y == Height - 1);
+
     /// <summary>Terrain de la case ; hors de la grille, un mur.</summary>
     public Terrain TerrainAt(Cell cell) => Contains(cell) ? _terrain[Index(cell)] : Terrain.Wall;
 

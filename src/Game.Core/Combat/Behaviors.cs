@@ -34,11 +34,21 @@ public static class Behaviors
     /// </summary>
     public const string Beacon = "beacon";
 
-    internal static readonly IUnitBehavior BasicInstance = new BasicBehavior(confused: false);
+    /// <summary>
+    /// Tireur : comme le comportement de base, mais tire depuis la case atteignable la plus éloignée de l'ennemi le
+    /// plus proche (il recule si on l'approche), et utilise aussi ses zones en ligne (Tir appuyé).
+    /// </summary>
+    public const string Gunner = "gunner";
+
+    internal static readonly IUnitBehavior BasicInstance = new BasicBehavior(BasicBehavior.Mode.Basic);
     private static readonly IUnitBehavior BeaconInstance = new BeaconBehavior();
+    private static readonly IUnitBehavior GunnerInstance = new BasicBehavior(BasicBehavior.Mode.Gunner);
 
     /// <summary>Unité confuse (état, pas une donnée) : attaque l'unité debout la plus proche, quel que soit son camp.</summary>
-    internal static readonly IUnitBehavior ConfusedInstance = new BasicBehavior(confused: true);
+    internal static readonly IUnitBehavior ConfusedInstance = new BasicBehavior(BasicBehavior.Mode.Confused);
+
+    /// <summary>Unité en fuite (sous son seuil de PV) : ne fait que courir vers le bord de carte le plus proche.</summary>
+    internal static readonly IUnitBehavior FleeInstance = new FleeBehavior();
 
     public static bool IsKnown(string id) => Find(id) is not null;
 
@@ -46,8 +56,44 @@ public static class Behaviors
     {
         Basic => BasicInstance,
         Beacon => BeaconInstance,
+        Gunner => GunnerInstance,
         _ => null,
     };
+}
+
+/// <summary>
+/// Fuite : son intention est de fuir (aucune compétence, elle-même pour cible) ; elle n'attaque pas et se rapproche à
+/// pied du bord de carte le plus proche. Quitter le combat en l'atteignant est géré par la simulation.
+/// </summary>
+internal sealed class FleeBehavior : IUnitBehavior
+{
+    public Intention? ChooseIntention(CombatSimulation sim, Unit unit) => new(null, unit.Id);
+
+    public ActivateCommand? Execute(CombatSimulation sim, Unit unit, Intention intention) => null;
+
+    public ActivateCommand? Approach(CombatSimulation sim, Unit unit, Intention intention)
+    {
+        if (unit.Mobility == 0)
+            return null;
+        Occupant OccupantFor(Cell cell) => sim.OccupantFor(unit, cell);
+
+        // Le bord le plus proche à pied, puis la case atteignable qui s'en rapproche le plus.
+        var fromUnit = Pathfinder.ReachableCells(sim.Grid, unit.Position, int.MaxValue, OccupantFor);
+        var exits = fromUnit.Where(c => sim.Grid.IsEdge(c.Key)).ToList();
+        if (exits.Count == 0)
+            return null;
+        var exit = exits.MinBy(c => c.Value).Key;
+        var toExit = Pathfinder.ReachableCells(sim.Grid, exit, int.MaxValue, OccupantFor);
+
+        var best = Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Mobility, OccupantFor).Keys
+            .Where(c => c != unit.Position && toExit.ContainsKey(c))
+            .Select(c => (Cell: c, Distance: toExit[c]))
+            .DefaultIfEmpty((Cell: unit.Position, Distance: int.MaxValue))
+            .MinBy(c => c.Distance);
+        return best.Distance < toExit.GetValueOrDefault(unit.Position, int.MaxValue)
+            ? new ActivateCommand(unit.Id, best.Cell)
+            : null;
+    }
 }
 
 internal sealed class BeaconBehavior : IUnitBehavior
@@ -74,14 +120,24 @@ internal sealed class BeaconBehavior : IUnitBehavior
 
 /// <summary>
 /// Comportement de base. En mode confus, les « ennemis » sont toutes les autres unités debout, et la cible est
-/// toujours la plus proche (la plus forte compétence qui l'atteint).
+/// toujours la plus proche (la plus forte compétence qui l'atteint). En mode tireur, il utilise aussi ses zones en
+/// ligne et tire depuis la case la plus éloignée de l'ennemi le plus proche.
 /// </summary>
-internal sealed class BasicBehavior(bool confused) : IUnitBehavior
+internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
 {
+    internal enum Mode
+    {
+        Basic,
+        Confused,
+        Gunner,
+    }
+
+    private bool Confused => mode == Mode.Confused;
+
     public Intention? ChooseIntention(CombatSimulation sim, Unit unit)
     {
         var enemies = sim.Units
-            .Where(e => e != unit && e.Status == UnitStatus.Active && (confused || e.Team != unit.Team))
+            .Where(e => e != unit && e.Status == UnitStatus.Active && (Confused || e.Team != unit.Team))
             .ToList();
         if (enemies.Count == 0)
             return null;
@@ -89,10 +145,10 @@ internal sealed class BasicBehavior(bool confused) : IUnitBehavior
         var skills = UsableSkills(sim, unit);
         var reachable = ReachableCells(sim, unit);
 
-        if (confused)
+        if (Confused)
         {
             var nearest = Nearest(sim, unit, enemies);
-            var reaching = skills.FirstOrDefault(s => FindAttack(sim, unit, s, nearest, reachable) is not null);
+            var reaching = skills.FirstOrDefault(s => CanAttack(sim, unit, s, nearest, reachable));
             return new Intention((reaching ?? skills.FirstOrDefault())?.Id, nearest.Id);
         }
 
@@ -100,7 +156,7 @@ internal sealed class BasicBehavior(bool confused) : IUnitBehavior
         // des unités), puis la plus forte compétence qui l'atteint.
         foreach (var target in enemies.OrderBy(e => e.Hp))
         {
-            var skill = skills.FirstOrDefault(s => FindAttack(sim, unit, s, target, reachable) is not null);
+            var skill = skills.FirstOrDefault(s => CanAttack(sim, unit, s, target, reachable));
             if (skill is not null)
                 return new Intention(skill.Id, target.Id);
         }
@@ -138,14 +194,14 @@ internal sealed class BasicBehavior(bool confused) : IUnitBehavior
 
     /// <summary>
     /// Attaques hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).
-    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi, zones de soin), ni les zones
-    /// en ligne, ni les dômes, ni les invocations, ni la Percée ou le Saut (la Charge, oui).
+    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi, zones de soin), ni les dômes,
+    /// ni les invocations, ni la Percée ou le Saut (la Charge, oui) ; les zones en ligne, seulement en mode tireur.
     /// </summary>
-    private static List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
+    private List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
             .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id))
-            .Where(s => s.IsOffensive && s.Zone?.Shape != ZoneShape.Line && !s.CreatesDome && s.Summon is null
-                        && s.SelfMove is null or SelfMoveType.Rush)
+            .Where(s => s.IsOffensive && (mode == Mode.Gunner || s.Zone?.Shape != ZoneShape.Line) && !s.CreatesDome
+                        && s.Summon is null && s.SelfMove is null or SelfMoveType.Rush)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();
 
@@ -166,31 +222,71 @@ internal sealed class BasicBehavior(bool confused) : IUnitBehavior
     }
 
     /// <summary>
-    /// Activation qui frappe <paramref name="target"/> avec <paramref name="skill"/> en bougeant le moins possible
-    /// (cases atteignables par distance croissante, la case actuelle d'abord), ou <c>null</c>. Une zone carrée est
-    /// centrée sur la cible, ou sur l'unité si sa portée est 0 ; elle doit toucher la cible et aucun allié.
+    /// Activation qui frappe <paramref name="target"/> avec <paramref name="skill"/>, ou <c>null</c>. D'ordinaire en
+    /// bougeant le moins possible (cases atteignables par distance croissante, la case actuelle d'abord) ; en mode
+    /// tireur, depuis la case la plus éloignée de l'ennemi le plus proche. Une zone carrée est centrée sur la cible,
+    /// ou sur l'unité si sa portée est 0 ; une ligne part vers la cible alignée ; la zone doit toucher la cible et,
+    /// hors confusion, aucun allié.
     /// </summary>
     private ActivateCommand? FindAttack(CombatSimulation sim, Unit unit, SkillDefinition skill, Unit target,
         IReadOnlyList<Cell> reachable)
     {
+        List<Cell>? threats = null;
+        ActivateCommand? best = null;
+        var bestDistance = -1;
         foreach (var cell in reachable)
         {
-            var use = skill.Zone is null
-                ? new SkillUse(skill.Id, target.Id)
-                : new SkillUse(skill.Id, null, skill.Range == 0 ? cell : target.Position);
-            var action = sim.PlanAction(unit, cell, skill, use).Action;
-            // Une charge peut percuter quelqu'un d'autre en chemin (ou personne) : on ne garde que celles qui
-            // atteignent la cible.
-            if (action is null || (skill.SelfMove == SelfMoveType.Rush && action.Target != target))
+            if (AttackFrom(sim, unit, skill, target, cell) is not { } use)
                 continue;
-            // Une zone doit vraiment toucher la cible (selon qui elle touche) ; hors confusion, sans prendre d'allié.
-            if (action.Zone is { } zone
-                && (!sim.UnitsAffectedBy(unit, skill, zone).Contains(target)
-                    || (!confused && skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))
-                continue;
-            return new ActivateCommand(unit.Id, cell == unit.Position ? null : cell, use);
+            var command = new ActivateCommand(unit.Id, cell == unit.Position ? null : cell, use);
+            if (mode != Mode.Gunner)
+                return command;
+
+            // Tireur : la case la plus loin de l'ennemi le plus proche (à égalité, la première dans l'ordre).
+            threats ??= sim.Units
+                .Where(e => e.Team != unit.Team && e.Status == UnitStatus.Active)
+                .Select(e => e.Position)
+                .ToList();
+            var distance = threats.Count == 0 ? int.MaxValue : threats.Min(p => p.DistanceTo(cell));
+            if (distance > bestDistance)
+            {
+                best = command;
+                bestDistance = distance;
+            }
         }
-        return null;
+        return best;
+    }
+
+    /// <summary>Au moins une case atteignable d'où <paramref name="skill"/> frappe <paramref name="target"/> (sans chercher la meilleure).</summary>
+    private bool CanAttack(CombatSimulation sim, Unit unit, SkillDefinition skill, Unit target, IReadOnlyList<Cell> reachable) =>
+        reachable.Any(cell => AttackFrom(sim, unit, skill, target, cell) is not null);
+
+    /// <summary>Visée de <paramref name="skill"/> depuis <paramref name="cell"/> qui touche bien <paramref name="target"/>, ou <c>null</c>.</summary>
+    private SkillUse? AttackFrom(CombatSimulation sim, Unit unit, SkillDefinition skill, Unit target, Cell cell)
+    {
+        SkillUse use;
+        if (skill.Zone is null)
+            use = new SkillUse(skill.Id, target.Id);
+        else if (skill.Zone.Shape == ZoneShape.Line)
+        {
+            if (cell.DirectionTo(target.Position) is not { } step)
+                return null;
+            use = new SkillUse(skill.Id, null, new Cell(cell.X + step.X, cell.Y + step.Y));
+        }
+        else
+            use = new SkillUse(skill.Id, null, skill.Range == 0 ? cell : target.Position);
+
+        var action = sim.PlanAction(unit, cell, skill, use).Action;
+        // Une charge peut percuter quelqu'un d'autre en chemin (ou personne) : on ne garde que celles qui
+        // atteignent la cible.
+        if (action is null || (skill.SelfMove == SelfMoveType.Rush && action.Target != target))
+            return null;
+        // Une zone doit vraiment toucher la cible (selon qui elle touche) ; hors confusion, sans prendre d'allié.
+        if (action.Zone is { } zone
+            && (!sim.UnitsAffectedBy(unit, skill, zone).Contains(target)
+                || (!Confused && skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))
+            return null;
+        return use;
     }
 
     private static bool HitsAnAlly(CombatSimulation sim, Unit unit, IReadOnlyList<Cell> zone) =>
