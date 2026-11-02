@@ -9,5 +9,8 @@
   // Pourcentage de la capacité dont repart la jauge selon le poids de l'activation.
   "moveOnlyRestartPercent": 50,
   "lightActionRestartPercent": 40,
-  "heavyActionRestartPercent": 0
+  "heavyActionRestartPercent": 0,
+
+  // Une unité déséquilibrée remplit sa jauge à ce pourcentage de sa vitesse normale.
+  "offBalanceFillPercent": 50
 }

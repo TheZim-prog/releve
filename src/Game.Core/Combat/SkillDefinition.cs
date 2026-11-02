@@ -25,6 +25,18 @@ public sealed record SkillDefinition
     /// <summary>Temps de recharge, en millisecondes de combat (0 = aucun).</summary>
     public required int CooldownMs { get; init; }
 
+    private readonly IReadOnlyList<StatusEffect> _effects = Array.Empty<StatusEffect>();
+
+    /// <summary>États appliqués à la cible si elle est encore debout après les dégâts (facultatif). Liste copiée.</summary>
+    public IReadOnlyList<StatusEffect> Effects
+    {
+        get => _effects;
+        init => _effects = value is null ? null! : CombatSetup.ReadOnlyCopy(value);
+    }
+
+    /// <summary>Une compétence à 0 dégât maximum n'en inflige pas (contrôle pur) : aucun tirage, aucun événement.</summary>
+    public bool DealsDamage => MaxDamage > 0;
+
     public static IReadOnlyList<SkillDefinition> ListFromJson(string json)
     {
         var skills = DataJson.Deserialize<List<SkillDefinition?>>(json);
@@ -59,5 +71,13 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}' needs 0 <= minDamage <= maxDamage.");
         if (CooldownMs < 0)
             throw new ArgumentException($"Skill '{Id}' has a negative cooldown.");
+        if (Effects is null || Effects.Any(e => e is null))
+            throw new ArgumentException($"Skill '{Id}' has a null effect.");
+        foreach (var effect in Effects)
+            effect.Validate(Id);
+        if (Effects.Select(e => e.Status).Distinct().Count() != Effects.Count)
+            throw new ArgumentException($"Skill '{Id}' applies the same status twice.");
+        if (!DealsDamage && Effects.Count == 0)
+            throw new ArgumentException($"Skill '{Id}' deals no damage and applies no status.");
     }
 }

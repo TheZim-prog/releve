@@ -6,7 +6,19 @@ namespace Game.Core.Tests.Combat;
 
 public class ReplayTests
 {
+    // Dégâts aléatoires, et un état en alternance pour couvrir aussi leur application et leur fin.
     private static readonly SkillDefinition RandomStrike = Strike with { Id = "random-strike", MinDamage = 5, MaxDamage = 25 };
+
+    private static readonly SkillDefinition DazingStrike = RandomStrike with
+    {
+        Id = "dazing-strike",
+        CooldownMs = 1000,
+        Effects = new[]
+        {
+            new StatusEffect { Status = StatusKind.OffBalance, DurationMs = 1500 },
+            new StatusEffect { Status = StatusKind.Stunned, DurationMs = 300 },
+        },
+    };
 
     [Fact]
     public void Replay_FromInitialStateAndCommandLog_ReproducesTheCombat()
@@ -16,7 +28,7 @@ public class ReplayTests
             "..##....",
             "........",
             "....#...");
-        var skills = new[] { RandomStrike };
+        var skills = new[] { RandomStrike, DazingStrike };
         var setup = Setup(grid,
             Unit(1, team: 0, 0, 0, initiative: 20, mobility: 3, hp: 60, onDefeat: DefeatOutcome.Downed, skills: skills),
             Unit(2, team: 0, 0, 2, initiative: 15, mobility: 4, hp: 60, onDefeat: DefeatOutcome.Downed, skills: skills),
@@ -31,8 +43,9 @@ public class ReplayTests
             {
                 var enemy = original.Units.FirstOrDefault(e =>
                     e.Team != unit.Team && e.Status == UnitStatus.Active && e.Position.IsAdjacentTo(unit.Position));
+                var skill = original.CurrentTick >= unit.CooldownEndTick(DazingStrike.Id) ? DazingStrike : RandomStrike;
                 var command = enemy is not null
-                    ? new ActivateCommand(unit.Id, MoveTo: null, new SkillUse(RandomStrike.Id, enemy.Id))
+                    ? new ActivateCommand(unit.Id, MoveTo: null, new SkillUse(skill.Id, enemy.Id))
                     : new ActivateCommand(unit.Id, new Cell(unit.Position.X + (unit.Team == 0 ? 1 : -1), unit.Position.Y));
                 original.Submit(command);
             }
@@ -41,13 +54,15 @@ public class ReplayTests
         Assert.Contains(original.EventLog, e => e is UnitMoved);
         Assert.Contains(original.EventLog, e => e is UnitDamaged);
         Assert.Contains(original.EventLog, e => e is CommandRejected);
+        Assert.Contains(original.EventLog, e => e is StatusApplied);
+        Assert.Contains(original.EventLog, e => e is StatusEnded);
 
         var replayed = CombatSimulation.Replay(setup, original.CommandLog, original.CurrentTick);
 
         Assert.Equal(original.EventLog, replayed.EventLog);
         Assert.Equal(
-            original.Units.Select(u => (u.Id, u.Position, u.Gauge, u.Hp, u.Status)),
-            replayed.Units.Select(u => (u.Id, u.Position, u.Gauge, u.Hp, u.Status)));
+            original.Units.Select(u => (u.Id, u.Position, u.Gauge, u.Hp, u.Status, string.Join(",", u.StatusEndTicks))),
+            replayed.Units.Select(u => (u.Id, u.Position, u.Gauge, u.Hp, u.Status, string.Join(",", u.StatusEndTicks))));
     }
 
     [Fact]

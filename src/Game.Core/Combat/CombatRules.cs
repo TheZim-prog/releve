@@ -21,6 +21,9 @@ public sealed record CombatRules
     /// <summary>Idem après une action lourde (avec ou sans déplacement).</summary>
     public required int HeavyActionRestartPercent { get; init; }
 
+    /// <summary>Vitesse de remplissage de la jauge d'une unité déséquilibrée, en % de la normale.</summary>
+    public required int OffBalanceFillPercent { get; init; }
+
     public static CombatRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<CombatRules>(json);
@@ -44,12 +47,14 @@ public sealed record CombatRules
         ValidatePercent(MoveOnlyRestartPercent, nameof(MoveOnlyRestartPercent));
         ValidatePercent(LightActionRestartPercent, nameof(LightActionRestartPercent));
         ValidatePercent(HeavyActionRestartPercent, nameof(HeavyActionRestartPercent));
+        ValidatePercent(OffBalanceFillPercent, nameof(OffBalanceFillPercent), max: 100);
     }
 
-    // 100 % est exclu : l'unité serait de nouveau prête aussitôt et pourrait agir plusieurs fois dans le même tick.
-    private static void ValidatePercent(int value, string name)
+    // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau
+    // prête aussitôt et pourrait agir plusieurs fois dans le même tick.
+    private static void ValidatePercent(int value, string name, int max = 99)
     {
-        if (value is < 0 or > 99)
-            throw new ArgumentException($"{name} must be between 0 and 99.");
+        if (value < 0 || value > max)
+            throw new ArgumentException($"{name} must be between 0 and {max}.");
     }
 }

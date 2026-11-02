@@ -13,6 +13,7 @@ public class CombatRulesTests
           "moveOnlyRestartPercent": 50,
           "lightActionRestartPercent": 40,
           "heavyActionRestartPercent": 0,
+          "offBalanceFillPercent": 50,
         }
         """;
 
@@ -51,6 +52,7 @@ public class CombatRulesTests
     [InlineData("\"moveOnlyRestartPercent\": 50", "\"moveOnlyRestartPercent\": -1")]
     [InlineData("\"lightActionRestartPercent\": 40", "\"lightActionRestartPercent\": 100")]
     [InlineData("\"heavyActionRestartPercent\": 0", "\"heavyActionRestartPercent\": -5")]
+    [InlineData("\"offBalanceFillPercent\": 50", "\"offBalanceFillPercent\": 101")]
     public void FromJson_RejectsOutOfRangeValues(string valid, string invalid)
     {
         Assert.Throws<ArgumentException>(() => CombatRules.FromJson(ValidJson.Replace(valid, invalid)));

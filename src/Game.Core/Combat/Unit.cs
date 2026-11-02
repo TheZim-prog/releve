@@ -54,6 +54,7 @@ public sealed class Unit
 {
     private readonly int _gaugeCapacity;
     private readonly Dictionary<string, int> _cooldownEndTicks = new();
+    private readonly SortedDictionary<StatusKind, int> _statusEndTicks = new();
 
     internal Unit(UnitSetup setup, int gaugeCapacity)
     {
@@ -68,6 +69,7 @@ public sealed class Unit
         OnDefeat = setup.OnDefeat;
         Gauge = setup.InitialGauge;
         _gaugeCapacity = gaugeCapacity;
+        StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
 
     public UnitId Id { get; }
@@ -82,8 +84,27 @@ public sealed class Unit
     public UnitStatus Status { get; internal set; } = UnitStatus.Active;
     public int Gauge { get; internal set; }
 
-    /// <summary>Jauge pleine : l'unité peut agir, et le reste tant qu'elle n'a pas agi.</summary>
-    public bool IsReady => Status == UnitStatus.Active && Gauge >= _gaugeCapacity;
+    public bool IsGaugeFull => Gauge >= _gaugeCapacity;
+
+    /// <summary>
+    /// Peut agir : debout, jauge pleine et pas étourdie. Le reste tant qu'elle n'a pas agi.
+    /// </summary>
+    public bool IsReady => Status == UnitStatus.Active && IsGaugeFull && !HasStatus(StatusKind.Stunned);
+
+    /// <summary>États en cours, avec le tick où chacun se termine (ordre fixe).</summary>
+    public IReadOnlyDictionary<StatusKind, int> StatusEndTicks { get; }
+
+    public bool HasStatus(StatusKind status) => _statusEndTicks.ContainsKey(status);
+
+    /// <summary>
+    /// Reste de la division du remplissage ralenti (en centièmes de point de jauge), reporté au tick suivant
+    /// pour que le ralentissement soit exact en moyenne, même avec une petite initiative.
+    /// </summary>
+    internal int FillRemainder { get; set; }
+
+    internal void SetStatus(StatusKind status, int endTick) => _statusEndTicks[status] = endTick;
+
+    internal void ClearStatus(StatusKind status) => _statusEndTicks.Remove(status);
 
     public SkillDefinition? FindSkill(string skillId) => Skills.FirstOrDefault(s => s.Id == skillId);
 

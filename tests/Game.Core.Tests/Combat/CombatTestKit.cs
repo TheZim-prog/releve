@@ -8,7 +8,10 @@ internal static class CombatTestKit
 {
     public const int Capacity = 100;
 
-    /// <summary>Jauge pleine à 100 ; reprise à 50 % (déplacement seul), 40 % (léger), 0 % (lourd).</summary>
+    /// <summary>
+    /// Jauge pleine à 100 ; reprise à 50 % (déplacement seul), 40 % (léger), 0 % (lourd) ;
+    /// déséquilibré = remplissage à 50 %. 20 ticks/s : 1 tick = 50 ms.
+    /// </summary>
     public static readonly CombatRules Rules = new()
     {
         TicksPerSecond = 20,
@@ -16,6 +19,7 @@ internal static class CombatTestKit
         MoveOnlyRestartPercent = 50,
         LightActionRestartPercent = 40,
         HeavyActionRestartPercent = 0,
+        OffBalanceFillPercent = 50,
     };
 
     /// <summary>Attaque légère, 10 dégâts fixes, sans recharge.</summary>

@@ -5,8 +5,9 @@ namespace Game.Core.Combat;
 /// <summary>
 /// Simulation d'un combat, à ticks fixes et entièrement déterministe.
 /// <para>
-/// Déroulement d'un tick : les commandes soumises depuis le tick précédent sont appliquées dans leur
-/// ordre d'arrivée (la première validée l'emporte en cas de conflit), puis les jauges se remplissent.
+/// Déroulement d'un tick : les états arrivés à échéance prennent fin ; les commandes soumises depuis
+/// le tick précédent sont appliquées dans leur ordre d'arrivée (la première validée l'emporte en cas
+/// de conflit) ; puis les jauges se remplissent.
 /// </para>
 /// <para>
 /// La pause n'existe pas ici : c'est la boucle qui appelle <see cref="Tick"/> qui s'arrête.
@@ -80,6 +81,8 @@ public sealed class CombatSimulation
         CurrentTick++;
         var firstEvent = _events.Count;
 
+        ExpireStatuses();
+
         while (_pending.TryDequeue(out var command))
         {
             _commandLog.Add(new LoggedCommand(CurrentTick, command));
@@ -88,11 +91,51 @@ public sealed class CombatSimulation
 
         foreach (var unit in _units)
         {
-            if (unit.Status == UnitStatus.Active && !unit.IsReady)
-                SetGauge(unit, Math.Min(Rules.GaugeCapacity, unit.Gauge + unit.Initiative));
+            if (unit.Status == UnitStatus.Active && !unit.IsGaugeFull)
+                SetGauge(unit, Math.Min(Rules.GaugeCapacity, unit.Gauge + FillAmount(unit)));
         }
 
         return _events.GetRange(firstEvent, _events.Count - firstEvent);
+    }
+
+    /// <summary>
+    /// Points de jauge gagnés ce tick : seul endroit où se décide la vitesse de la jauge
+    /// (initiative, étourdi, déséquilibré ; plus tard l'hypervitesse…).
+    /// </summary>
+    private int FillAmount(Unit unit)
+    {
+        if (unit.HasStatus(StatusKind.Stunned))
+            return 0;
+        if (!unit.HasStatus(StatusKind.OffBalance))
+            return unit.Initiative;
+
+        var hundredths = (long)unit.Initiative * Rules.OffBalanceFillPercent + unit.FillRemainder;
+        unit.FillRemainder = (int)(hundredths % 100);
+        return (int)(hundredths / 100);
+    }
+
+    private void ExpireStatuses()
+    {
+        foreach (var unit in _units)
+        {
+            if (unit.StatusEndTicks.Count == 0)
+                continue;
+
+            var expired = unit.StatusEndTicks.Where(s => s.Value <= CurrentTick).Select(s => s.Key).ToList();
+            foreach (var status in expired)
+                EndStatus(unit, status);
+        }
+    }
+
+    private void EndStatus(Unit unit, StatusKind status)
+    {
+        var wasReady = unit.IsReady;
+        unit.ClearStatus(status);
+        if (status == StatusKind.OffBalance)
+            unit.FillRemainder = 0;
+        _events.Add(new StatusEnded(CurrentTick, unit.Id, status));
+        if (!wasReady && unit.IsReady)
+            _events.Add(new UnitReady(CurrentTick, unit.Id));
     }
 
     /// <summary>
@@ -142,6 +185,11 @@ public sealed class CombatSimulation
         if (unit.Status != UnitStatus.Active)
         {
             Reject(command, RejectionReason.Incapacitated);
+            return;
+        }
+        if (unit.HasStatus(StatusKind.Stunned))
+        {
+            Reject(command, RejectionReason.Stunned);
             return;
         }
         if (!unit.IsReady)
@@ -224,7 +272,13 @@ public sealed class CombatSimulation
             var (skill, target) = validAction;
             unit.StartCooldown(skill.Id, CurrentTick + Rules.MillisecondsToTicks(skill.CooldownMs));
             _events.Add(new SkillUsed(CurrentTick, unit.Id, skill.Id, target.Id));
-            Damage(target, _random.NextInt(skill.MinDamage, skill.MaxDamage));
+            if (skill.DealsDamage)
+                Damage(target, _random.NextInt(skill.MinDamage, skill.MaxDamage));
+            if (target.Status == UnitStatus.Active)
+            {
+                foreach (var effect in skill.Effects)
+                    ApplyStatus(target, effect);
+            }
             restartPercent = skill.Weight == SkillWeight.Heavy
                 ? Rules.HeavyActionRestartPercent
                 : Rules.LightActionRestartPercent;
@@ -259,16 +313,27 @@ public sealed class CombatSimulation
             return;
 
         // La jauge est gelée à sa valeur : seules les unités actives la remplissent.
-        if (target.OnDefeat == DefeatOutcome.Downed)
-        {
-            target.Status = UnitStatus.Downed;
-            _events.Add(new UnitDowned(CurrentTick, target.Id));
-        }
-        else
-        {
-            target.Status = UnitStatus.Removed;
-            _events.Add(new UnitRemoved(CurrentTick, target.Id));
-        }
+        // Le statut change d'abord, pour que la fin d'un étourdissement n'annonce pas l'unité prête.
+        target.Status = target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed;
+
+        // Une unité vaincue perd ses états, annoncés avant sa chute (rien n'arrive plus après).
+        foreach (var status in target.StatusEndTicks.Keys.ToList())
+            EndStatus(target, status);
+
+        _events.Add(target.Status == UnitStatus.Downed
+            ? new UnitDowned(CurrentTick, target.Id)
+            : new UnitRemoved(CurrentTick, target.Id));
+    }
+
+    /// <summary>Applique un état ; s'il est déjà là, garde la plus longue des deux durées.</summary>
+    private void ApplyStatus(Unit target, StatusEffect effect)
+    {
+        var endTick = CurrentTick + Rules.MillisecondsToTicks(effect.DurationMs);
+        if (target.StatusEndTicks.TryGetValue(effect.Status, out var currentEnd))
+            endTick = Math.Max(endTick, currentEnd);
+
+        target.SetStatus(effect.Status, endTick);
+        _events.Add(new StatusApplied(CurrentTick, target.Id, effect.Status, endTick));
     }
 
     /// <summary>Change la jauge et annonce l'unité prête si elle vient de se remplir.</summary>

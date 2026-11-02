@@ -21,6 +21,40 @@ public class SkillDefinitionTests
     }
 
     [Fact]
+    public void ListFromJson_ReadsStatusEffects()
+    {
+        var skill = SkillDefinition.ListFromJson("""
+            [{ "id": "stun", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 6000,
+               "effects": [ { "status": "stunned", "durationMs": 2000 }, { "status": "offBalance", "durationMs": 4000 } ] }]
+            """).Single();
+
+        Assert.False(skill.DealsDamage);
+        Assert.Equal(
+            new[] { (StatusKind.Stunned, 2000), (StatusKind.OffBalance, 4000) },
+            skill.Effects.Select(e => (e.Status, e.DurationMs)));
+    }
+
+    [Theory]
+    [InlineData("""[{ "status": "stunned", "durationMs": 0 }]""")]
+    [InlineData("""[{ "status": "stunned", "durationMs": 100 }, { "status": "stunned", "durationMs": 200 }]""")]
+    [InlineData("""[ null ]""")]
+    public void ListFromJson_RejectsInvalidEffects(string effects)
+    {
+        var json = $$"""[{ "id": "x", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "effects": {{effects}} }]""";
+
+        Assert.Throws<ArgumentException>(() => SkillDefinition.ListFromJson(json));
+    }
+
+    [Fact]
+    public void ListFromJson_RejectsUnknownStatus()
+    {
+        Assert.Throws<JsonException>(() => SkillDefinition.ListFromJson("""
+            [{ "id": "x", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0,
+               "effects": [ { "status": "frozen", "durationMs": 100 } ] }]
+            """));
+    }
+
+    [Fact]
     public void ListFromJson_AcceptsRangedSkills()
     {
         var skills = SkillDefinition.ListFromJson("""
@@ -41,6 +75,7 @@ public class SkillDefinitionTests
 
     [Theory]
     [InlineData("""[ null ]""")]
+    [InlineData("""[{ "id": "nothing", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0 }]""")]
     [InlineData("""[{ "id": "", "weight": "light", "range": 1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
     [InlineData("""[{ "id": "x", "weight": "light", "range": 0, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
     [InlineData("""[{ "id": "x", "weight": "light", "range": -1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
