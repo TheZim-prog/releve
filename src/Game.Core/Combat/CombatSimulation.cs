@@ -99,8 +99,10 @@ public sealed class CombatSimulation
             Apply(command);
         }
 
-        foreach (var unit in _units)
+        // Par index : une action pourrait ajouter une unité (invocation) à la liste pendant la boucle.
+        for (var i = 0; i < _units.Count; i++)
         {
+            var unit = _units[i];
             if (unit.Behavior is not null && unit.IsReady)
                 RunAi(unit, Behaviors.Find(unit.Behavior)!);
         }
@@ -329,6 +331,23 @@ public sealed class CombatSimulation
 
     private void ApplyActivation(ActivationPlan plan)
     {
+        ApplyActivationCore(plan);
+        DismissIfExhausted(plan.Unit);
+    }
+
+    /// <summary>
+    /// Unités à activations limitées (ex. balise) : épuisées, elles disparaissent, mais après leur dernière action
+    /// (une attaque chargée en cours se déclenche d'abord).
+    /// </summary>
+    private void DismissIfExhausted(Unit unit)
+    {
+        if (unit.Definition.MaxActivations is { } max && unit.Activations >= max
+            && unit.Status == UnitStatus.Active && unit.Charge is null)
+            Dismiss(unit);
+    }
+
+    private void ApplyActivationCore(ActivationPlan plan)
+    {
         var (unit, path, action) = plan;
         unit.Intention = null; // l'unité agit : son intention éventuelle est consommée
         RemoveDome(unit); // et son dôme éventuel tombe (un nouveau peut être posé par cette action)
@@ -351,6 +370,7 @@ public sealed class CombatSimulation
         }
 
         var actionSkill = action.Skill;
+        unit.Activations++; // un « déclenchement » : une compétence utilisée (pas un déplacement seul, ni une action annulée)
         unit.StartCooldown(actionSkill.Id, CurrentTick + Rules.MillisecondsToTicks(actionSkill.CooldownMs));
         if (actionSkill.IsCharged)
         {
@@ -383,6 +403,23 @@ public sealed class CombatSimulation
     /// </summary>
     internal (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
     {
+        if (skill.Summon is not null)
+        {
+            // Une case libre (une fois le lanceur arrivé), à portée et en vue.
+            if (use.Cell is not { } spot || use.Target is not null)
+                return (null, RejectionReason.InvalidTarget);
+            if (!IsWithinRange(position, spot, skill.Range))
+                return (null, RejectionReason.OutOfRange);
+            // Libre, ou occupée par le lanceur (il en part) ou par son ancien gadget du même type (il sera remplacé).
+            if (!_grid.IsWalkable(spot)
+                || (UnitAt(spot) is { } occupant && occupant != unit
+                    && !(occupant.SummonedBy == unit.Id && occupant.Definition.Id == skill.Summon.Id)))
+                return (null, RejectionReason.InvalidDestination);
+            if (!HasLineOfSight(unit, position, spot))
+                return (null, RejectionReason.NoLineOfSight);
+            return (new PlannedAction(skill, null, null, spot), null);
+        }
+
         if (skill.Zone is { } zone)
         {
             if (use.Cell is not { } cell || use.Target is not null)
@@ -413,7 +450,7 @@ public sealed class CombatSimulation
         if (target is null || !IsRightSide(unit, target, skill))
             return (null, RejectionReason.InvalidTarget);
         // Remplir une jauge déjà pleine, ou bloquée à 0 par une charge, ne servirait à rien.
-        if (skill.GaugeGainPercent > 0 && skill.Effects.Count == 0 && (target.IsGaugeFull || target.Charge is not null))
+        if (!skill.IsOffensive && !HasSupportEffect(skill, target))
             return (null, RejectionReason.NoEffect);
         if (CheckTarget(unit, position, target, skill) is { } reason)
             return (null, reason);
@@ -421,6 +458,16 @@ public sealed class CombatSimulation
             return (null, RejectionReason.InvalidDestination);
         return (new PlannedAction(skill, target, null, use.Cell), null);
     }
+
+    /// <summary>
+    /// Une compétence de soutien aurait-elle un effet sur cette cible ? Un état ou un déplacement en a toujours ;
+    /// un soin, si la cible est blessée ; un gain de jauge, si sa jauge n'est ni pleine ni bloquée par une charge.
+    /// </summary>
+    private static bool HasSupportEffect(SkillDefinition skill, Unit target) =>
+        skill.Effects.Count > 0
+        || skill.ForcedMove is not null
+        || (skill.Heals && target.Hp < target.MaxHp)
+        || (skill.GaugeGainPercent > 0 && !target.IsGaugeFull && target.Charge is null);
 
     /// <summary>
     /// Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur ; une télékinésie,
@@ -472,7 +519,12 @@ public sealed class CombatSimulation
         Cell? destination = null)
     {
         // Une compétence exécutée est une « source » : un dôme bloque toute la source, pour tous ses protégés.
-        if (zone is null)
+        if (skill.Summon is not null)
+        {
+            _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null));
+            Summon(caster, skill.Summon, destination!.Value);
+        }
+        else if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
             var landed = ResolveHit(caster, skill, target, damagePercent);
@@ -493,16 +545,25 @@ public sealed class CombatSimulation
             }
             else
             {
-                var cells = zone.ToHashSet();
-                var affected = _units
-                    .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
-                    .Where(u => skill.Zone!.Affects == ZoneTargets.All || u.Team != caster.Team)
-                    .ToList();
-                foreach (var unit in affected)
+                foreach (var unit in UnitsAffectedBy(caster, skill, zone))
                     ResolveHit(caster, skill, unit, damagePercent);
             }
         }
         EndSource();
+    }
+
+    /// <summary>
+    /// Unités debout qu'une zone de <paramref name="caster"/> toucherait, dans l'ordre des unités : jamais le lanceur,
+    /// puis tout le monde, les ennemis seulement ou les alliés seulement selon la zone.
+    /// </summary>
+    internal List<Unit> UnitsAffectedBy(Unit caster, SkillDefinition skill, IReadOnlyList<Cell> zone)
+    {
+        var cells = zone.ToHashSet();
+        var affects = skill.Zone!.Affects;
+        return _units
+            .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
+            .Where(u => affects == ZoneTargets.All || (affects == ZoneTargets.Allies) == (u.Team == caster.Team))
+            .ToList();
     }
 
     /// <summary>Dôme posé par une unité : ses cases, et s'il a déjà bloqué quelque chose pendant la source en cours.</summary>
@@ -532,7 +593,7 @@ public sealed class CombatSimulation
     /// </summary>
     private bool IsBlockedByDome(SkillDefinition skill, Unit target)
     {
-        if (skill.Target != SkillTargeting.Enemy)
+        if (!skill.IsOffensive)
             return false;
         var dome = _domes.FirstOrDefault(d => d.Owner.Team == target.Team && d.Cells.Contains(target.Position));
         if (dome is null)
@@ -643,6 +704,7 @@ public sealed class CombatSimulation
                 _events.Add(new ChargeMissed(CurrentTick, unit.Id, skill.Id, charge.Target!.Value));
 
             SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(skill)));
+            DismissIfExhausted(unit);
         }
     }
 
@@ -765,6 +827,8 @@ public sealed class CombatSimulation
         }
         if (target.Status != UnitStatus.Active)
             return true;
+        if (skill.Heals)
+            Heal(target, _random.NextInt(skill.MinHeal, skill.MaxHeal));
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect);
         if (skill.GaugeGainPercent > 0)
@@ -827,16 +891,8 @@ public sealed class CombatSimulation
         if (target.Hp > 0)
             return;
 
-        // La jauge est gelée à sa valeur : seules les unités actives la remplissent.
-        // Le statut change d'abord, pour que la fin d'un étourdissement n'annonce pas l'unité prête.
-        target.Status = target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed;
-
-        // Une unité vaincue perd ses états et sa charge, annoncés avant sa chute (rien n'arrive plus après),
-        // ainsi que son intention.
-        foreach (var status in target.StatusEndTicks.Keys.ToList())
-            EndStatus(target, status);
-        InterruptCharge(target);
-        target.Intention = null; // son dôme éventuel tombe à la fin de la source en cours (EndSource)
+        // Son dôme éventuel tombe à la fin de la source en cours (EndSource).
+        TakeOutOfAction(target, target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed);
 
         if (target.Status == UnitStatus.Removed)
         {
@@ -848,6 +904,54 @@ public sealed class CombatSimulation
         if (IsOccupiedByOther(target, target.Position))
             target.Position = fallbackCell ?? throw new InvalidOperationException($"Unit {target.Id} fell on an occupied cell.");
         _events.Add(new UnitDowned(CurrentTick, target.Id, target.Position));
+    }
+
+    /// <summary>
+    /// Met l'unité hors de combat (à terre ou retirée) : elle perd ses états, sa charge et son intention, annoncés
+    /// avant sa chute (rien ne lui arrive plus après). Sa jauge est gelée à sa valeur. Le statut change d'abord,
+    /// pour que la fin d'un étourdissement n'annonce pas l'unité prête.
+    /// </summary>
+    private void TakeOutOfAction(Unit unit, UnitStatus status)
+    {
+        unit.Status = status;
+        foreach (var effect in unit.StatusEndTicks.Keys.ToList())
+            EndStatus(unit, effect);
+        InterruptCharge(unit);
+        unit.Intention = null;
+    }
+
+    /// <summary>Retire une unité sans qu'elle soit vaincue (gadget remplacé ou épuisé).</summary>
+    private void Dismiss(Unit unit)
+    {
+        TakeOutOfAction(unit, UnitStatus.Removed);
+        RemoveDome(unit);
+        _events.Add(new UnitRemoved(CurrentTick, unit.Id));
+    }
+
+    /// <summary>
+    /// Pose une unité invoquée sur <paramref name="cell"/>, de l'équipe du lanceur, jauge vide ; elle remplace celle
+    /// du même type déjà posée par ce lanceur. Son identifiant suit le plus grand existant (déterministe).
+    /// </summary>
+    private void Summon(Unit owner, UnitDefinition definition, Cell cell)
+    {
+        foreach (var previous in _units.Where(u => u.SummonedBy == owner.Id && u.Definition.Id == definition.Id
+                                                   && u.Status != UnitStatus.Removed).ToList())
+            Dismiss(previous);
+
+        var id = new UnitId(_units.Max(u => u.Id.Value) + 1);
+        var unit = new Unit(definition.ToSetup(id, owner.Team, cell), Rules.GaugeCapacity) { SummonedBy = owner.Id };
+        _units.Add(unit);
+        _events.Add(new UnitSummoned(CurrentTick, id, definition.Id, owner.Id, owner.Team, cell));
+    }
+
+    /// <summary>Soigne une unité debout, sans dépasser son maximum.</summary>
+    private void Heal(Unit unit, int amount)
+    {
+        var healed = Math.Min(amount, unit.MaxHp - unit.Hp);
+        if (healed <= 0)
+            return;
+        unit.Hp += healed;
+        _events.Add(new UnitHealed(CurrentTick, unit.Id, healed, unit.Hp));
     }
 
     /// <summary>Applique un état ; s'il est déjà là, garde la plus longue des deux durées.</summary>

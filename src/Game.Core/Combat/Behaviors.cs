@@ -28,15 +28,45 @@ public static class Behaviors
     /// </summary>
     public const string Basic = "basic";
 
+    /// <summary>
+    /// Balise de soin (gadget immobile) : jauge pleine, elle lance sa zone de soin autour d'elle, seulement si un allié
+    /// blessé s'y trouve ; sinon elle attend.
+    /// </summary>
+    public const string Beacon = "beacon";
+
     private static readonly IUnitBehavior BasicInstance = new BasicBehavior();
+    private static readonly IUnitBehavior BeaconInstance = new BeaconBehavior();
 
     public static bool IsKnown(string id) => Find(id) is not null;
 
     internal static IUnitBehavior? Find(string id) => id switch
     {
         Basic => BasicInstance,
+        Beacon => BeaconInstance,
         _ => null,
     };
+}
+
+internal sealed class BeaconBehavior : IUnitBehavior
+{
+    /// <summary>Sa zone de soin, visée sur elle-même.</summary>
+    public Intention? ChooseIntention(CombatSimulation sim, Unit unit) =>
+        HealSkill(unit) is { } skill ? new Intention(skill.Id, unit.Id) : null;
+
+    public ActivateCommand? Execute(CombatSimulation sim, Unit unit, Intention intention)
+    {
+        if (HealSkill(unit) is not { } skill || sim.CurrentTick < unit.CooldownEndTick(skill.Id))
+            return null;
+        var zone = skill.Zone!.Cells(sim.Grid, unit.Position, unit.Position);
+        var someoneWounded = zone is not null && sim.UnitsAffectedBy(unit, skill, zone).Any(u => u.Hp < u.MaxHp);
+        return someoneWounded ? new ActivateCommand(unit.Id, null, new SkillUse(skill.Id, null, unit.Position)) : null;
+    }
+
+    /// <summary>Immobile.</summary>
+    public ActivateCommand? Approach(CombatSimulation sim, Unit unit, Intention intention) => null;
+
+    private static SkillDefinition? HealSkill(Unit unit) =>
+        unit.Skills.FirstOrDefault(s => s.Heals && s.Zone is { Affects: ZoneTargets.Allies });
 }
 
 internal sealed class BasicBehavior : IUnitBehavior
@@ -75,7 +105,7 @@ internal sealed class BasicBehavior : IUnitBehavior
 
     public ActivateCommand? Approach(CombatSimulation sim, Unit unit, Intention intention)
     {
-        if (sim.FindUnit(intention.Target) is not { Status: UnitStatus.Active } target)
+        if (unit.Mobility == 0 || sim.FindUnit(intention.Target) is not { Status: UnitStatus.Active } target)
             return null;
 
         // Distance à pied jusqu'à la cible (contourne les murs) ; la case atteignable qui la réduit le plus.
@@ -92,18 +122,24 @@ internal sealed class BasicBehavior : IUnitBehavior
 
     /// <summary>
     /// Attaques hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).
-    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi), ni les zones en ligne, ni les dômes.
+    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi, zones de soin), ni les zones
+    /// en ligne, ni les dômes, ni les invocations.
     /// </summary>
     private static List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
             .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id))
-            .Where(s => s.Target == SkillTargeting.Enemy && s.Zone?.Shape != ZoneShape.Line && !s.CreatesDome)
+            .Where(s => s.IsOffensive && s.Zone?.Shape != ZoneShape.Line && !s.CreatesDome && s.Summon is null)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();
 
-    /// <summary>L'ennemi le plus proche à pied ; s'il n'y a de chemin vers aucun, le plus proche à vol d'oiseau.</summary>
+    /// <summary>
+    /// L'ennemi le plus proche à pied ; s'il n'y a de chemin vers aucun, ou si l'unité est immobile (tourelle),
+    /// le plus proche à vol d'oiseau.
+    /// </summary>
     private static Unit Nearest(CombatSimulation sim, Unit unit, List<Unit> enemies)
     {
+        if (unit.Mobility == 0)
+            return enemies.MinBy(e => e.Position.DistanceTo(unit.Position))!;
         var byWalking = enemies
             .Select(e => (Enemy: e, Distance: WalkingDistances(sim, unit, e).GetValueOrDefault(unit.Position, int.MaxValue)))
             .MinBy(e => e.Distance);

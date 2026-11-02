@@ -1,6 +1,6 @@
 // Héros jouables (kits du prologue, docs/design.md section 3).
 // Seules les compétences faisables avec le moteur actuel sont présentes ; les autres viendront
-// avec leurs mécaniques (tourelle, confusion…).
+// avec leurs mécaniques (confusion, domination, percée, saut, sauvetage…).
 // Durées en millisecondes de combat. L'initiative est en points de jauge par tick (voir combat-rules.json
 // pour la capacité de la jauge, les ticks par seconde et le point de reprise selon le poids de l'action).
 [
@@ -127,6 +127,37 @@
     "behavior": null,
     "skills": [
       { "id": "shot", "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 0 },
+      {
+        "id": "turret", // pose une tourelle qui tire seule sur les ennemis à portée (une à la fois)
+        "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+        "summon": {
+          "id": "turret", "name": "Tourelle",
+          "maxHp": 30, "initiative": 8, "mobility": 0,
+          "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+          "behavior": "basic",
+          "skills": [
+            { "id": "turret-shot", "weight": "light", "range": 5, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 }
+          ]
+        }
+      },
+      {
+        "id": "nano-heal", // pose une balise qui soigne les alliés autour d'elle, 3 fois au plus (une à la fois)
+        "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+        "summon": {
+          "id": "nano-beacon", "name": "Balise de nano-soin",
+          "maxHp": 20, "initiative": 6, "mobility": 0,
+          "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+          "behavior": "beacon",
+          "maxActivations": 3,
+          "skills": [
+            {
+              "id": "nano-pulse", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0,
+              "minHeal": 10, "maxHeal": 14,
+              "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "allies" }
+            }
+          ]
+        }
+      },
       {
         "id": "tactical-order", // Ordre tactique : remplit une partie de la jauge d'un allié
         "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,

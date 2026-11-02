@@ -19,6 +19,9 @@ public enum ZoneTargets
 {
     All,
     Enemies,
+
+    /// <summary>Seulement les alliés du lanceur : une zone de soutien (ex. soin de la balise), jamais bloquée par un dôme.</summary>
+    Allies,
 }
 
 /// <summary>Zone d'effet d'une compétence (données). Une compétence à zone vise une case, pas une unité.</summary>

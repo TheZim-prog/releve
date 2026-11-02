@@ -50,6 +50,8 @@ public class ContentTests
         Assert.Contains(Heroes["speedster"].Skills, s => s.Id == "hyperspeed" && s.Target == SkillTargeting.Self);
         Assert.Contains(Heroes["colossus"].Skills, s => s.Id == "projection" && s.ForcedMove!.Type == ForcedMoveType.Push);
         Assert.Contains(Heroes["colossus"].Skills, s => s.Id == "dome" && s.CreatesDome);
+        Assert.Contains(Heroes["tech"].Skills, s => s.Summon?.Id == "turret");
+        Assert.Contains(Heroes["tech"].Skills, s => s.Summon is { Id: "nano-beacon", MaxActivations: 3 });
         Assert.Equal(PassiveKind.WeakPoint, Heroes["fighter"].Passive);
         Assert.Contains(Heroes["fighter"].Skills, s => s.Id == "execution" && s.ExecuteAtOrBelowPercent > 0);
         Assert.True(Enemies["kingpin"].IsBoss);

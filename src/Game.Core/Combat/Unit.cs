@@ -111,6 +111,12 @@ public sealed class Unit
     /// <summary>Comportement d'IA, ou <c>null</c> pour une unité commandée par un joueur.</summary>
     public string? Behavior { get; }
 
+    /// <summary>Lanceur qui a posé cette unité (gadget), ou <c>null</c> pour une unité présente dès le début.</summary>
+    public UnitId? SummonedBy { get; internal set; }
+
+    /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
+    public int Activations { get; internal set; }
+
     /// <summary>Intention en cours (unités IA), ou <c>null</c>.</summary>
     public Intention? Intention { get; internal set; }
 

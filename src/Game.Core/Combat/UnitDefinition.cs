@@ -53,6 +53,9 @@ public sealed record UnitDefinition
     /// <summary>Boss : ne peut pas être exécuté (ni, plus tard, dominé). Faux par défaut.</summary>
     public bool IsBoss { get; init; }
 
+    /// <summary>Nombre d'activations après lequel l'unité disparaît (ex. balise : 3), ou <c>null</c> (illimité).</summary>
+    public int? MaxActivations { get; init; }
+
     /// <summary>Instance de cette unité pour un combat.</summary>
     public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0) => new(id, team, position, this, initialGauge);
 
@@ -80,6 +83,8 @@ public sealed record UnitDefinition
             throw new ArgumentException($"Unit '{Id}' has an unknown behavior '{Behavior}'.");
         if (Passive is { } passive && !Enum.IsDefined(passive))
             throw new ArgumentException($"Unit '{Id}' has an unknown passive.");
+        if (MaxActivations is < 1)
+            throw new ArgumentException($"Unit '{Id}' needs at least one activation.");
 
         try
         {
@@ -110,5 +115,8 @@ public sealed record UnitDefinition
         // Au-delà, la jauge se remplirait en moins d'un tick ; borner évite aussi tout débordement.
         if (Initiative > rules.GaugeCapacity)
             throw new ArgumentException($"Unit '{Id}' has an initiative above the gauge capacity ({rules.GaugeCapacity}).");
+        // Les unités qu'elle peut invoquer aussi.
+        foreach (var summon in Skills.Select(s => s.Summon).OfType<UnitDefinition>())
+            summon.ValidateAgainst(rules);
     }
 }

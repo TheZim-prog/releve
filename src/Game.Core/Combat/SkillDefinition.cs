@@ -64,6 +64,12 @@ public sealed record SkillDefinition
 
     public bool IsCharged => ChargeMs > 0;
 
+    /// <summary>
+    /// Compétence offensive : vise un ennemi ou une zone qui n'est pas réservée aux alliés. Seules celles-ci posent
+    /// des états nuisibles, sont bloquées par un dôme et sont utilisées par l'IA de base pour attaquer.
+    /// </summary>
+    public bool IsOffensive => Target == SkillTargeting.Enemy && Zone?.Affects != ZoneTargets.Allies;
+
     /// <summary>Cible d'une compétence sans zone : un ennemi (par défaut), un allié, ou le lanceur lui-même (portée 0).</summary>
     public SkillTargeting Target { get; init; } = SkillTargeting.Enemy;
 
@@ -72,6 +78,19 @@ public sealed record SkillDefinition
 
     /// <summary>Déplacement forcé de la cible, après les dégâts et les états (facultatif).</summary>
     public ForcedMoveDefinition? ForcedMove { get; init; }
+
+    /// <summary>Soin : PV rendus à chaque cible debout, sans dépasser son maximum (0 = pas de soin).</summary>
+    public int MinHeal { get; init; }
+
+    public int MaxHeal { get; init; }
+
+    public bool Heals => MaxHeal > 0;
+
+    /// <summary>
+    /// Invocation (ex. tourelle, balise) : la compétence vise une case libre à portée et en vue, et y pose une unité
+    /// de ce type, de l'équipe du lanceur. Elle remplace celle du même type déjà posée par le même lanceur.
+    /// </summary>
+    public UnitDefinition? Summon { get; init; }
 
     /// <summary>
     /// Dôme : au lieu de frapper, la compétence (zone carrée) pose un dôme sur ses cases. Il bloque la prochaine
@@ -124,7 +143,7 @@ public sealed record SkillDefinition
         // pas de dégâts, et seulement des états bénéfiques. Sur un ennemi : seulement des états nuisibles.
         if (Target != SkillTargeting.Enemy && (Zone is not null || IsCharged || DealsDamage))
             throw new ArgumentException($"Skill '{Id}' targets an ally or its caster: no zone, charge or damage allowed.");
-        if (Effects.Any(e => e.Status.IsHarmful() != (Target == SkillTargeting.Enemy)))
+        if (Effects.Any(e => e.Status.IsHarmful() != IsOffensive))
             throw new ArgumentException($"Skill '{Id}': harmful statuses go on enemies, beneficial ones on allies or self.");
         if (GaugeGainPercent > 0 && Target != SkillTargeting.Ally)
             throw new ArgumentException($"Skill '{Id}': only a skill targeting an ally can fill a gauge.");
@@ -151,7 +170,38 @@ public sealed record SkillDefinition
                             || GaugeGainPercent > 0 || ForcedMove is not null || ExecuteAtOrBelowPercent > 0))
             throw new ArgumentException($"Skill '{Id}': a dome is an instant square zone that does nothing else.");
 
-        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome)
+        // Soin : sur un allié, sur soi, ou dans une zone qui ne touche que les alliés ; jamais avec des dégâts.
+        if (MinHeal < 0 || MaxHeal < MinHeal)
+            throw new ArgumentException($"Skill '{Id}' needs 0 <= minHeal <= maxHeal.");
+        var supportZone = Zone?.Affects == ZoneTargets.Allies;
+        if (Heals && (DealsDamage || (Zone is null ? Target is SkillTargeting.Enemy or SkillTargeting.Any : !supportZone)))
+            throw new ArgumentException($"Skill '{Id}': a heal targets an ally, its caster, or an allies-only zone, without damage.");
+        // (Ses états sont déjà vérifiés bénéfiques plus haut, puisqu'elle n'est pas offensive.)
+        if (supportZone && (DealsDamage || CreatesDome))
+            throw new ArgumentException($"Skill '{Id}': an allies-only zone can only heal or give beneficial statuses.");
+
+        // Invocation : une case visée, rien d'autre ; l'unité posée est une unité IA immobile, sans attaque d'opportunité.
+        if (Summon is not null)
+        {
+            if (Zone is not null || IsCharged || DealsDamage || Heals || Effects.Count > 0 || GaugeGainPercent > 0
+                || ForcedMove is not null || CreatesDome || ExecuteAtOrBelowPercent > 0 || Range < 1)
+                throw new ArgumentException($"Skill '{Id}': a summon targets a cell in range and does nothing else.");
+            try
+            {
+                Summon.Validate();
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException($"Skill '{Id}': {e.Message}", e);
+            }
+            if (Summon.Behavior is null || Summon.Mobility != 0 || Summon.BasicAttack is not null
+                || Summon.OnDefeat != DefeatOutcome.Removed)
+                throw new ArgumentException(
+                    $"Skill '{Id}': a summoned unit acts on its own, does not move, makes no opportunity attack and is removed when destroyed.");
+        }
+
+        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
+            && !Heals && Summon is null)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }

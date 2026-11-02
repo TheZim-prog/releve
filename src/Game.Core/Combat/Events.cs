@@ -92,6 +92,15 @@ public sealed record OpportunityAttack(int Tick, UnitId Attacker, UnitId Target,
 /// </summary>
 public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
+/// <summary>
+/// Une unité apparaît en combat : <paramref name="Unit"/>, du type <paramref name="DefinitionId"/> (celui de la
+/// compétence d'invocation), posée par <paramref name="Owner"/>, de son équipe <paramref name="Team"/>.
+/// </summary>
+public sealed record UnitSummoned(int Tick, UnitId Unit, string DefinitionId, UnitId Owner, int Team, Cell Position) : CombatEvent(Tick);
+
+/// <summary>L'unité regagne <paramref name="Amount"/> PV ; elle en a maintenant <paramref name="Hp"/>.</summary>
+public sealed record UnitHealed(int Tick, UnitId Unit, int Amount, int Hp) : CombatEvent(Tick);
+
 /// <summary>Le dôme de <paramref name="Owner"/> se lève sur ces cases.</summary>
 public sealed record DomeRaised(int Tick, UnitId Owner, IReadOnlyList<Cell> Cells) : CombatEvent(Tick)
 {
@@ -131,7 +140,7 @@ public sealed record GaugeGained(int Tick, UnitId Unit, int Amount, int Gauge) :
 /// </summary>
 public sealed record UnitDowned(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
-/// <summary>L'unité est vaincue et retirée de la grille.</summary>
+/// <summary>L'unité est retirée de la grille : vaincue, remplacée (gadget) ou épuisée (activations).</summary>
 public sealed record UnitRemoved(int Tick, UnitId Unit) : CombatEvent(Tick);
 
 /// <summary>Commande refusée : rien n'a changé, la jauge de l'unité reste pleine.</summary>
