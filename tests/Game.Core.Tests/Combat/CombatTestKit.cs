@@ -22,6 +22,8 @@ internal static class CombatTestKit
         OffBalanceFillPercent = 50,
         HastedFillPercent = 300,
         EmpoweredDamagePercent = 150,
+        ExposedDamageTakenPercent = 125,
+        WeakPointExposedMs = 1000, // 20 ticks
         IntentionThresholdPercent = 50,
     };
 
@@ -46,7 +48,7 @@ internal static class CombatTestKit
         int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
         DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null,
         string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null,
-        PassiveKind? passive = null)
+        PassiveKind? passive = null, bool isBoss = false)
     {
         var definition = new UnitDefinition
         {
@@ -61,6 +63,7 @@ internal static class CombatTestKit
             Behavior = behavior,
             Skills = skills ?? new[] { Strike, Smash },
             Passive = passive,
+            IsBoss = isBoss,
         };
         return definition.ToSetup(new UnitId(id), team, new Cell(x, y), gauge);
     }

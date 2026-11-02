@@ -19,6 +19,11 @@
   "hastedFillPercent": 300,
   "empoweredDamagePercent": 150,
 
+  // Point faible (passif du combattant) : la cible frappée devient vulnérable et prend ce % de dégâts
+  // (de toutes les sources) pendant cette durée.
+  "exposedDamageTakenPercent": 125,
+  "weakPointExposedMs": 4000,
+
   // Une unité IA fixe son intention (action + cible) quand sa jauge atteint ce pourcentage.
   "intentionThresholdPercent": 50
 }

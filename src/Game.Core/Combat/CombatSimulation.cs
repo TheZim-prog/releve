@@ -472,7 +472,7 @@ public sealed class CombatSimulation
         if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
-            ResolveHit(skill, target, damagePercent);
+            ResolveHit(caster, skill, target, damagePercent);
             if (target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
             {
                 if (move.Type == ForcedMoveType.Push)
@@ -490,7 +490,7 @@ public sealed class CombatSimulation
             .Where(u => skill.Zone!.Affects == ZoneTargets.All || u.Team != caster.Team)
             .ToList();
         foreach (var unit in affected)
-            ResolveHit(skill, unit, damagePercent);
+            ResolveHit(caster, skill, unit, damagePercent);
     }
 
     /// <summary>
@@ -538,7 +538,7 @@ public sealed class CombatSimulation
             if (hit is { Status: UnitStatus.Active })
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
-                Damage(hit, (int)((long)damage * damagePercent / 100), fallbackCell: null);
+                Damage(hit, Scaled(damage, damagePercent, hit), fallbackCell: null);
             }
         }
     }
@@ -599,7 +599,7 @@ public sealed class CombatSimulation
         var segmentStart = unit.Position;
         var segment = new List<Cell>();
         var lastFreeCell = unit.Position;
-        var exposed = !unit.HasPassive(PassiveKind.IgnoresOpportunityAttacks);
+        var canBePunished = !unit.HasPassive(PassiveKind.IgnoresOpportunityAttacks);
 
         void FlushSegment()
         {
@@ -612,7 +612,7 @@ public sealed class CombatSimulation
 
         foreach (var next in path)
         {
-            foreach (var enemy in exposed ? _units : Enumerable.Empty<Unit>())
+            foreach (var enemy in canBePunished ? _units : Enumerable.Empty<Unit>())
             {
                 if (!CanMakeOpportunityAttack(enemy, unit, next))
                     continue;
@@ -621,7 +621,7 @@ public sealed class CombatSimulation
                 var attack = enemy.BasicAttack!;
                 enemy.OpportunityAttacksLeft--;
                 _events.Add(new OpportunityAttack(CurrentTick, enemy.Id, unit.Id, attack.Id));
-                ResolveHit(attack, unit, DamagePercentOf(enemy), lastFreeCell);
+                ResolveHit(enemy, attack, unit, DamagePercentOf(enemy), lastFreeCell);
                 if (unit.Status != UnitStatus.Active)
                     return false;
                 if (unit.HasStatus(StatusKind.Stunned))
@@ -666,17 +666,32 @@ public sealed class CombatSimulation
         _units.Any(u => u != unit && u.Status != UnitStatus.Removed && u.Position == cell);
 
     /// <summary>
-    /// Effets d'un coup sur sa cible : dégâts (s'il y en a, multipliés par <paramref name="damagePercent"/>),
-    /// puis états si elle est encore debout, puis gain de jauge.
+    /// Effets d'un coup de <paramref name="attacker"/> sur sa cible : dégâts (s'il y en a : exécution si la cible est
+    /// assez basse et pas un boss, sinon tirage multiplié par <paramref name="damagePercent"/> et par la vulnérabilité
+    /// de la cible), Point faible de l'attaquant, puis états si la cible est encore debout, puis gain de jauge.
     /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
     /// (seulement possible en plein déplacement, en traversant un allié).
     /// </summary>
-    private void ResolveHit(SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null)
+    private void ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null)
     {
         if (skill.DealsDamage)
         {
-            var damage = _random.NextInt(skill.MinDamage, skill.MaxDamage);
-            Damage(target, (int)((long)damage * damagePercent / 100), fallbackCell);
+            int dealt;
+            if (CanExecute(skill, target))
+            {
+                _events.Add(new UnitExecuted(CurrentTick, attacker.Id, target.Id));
+                dealt = target.Hp;
+            }
+            else
+            {
+                dealt = Scaled(_random.NextInt(skill.MinDamage, skill.MaxDamage), damagePercent, target);
+            }
+            Damage(target, dealt, fallbackCell);
+
+            // Point faible : un coup qui a vraiment fait des dégâts à un ennemi le rend vulnérable.
+            if (dealt > 0 && target.Status == UnitStatus.Active && target.Team != attacker.Team
+                && attacker.HasPassive(PassiveKind.WeakPoint))
+                ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs });
         }
         if (target.Status != UnitStatus.Active)
             return;
@@ -684,6 +699,22 @@ public sealed class CombatSimulation
             ApplyStatus(target, effect);
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
+    }
+
+    /// <summary>Exécution : la cible est au plus au seuil de PV de la compétence, et ce n'est pas un boss.</summary>
+    private static bool CanExecute(SkillDefinition skill, Unit target) =>
+        skill.ExecuteAtOrBelowPercent > 0
+        && !target.Definition.IsBoss
+        && (long)target.Hp * 100 <= (long)target.MaxHp * skill.ExecuteAtOrBelowPercent;
+
+    /// <summary>
+    /// Dégâts finaux : tirage × bonus de l'attaquant (<paramref name="damagePercent"/>) × vulnérabilité de la cible,
+    /// en une seule division (pas d'arrondi intermédiaire).
+    /// </summary>
+    private int Scaled(int damage, int damagePercent, Unit target)
+    {
+        var exposedPercent = target.HasStatus(StatusKind.Exposed) ? Rules.ExposedDamageTakenPercent : 100;
+        return (int)((long)damage * damagePercent * exposedPercent / 10_000);
     }
 
     /// <summary>

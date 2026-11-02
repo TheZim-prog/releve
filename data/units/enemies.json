@@ -53,6 +53,7 @@
   {
     "id": "kingpin",
     "name": "Le caïd",
+    "isBoss": true,
     "maxHp": 220, "initiative": 9, "mobility": 4,
     "onDefeat": "removed",
     "basicAttack": "power-punch",

@@ -8,4 +8,10 @@ public enum PassiveKind
 {
     /// <summary>L'unité ne subit pas d'attaques d'opportunité (speedster).</summary>
     IgnoresOpportunityAttacks,
+
+    /// <summary>
+    /// Point faible (combattant) : chaque coup qui fait des dégâts rend la cible vulnérable
+    /// (<see cref="StatusKind.Exposed"/>, durée <see cref="CombatRules.WeakPointExposedMs"/>).
+    /// </summary>
+    WeakPoint,
 }

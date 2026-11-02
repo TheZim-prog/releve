@@ -101,8 +101,8 @@
 - **Frappe précise** : coup puissant sur une seule cible, qui **ignore les protections** (boucliers, armures).
 - **Lames de jet** (légère) : dégâts à distance.
 - **Coup étourdissant** : **étourdit** une cible (introduit le contrôle au tutoriel).
-- **Exécution** (lourde) : achève instantanément une cible sous un seuil de vie (~30 %), sinon très gros dégâts.
-- **Passif équipé : Point faible** : chaque cible qu'il frappe subit davantage de dégâts de la part des alliés pendant quelques secondes.
+- **Exécution** (lourde) : achève instantanément une cible sous un seuil de vie (~30 %), sinon très gros dégâts. ✅ **Pas sur les boss** (marqués dans les données) : gros dégâts seulement.
+- **Passif équipé : Point faible** : chaque cible qu'il frappe subit davantage de dégâts de la part des alliés pendant quelques secondes. ✅ Tout coup du combattant qui fait des dégâts (attaques d'opportunité comprises) rend la cible **vulnérable** : elle prend plus de dégâts de **toutes les sources**, combattant compris (bonus et durée en données).
 
 **Énergétique** (une seule énergie, visuel feu / électricité, **purs dégâts, sans états**) :
 - **Attaque de base** : trait d'énergie à distance.

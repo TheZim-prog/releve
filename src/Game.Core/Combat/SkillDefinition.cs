@@ -73,6 +73,12 @@ public sealed record SkillDefinition
     /// <summary>Déplacement forcé de la cible, après les dégâts et les états (facultatif).</summary>
     public ForcedMoveDefinition? ForcedMove { get; init; }
 
+    /// <summary>
+    /// Exécution : si les PV de la cible sont au plus à ce % de son maximum, elle est achevée au lieu de prendre les
+    /// dégâts normaux (sauf un boss). 0 = pas d'exécution.
+    /// </summary>
+    public int ExecuteAtOrBelowPercent { get; init; }
+
     public static IReadOnlyList<SkillDefinition> ListFromJson(string json) =>
         ValidateAll(DataJson.Deserialize<List<SkillDefinition?>>(json));
 
@@ -129,6 +135,11 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}': a placement cannot be charged.");
         if (Target == SkillTargeting.Any && (ForcedMove?.Type != ForcedMoveType.Place || Effects.Count > 0 || GaugeGainPercent > 0))
             throw new ArgumentException($"Skill '{Id}' targets anyone: it can only place its target.");
+
+        if (ExecuteAtOrBelowPercent is < 0 or > 99)
+            throw new ArgumentException($"Skill '{Id}' needs an execution threshold between 0 and 99 %.");
+        if (ExecuteAtOrBelowPercent > 0 && (Target != SkillTargeting.Enemy || Zone is not null || !DealsDamage))
+            throw new ArgumentException($"Skill '{Id}': an execution is a damaging attack on one enemy.");
 
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");

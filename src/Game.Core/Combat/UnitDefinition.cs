@@ -50,6 +50,9 @@ public sealed record UnitDefinition
     /// </summary>
     public PassiveKind? Passive { get; init; }
 
+    /// <summary>Boss : ne peut pas être exécuté (ni, plus tard, dominé). Faux par défaut.</summary>
+    public bool IsBoss { get; init; }
+
     /// <summary>Instance de cette unité pour un combat.</summary>
     public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0) => new(id, team, position, this, initialGauge);
 

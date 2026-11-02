@@ -92,6 +92,9 @@ public sealed record OpportunityAttack(int Tick, UnitId Attacker, UnitId Target,
 /// </summary>
 public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
+/// <summary>L'unité est achevée par une exécution (ses PV restants suivent en dégâts).</summary>
+public sealed record UnitExecuted(int Tick, UnitId Attacker, UnitId Target) : CombatEvent(Tick);
+
 /// <summary>
 /// L'unité est déplacée de force (projection : en ligne droite ; télékinésie : posée directement), sans attaque
 /// d'opportunité.

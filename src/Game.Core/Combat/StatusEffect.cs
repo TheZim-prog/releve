@@ -14,6 +14,9 @@ public enum StatusKind
 
     /// <summary>Dégâts infligés augmentés (Forme d'énergie pure ; <see cref="CombatRules.EmpoweredDamagePercent"/>).</summary>
     Empowered,
+
+    /// <summary>Dégâts subis augmentés, de toutes les sources (Point faible ; <see cref="CombatRules.ExposedDamageTakenPercent"/>).</summary>
+    Exposed,
 }
 
 public static class StatusKindExtensions
@@ -24,7 +27,7 @@ public static class StatusKindExtensions
     /// </summary>
     public static bool IsHarmful(this StatusKind status) => status switch
     {
-        StatusKind.Stunned or StatusKind.OffBalance => true,
+        StatusKind.Stunned or StatusKind.OffBalance or StatusKind.Exposed => true,
         StatusKind.Hasted or StatusKind.Empowered => false,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Status not classified as harmful or beneficial."),
     };

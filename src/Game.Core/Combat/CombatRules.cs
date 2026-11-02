@@ -30,6 +30,12 @@ public sealed record CombatRules
     /// <summary>Dégâts infligés par une unité surpuissante, en % des dégâts normaux.</summary>
     public required int EmpoweredDamagePercent { get; init; }
 
+    /// <summary>Dégâts subis par une unité vulnérable, en % des dégâts normaux.</summary>
+    public required int ExposedDamageTakenPercent { get; init; }
+
+    /// <summary>Durée de la vulnérabilité posée par le passif Point faible, en millisecondes de combat.</summary>
+    public required int WeakPointExposedMs { get; init; }
+
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
@@ -63,6 +69,10 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(HastedFillPercent)} must be between 100 and 1000.");
         if (EmpoweredDamagePercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(EmpoweredDamagePercent)} must be between 100 and 1000.");
+        if (ExposedDamageTakenPercent is < 100 or > 1000)
+            throw new ArgumentException($"{nameof(ExposedDamageTakenPercent)} must be between 100 and 1000.");
+        if (WeakPointExposedMs <= 0)
+            throw new ArgumentException($"{nameof(WeakPointExposedMs)} must be positive.");
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

@@ -60,6 +60,7 @@
     "basicAttack": "combo",
     "opportunityAttacksPerCycle": 1,
     "behavior": null,
+    "passive": "weakPoint", // Point faible : la cible frappée devient vulnérable
     "skills": [
       { "id": "combo", "weight": "light", "range": 1, "minDamage": 11, "maxDamage": 15, "cooldownMs": 0 },
       { "id": "precise-strike", "weight": "light", "range": 1, "minDamage": 22, "maxDamage": 28, "cooldownMs": 8000 },
@@ -68,6 +69,11 @@
         "id": "stunning-blow",
         "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 12000,
         "effects": [ { "status": "stunned", "durationMs": 2000 } ]
+      },
+      {
+        "id": "execution", // achève une cible sous 30 % de PV (pas un boss), sinon très gros dégâts
+        "weight": "heavy", "range": 1, "minDamage": 30, "maxDamage": 38, "cooldownMs": 20000,
+        "executeAtOrBelowPercent": 30
       }
     ]
   },
