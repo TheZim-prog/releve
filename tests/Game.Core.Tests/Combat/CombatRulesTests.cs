@@ -14,6 +14,8 @@ public class CombatRulesTests
           "lightActionRestartPercent": 40,
           "heavyActionRestartPercent": 0,
           "offBalanceFillPercent": 50,
+          "hastedFillPercent": 300,
+          "empoweredDamagePercent": 150,
           "intentionThresholdPercent": 50,
         }
         """;
@@ -54,6 +56,8 @@ public class CombatRulesTests
     [InlineData("\"lightActionRestartPercent\": 40", "\"lightActionRestartPercent\": 100")]
     [InlineData("\"heavyActionRestartPercent\": 0", "\"heavyActionRestartPercent\": -5")]
     [InlineData("\"offBalanceFillPercent\": 50", "\"offBalanceFillPercent\": 101")]
+    [InlineData("\"hastedFillPercent\": 300", "\"hastedFillPercent\": 90")]
+    [InlineData("\"empoweredDamagePercent\": 150", "\"empoweredDamagePercent\": 1001")]
     public void FromJson_RejectsOutOfRangeValues(string valid, string invalid)
     {
         Assert.Throws<ArgumentException>(() => CombatRules.FromJson(ValidJson.Replace(valid, invalid)));

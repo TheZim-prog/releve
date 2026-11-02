@@ -24,6 +24,12 @@ public sealed record CombatRules
     /// <summary>Vitesse de remplissage de la jauge d'une unité déséquilibrée, en % de la normale.</summary>
     public required int OffBalanceFillPercent { get; init; }
 
+    /// <summary>Vitesse de remplissage de la jauge d'une unité accélérée, en % de la normale (Hypervitesse : 300).</summary>
+    public required int HastedFillPercent { get; init; }
+
+    /// <summary>Dégâts infligés par une unité surpuissante, en % des dégâts normaux.</summary>
+    public required int EmpoweredDamagePercent { get; init; }
+
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
@@ -52,6 +58,11 @@ public sealed record CombatRules
         ValidatePercent(HeavyActionRestartPercent, nameof(HeavyActionRestartPercent));
         ValidatePercent(OffBalanceFillPercent, nameof(OffBalanceFillPercent), max: 100);
         ValidatePercent(IntentionThresholdPercent, nameof(IntentionThresholdPercent), max: 100);
+        // Renforcements : au moins 100 % (sinon ce serait un affaiblissement), au plus x10 pour rester raisonnable.
+        if (HastedFillPercent is < 100 or > 1000)
+            throw new ArgumentException($"{nameof(HastedFillPercent)} must be between 100 and 1000.");
+        if (EmpoweredDamagePercent is < 100 or > 1000)
+            throw new ArgumentException($"{nameof(EmpoweredDamagePercent)} must be between 100 and 1000.");
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

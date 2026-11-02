@@ -8,6 +8,26 @@ public enum StatusKind
 
     /// <summary>Jauge ralentie (pourcentage dans <see cref="CombatRules.OffBalanceFillPercent"/>).</summary>
     OffBalance,
+
+    /// <summary>Jauge accélérée (Hypervitesse ; pourcentage dans <see cref="CombatRules.HastedFillPercent"/>).</summary>
+    Hasted,
+
+    /// <summary>Dégâts infligés augmentés (Forme d'énergie pure ; <see cref="CombatRules.EmpoweredDamagePercent"/>).</summary>
+    Empowered,
+}
+
+public static class StatusKindExtensions
+{
+    /// <summary>
+    /// Un état nuisible (contrôle) se pose sur un ennemi ; un état bénéfique (renforcement), sur soi ou un allié.
+    /// Tout nouvel état doit être classé ici (sinon exception).
+    /// </summary>
+    public static bool IsHarmful(this StatusKind status) => status switch
+    {
+        StatusKind.Stunned or StatusKind.OffBalance => true,
+        StatusKind.Hasted or StatusKind.Empowered => false,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Status not classified as harmful or beneficial."),
+    };
 }
 
 /// <summary>État appliqué par une compétence à sa cible, pour une durée en millisecondes de combat.</summary>

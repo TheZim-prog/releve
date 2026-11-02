@@ -40,8 +40,9 @@ public sealed record Intention(string? SkillId, UnitId Target);
 /// <summary>
 /// Attaque en cours de charge : cible (attaque ciblée) ou cases fixées au sol (zone), et tick de déclenchement.
 /// Exactement l'un de <paramref name="Target"/> et <paramref name="Zone"/> est renseigné.
+/// <paramref name="DamagePercent"/> : multiplicateur de dégâts du lanceur, fixé au lancement (ex. surpuissant).
 /// </summary>
-public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick);
+public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick, int DamagePercent);
 
 /// <summary>État courant d'une unité. Seule la <see cref="CombatSimulation"/> le modifie.</summary>
 public sealed class Unit
@@ -119,10 +120,12 @@ public sealed class Unit
     public bool HasStatus(StatusKind status) => _statusEndTicks.ContainsKey(status);
 
     /// <summary>
-    /// Reste de la division du remplissage ralenti (en centièmes de point de jauge), reporté au tick suivant
-    /// pour que le ralentissement soit exact en moyenne, même avec une petite initiative.
+    /// Reste de la division du remplissage modifié (ralenti, accéléré), exprimé sur <see cref="FillRemainderScale"/>,
+    /// reporté au tick suivant pour que la vitesse soit exacte en moyenne, même avec une petite initiative.
     /// </summary>
     internal int FillRemainder { get; set; }
+
+    internal int FillRemainderScale { get; set; } = 1;
 
     internal void SetStatus(StatusKind status, int endTick) => _statusEndTicks[status] = endTick;
 

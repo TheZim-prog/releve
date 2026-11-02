@@ -20,6 +20,8 @@ internal static class CombatTestKit
         LightActionRestartPercent = 40,
         HeavyActionRestartPercent = 0,
         OffBalanceFillPercent = 50,
+        HastedFillPercent = 300,
+        EmpoweredDamagePercent = 150,
         IntentionThresholdPercent = 50,
     };
 

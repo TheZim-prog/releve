@@ -47,6 +47,8 @@ public class ContentTests
             h.ValidateAgainst(Rules);
         });
         Assert.Equal(PassiveKind.IgnoresOpportunityAttacks, Heroes["speedster"].Passive);
+        Assert.Contains(Heroes["speedster"].Skills, s => s.Id == "hyperspeed" && s.Target == SkillTargeting.Self);
+        Assert.Contains(Heroes["energetic"].Skills, s => s.Id == "energy-form" && s.Target == SkillTargeting.Self);
         var order = Heroes["tech"].Skills.Single(s => s.Id == "tactical-order");
         Assert.Equal(SkillTargeting.Ally, order.Target);
         Assert.True(order.GaugeGainPercent > 0);

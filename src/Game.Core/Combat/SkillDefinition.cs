@@ -14,6 +14,9 @@ public enum SkillTargeting
 
     /// <summary>Un allié, jamais le lanceur lui-même (ex. Ordre tactique). Ne fait pas de dégâts.</summary>
     Ally,
+
+    /// <summary>Le lanceur lui-même (ex. Hypervitesse) : pas de cible à donner, portée 0, renforcements seulement.</summary>
+    Self,
 }
 
 /// <summary>
@@ -56,7 +59,7 @@ public sealed record SkillDefinition
 
     public bool IsCharged => ChargeMs > 0;
 
-    /// <summary>Cible d'une compétence sans zone : un ennemi (par défaut) ou un allié.</summary>
+    /// <summary>Cible d'une compétence sans zone : un ennemi (par défaut), un allié, ou le lanceur lui-même (portée 0).</summary>
     public SkillTargeting Target { get; init; } = SkillTargeting.Enemy;
 
     /// <summary>Part de la jauge (en % de la capacité) remplie instantanément chez la cible (0 = aucune).</summary>
@@ -76,8 +79,9 @@ public sealed record SkillDefinition
         if (!Enum.IsDefined(Weight))
             throw new ArgumentException($"Skill '{Id}' has an unknown weight.");
         // Un carré peut être centré sur le lanceur (portée 0) ; une ligne part vers une case voisine au moins ;
-        // une attaque ciblée vise une autre unité.
-        if (Range < (Zone?.Shape == ZoneShape.Square ? 0 : 1))
+        // une compétence sur soi a une portée 0 ; une compétence ciblée vise une autre unité.
+        var validRange = Target == SkillTargeting.Self ? Range == 0 : Range >= (Zone?.Shape == ZoneShape.Square ? 0 : 1);
+        if (!validRange)
             throw new ArgumentException($"Skill '{Id}' has an invalid range {Range}.");
         if (ChargeMs < 0)
             throw new ArgumentException($"Skill '{Id}' has a negative charge time.");
@@ -96,10 +100,12 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}' has an unknown target kind.");
         if (GaugeGainPercent is < 0 or > 100)
             throw new ArgumentException($"Skill '{Id}' needs a gauge gain between 0 and 100 %.");
-        // Soutien : pas de zone, pas de charge (la cible changerait d'état avant le déclenchement), et rien de
-        // nuisible (tous les états actuels le sont).
-        if (Target == SkillTargeting.Ally && (Zone is not null || IsCharged || DealsDamage || Effects.Count > 0))
-            throw new ArgumentException($"Skill '{Id}' targets an ally: no zone, charge, damage or status allowed.");
+        // Sur un allié ou sur soi : pas de zone, pas de charge (la cible changerait d'état avant le déclenchement),
+        // pas de dégâts, et seulement des états bénéfiques. Sur un ennemi : seulement des états nuisibles.
+        if (Target != SkillTargeting.Enemy && (Zone is not null || IsCharged || DealsDamage))
+            throw new ArgumentException($"Skill '{Id}' targets an ally or its caster: no zone, charge or damage allowed.");
+        if (Effects.Any(e => e.Status.IsHarmful() != (Target == SkillTargeting.Enemy)))
+            throw new ArgumentException($"Skill '{Id}': harmful statuses go on enemies, beneficial ones on allies or self.");
         if (GaugeGainPercent > 0 && Target != SkillTargeting.Ally)
             throw new ArgumentException($"Skill '{Id}': only a skill targeting an ally can fill a gauge.");
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0)

@@ -1,6 +1,6 @@
 // Héros jouables (kits du prologue, docs/design.md section 3).
 // Seules les compétences faisables avec le moteur actuel sont présentes ; les autres viendront
-// avec leurs mécaniques (dôme, projection, hypervitesse, tourelle, confusion…).
+// avec leurs mécaniques (dôme, projection, tourelle, confusion…).
 // Durées en millisecondes de combat. L'initiative est en points de jauge par tick (voir combat-rules.json
 // pour la capacité de la jauge, les ticks par seconde et le point de reprise selon le poids de l'action).
 [
@@ -39,6 +39,11 @@
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false },
         "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+      },
+      {
+        "id": "hyperspeed", // Hypervitesse : sa jauge se remplit beaucoup plus vite pendant quelques secondes
+        "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+        "effects": [ { "status": "hasted", "durationMs": 5000 } ]
       }
     ]
   },
@@ -86,6 +91,12 @@
         "id": "nova", // explosion autour de lui pour se dégager
         "weight": "light", "range": 0, "minDamage": 12, "maxDamage": 16, "cooldownMs": 8000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false }
+      },
+      {
+        "id": "energy-form", // Forme d'énergie pure : plus de dégâts pendant 2-3 actions
+        "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+        // 11,5 s : lancée (lourde), elle couvre 3 actions légères (à 5 s, 8 s et 11 s) ou 2 si l'une est lourde.
+        "effects": [ { "status": "empowered", "durationMs": 11500 } ]
       }
     ]
   },

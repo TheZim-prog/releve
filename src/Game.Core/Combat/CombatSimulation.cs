@@ -168,19 +168,37 @@ public sealed class CombatSimulation
     }
 
     /// <summary>
-    /// Points de jauge gagnés ce tick : seul endroit où se décide la vitesse de la jauge
-    /// (initiative, étourdi, déséquilibré ; plus tard l'hypervitesse…).
+    /// Points de jauge gagnés ce tick : seul endroit où se décide la vitesse de la jauge. Étourdie ou en
+    /// train de charger : rien. Sinon l'initiative, multipliée par les pourcentages du déséquilibre et de
+    /// l'accélération (qui se combinent), avec report du reste pour être exact en moyenne.
     /// </summary>
     private int FillAmount(Unit unit)
     {
         if (unit.HasStatus(StatusKind.Stunned) || unit.Charge is not null)
             return 0;
-        if (!unit.HasStatus(StatusKind.OffBalance))
-            return unit.Initiative;
 
-        var hundredths = (long)unit.Initiative * Rules.OffBalanceFillPercent + unit.FillRemainder;
-        unit.FillRemainder = (int)(hundredths % 100);
-        return (int)(hundredths / 100);
+        // Gain exact = initiative × pourcentages / échelle ; le reste de la division est reporté au tick suivant.
+        long numerator = unit.Initiative, scale = 1;
+        if (unit.HasStatus(StatusKind.OffBalance))
+        {
+            numerator *= Rules.OffBalanceFillPercent;
+            scale *= 100;
+        }
+        if (unit.HasStatus(StatusKind.Hasted))
+        {
+            numerator *= Rules.HastedFillPercent;
+            scale *= 100;
+        }
+
+        // Quand les états changent, l'échelle change : le reste est converti, pas perdu.
+        if (unit.FillRemainderScale != scale)
+        {
+            unit.FillRemainder = (int)(unit.FillRemainder * scale / unit.FillRemainderScale);
+            unit.FillRemainderScale = (int)scale;
+        }
+        var total = numerator + unit.FillRemainder;
+        unit.FillRemainder = (int)(total % scale);
+        return (int)(total / scale);
     }
 
     private void ExpireStatuses()
@@ -200,8 +218,6 @@ public sealed class CombatSimulation
     {
         var wasReady = unit.IsReady;
         unit.ClearStatus(status);
-        if (status == StatusKind.OffBalance)
-            unit.FillRemainder = 0;
         _events.Add(new StatusEnded(CurrentTick, unit.Id, status));
         if (!wasReady && unit.IsReady)
             _events.Add(new UnitReady(CurrentTick, unit.Id));
@@ -336,17 +352,21 @@ public sealed class CombatSimulation
         unit.StartCooldown(actionSkill.Id, CurrentTick + Rules.MillisecondsToTicks(actionSkill.CooldownMs));
         if (actionSkill.IsCharged)
         {
-            // Immobilisée, jauge à 0 jusqu'au déclenchement (ReleaseCharges).
+            // Immobilisée, jauge à 0 jusqu'au déclenchement (ReleaseCharges). Les dégâts sont fixés maintenant :
+            // c'est l'attaque que le joueur a lancée et vue au sol.
             var charge = new PendingCharge(actionSkill, action.Target?.Id, action.Zone,
-                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs));
+                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs), DamagePercentOf(unit));
             unit.Charge = charge;
             _events.Add(new ChargeStarted(CurrentTick, unit.Id, actionSkill.Id, charge.Target, charge.Zone, charge.ReleaseTick));
             return;
         }
 
-        Execute(unit, actionSkill, action.Target, action.Zone);
+        Execute(unit, actionSkill, action.Target, action.Zone, DamagePercentOf(unit));
         SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
     }
+
+    /// <summary>Multiplicateur des dégâts infligés par l'unité, en % (surpuissant ou non).</summary>
+    private int DamagePercentOf(Unit unit) => unit.HasStatus(StatusKind.Empowered) ? Rules.EmpoweredDamagePercent : 100;
 
     /// <summary>Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>).</summary>
     internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone);
@@ -372,13 +392,21 @@ public sealed class CombatSimulation
             return (new PlannedAction(skill, null, cells), null);
         }
 
+        if (skill.Target == SkillTargeting.Self)
+        {
+            // Pas de cible à donner (ou soi-même).
+            if (use.Cell is not null || (use.Target is { } self && self != unit.Id))
+                return (null, RejectionReason.InvalidTarget);
+            return (new PlannedAction(skill, unit, null), null);
+        }
+
         if (use.Target is not { } targetId || use.Cell is not null)
             return (null, RejectionReason.InvalidTarget);
         var target = FindUnit(targetId);
         if (target is null || !IsRightSide(unit, target, skill))
             return (null, RejectionReason.InvalidTarget);
         // Remplir une jauge déjà pleine, ou bloquée à 0 par une charge, ne servirait à rien.
-        if (skill.GaugeGainPercent > 0 && (target.IsGaugeFull || target.Charge is not null))
+        if (skill.GaugeGainPercent > 0 && skill.Effects.Count == 0 && (target.IsGaugeFull || target.Charge is not null))
             return (null, RejectionReason.NoEffect);
         return CheckTarget(unit, position, target, skill) is { } reason
             ? (null, reason)
@@ -412,13 +440,14 @@ public sealed class CombatSimulation
     /// <summary>
     /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ;
     /// un coup ne touche que sa cible, donc la liste ne change pas en cours de route).
+    /// <paramref name="damagePercent"/> : multiplicateur de dégâts du lanceur (voir <see cref="DamagePercentOf"/>).
     /// </summary>
-    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone)
+    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damagePercent)
     {
         if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
-            ResolveHit(skill, target);
+            ResolveHit(skill, target, damagePercent);
             return;
         }
 
@@ -429,7 +458,7 @@ public sealed class CombatSimulation
             .Where(u => skill.Zone!.Affects == ZoneTargets.All || u.Team != caster.Team)
             .ToList();
         foreach (var unit in affected)
-            ResolveHit(skill, unit);
+            ResolveHit(skill, unit, damagePercent);
     }
 
     private int RestartPercentAfter(SkillDefinition skill) =>
@@ -450,10 +479,10 @@ public sealed class CombatSimulation
             unit.Charge = null;
             var skill = charge.Skill;
             if (charge.Zone is not null)
-                Execute(unit, skill, null, charge.Zone);
+                Execute(unit, skill, null, charge.Zone, charge.DamagePercent);
             else if (charge.Target is { } targetId && FindUnit(targetId) is { } target
                      && CheckTarget(unit, unit.Position, target, skill) is null)
-                Execute(unit, skill, target, null);
+                Execute(unit, skill, target, null, charge.DamagePercent);
             else
                 _events.Add(new ChargeMissed(CurrentTick, unit.Id, skill.Id, charge.Target!.Value));
 
@@ -501,7 +530,7 @@ public sealed class CombatSimulation
                 var attack = enemy.BasicAttack!;
                 enemy.OpportunityAttacksLeft--;
                 _events.Add(new OpportunityAttack(CurrentTick, enemy.Id, unit.Id, attack.Id));
-                ResolveHit(attack, unit, lastFreeCell);
+                ResolveHit(attack, unit, DamagePercentOf(enemy), lastFreeCell);
                 if (unit.Status != UnitStatus.Active)
                     return false;
                 if (unit.HasStatus(StatusKind.Stunned))
@@ -546,14 +575,18 @@ public sealed class CombatSimulation
         _units.Any(u => u != unit && u.Status != UnitStatus.Removed && u.Position == cell);
 
     /// <summary>
-    /// Effets d'un coup sur sa cible : dégâts (s'il y en a), puis états si elle est encore debout.
+    /// Effets d'un coup sur sa cible : dégâts (s'il y en a, multipliés par <paramref name="damagePercent"/>),
+    /// puis états si elle est encore debout, puis gain de jauge.
     /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
     /// (seulement possible en plein déplacement, en traversant un allié).
     /// </summary>
-    private void ResolveHit(SkillDefinition skill, Unit target, Cell? fallbackCell = null)
+    private void ResolveHit(SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null)
     {
         if (skill.DealsDamage)
-            Damage(target, _random.NextInt(skill.MinDamage, skill.MaxDamage), fallbackCell);
+        {
+            var damage = _random.NextInt(skill.MinDamage, skill.MaxDamage);
+            Damage(target, (int)((long)damage * damagePercent / 100), fallbackCell);
+        }
         if (target.Status != UnitStatus.Active)
             return;
         foreach (var effect in skill.Effects)
@@ -562,11 +595,14 @@ public sealed class CombatSimulation
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
     }
 
-    /// <summary>Remplit d'un coup la jauge (plafonnée à la capacité) ; l'unité peut devenir prête aussitôt.</summary>
+    /// <summary>
+    /// Remplit d'un coup la jauge (plafonnée à la capacité) ; l'unité peut devenir prête aussitôt.
+    /// Sans effet sur une unité qui charge (sa jauge reste à 0 jusqu'au déclenchement).
+    /// </summary>
     private void GainGauge(Unit unit, int amount)
     {
         var gained = Math.Min(amount, Rules.GaugeCapacity - unit.Gauge);
-        if (gained <= 0)
+        if (gained <= 0 || unit.Charge is not null)
             return;
         _events.Add(new GaugeGained(CurrentTick, unit.Id, gained, unit.Gauge + gained));
         SetGauge(unit, unit.Gauge + gained);
