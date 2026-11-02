@@ -43,9 +43,23 @@ internal static class CombatTestKit
         int id, int team, int x, int y,
         int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
         DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null,
-        string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null) =>
-        new(new UnitId(id), team, new Cell(x, y), initiative, mobility, hp, skills ?? new[] { Strike, Smash }, onDefeat,
-            basicAttack, opportunityAttacks, gauge, behavior);
+        string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null)
+    {
+        var definition = new UnitDefinition
+        {
+            Id = $"unit-{id}",
+            Name = $"Unit {id}",
+            MaxHp = hp,
+            Initiative = initiative,
+            Mobility = mobility,
+            OnDefeat = onDefeat,
+            BasicAttack = basicAttack,
+            OpportunityAttacksPerCycle = opportunityAttacks,
+            Behavior = behavior,
+            Skills = skills ?? new[] { Strike, Smash },
+        };
+        return definition.ToSetup(new UnitId(id), team, new Cell(x, y), gauge);
+    }
 
     public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);
 

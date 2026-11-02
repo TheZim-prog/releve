@@ -640,38 +640,20 @@ public sealed class CombatSimulation
     private void Reject(CombatCommand command, RejectionReason reason) =>
         _events.Add(new CommandRejected(CurrentTick, command, reason));
 
+    /// <summary>Définition de l'unité, compatibilité avec les règles, placement.</summary>
     private void Validate(UnitSetup setup)
     {
         ArgumentNullException.ThrowIfNull(setup);
+        ArgumentNullException.ThrowIfNull(setup.Definition);
+        setup.Definition.Validate();
+        setup.Definition.ValidateAgainst(Rules);
         if (FindUnit(setup.Id) is not null)
             throw new ArgumentException($"Duplicate unit id {setup.Id}.");
         if (_grid.IsBlocked(setup.Position))
             throw new ArgumentException($"Unit {setup.Id} is on a blocked cell {setup.Position}.");
         if (UnitAt(setup.Position) is not null)
             throw new ArgumentException($"Unit {setup.Id} shares cell {setup.Position} with another unit.");
-        if (setup.Initiative < 0 || setup.Mobility < 0)
-            throw new ArgumentException($"Unit {setup.Id} has negative initiative or mobility.");
-        // Au-delà, la jauge se remplirait en moins d'un tick ; borner évite aussi tout débordement.
-        if (setup.Initiative > Rules.GaugeCapacity)
-            throw new ArgumentException($"Unit {setup.Id} has an initiative above the gauge capacity.");
         if (setup.InitialGauge < 0 || setup.InitialGauge > Rules.GaugeCapacity)
             throw new ArgumentException($"Unit {setup.Id} has an initial gauge outside [0, {Rules.GaugeCapacity}].");
-        if (setup.MaxHp <= 0)
-            throw new ArgumentException($"Unit {setup.Id} needs positive max HP.");
-        if (!Enum.IsDefined(setup.OnDefeat))
-            throw new ArgumentException($"Unit {setup.Id} has an unknown defeat outcome.");
-        SkillDefinition.ValidateAll(setup.Skills);
-        if (setup.BasicAttack is not null)
-        {
-            var basic = setup.Skills.FirstOrDefault(s => s.Id == setup.BasicAttack)
-                ?? throw new ArgumentException($"Unit {setup.Id}: basic attack '{setup.BasicAttack}' is not one of its skills.");
-            // Elle sert aux attaques d'opportunité, instantanées et sur une seule unité.
-            if (basic.IsCharged || basic.Zone is not null)
-                throw new ArgumentException($"Unit {setup.Id}: basic attack '{basic.Id}' cannot be charged or a zone.");
-        }
-        if (setup.OpportunityAttacksPerCycle < 0)
-            throw new ArgumentException($"Unit {setup.Id} has a negative number of opportunity attacks.");
-        if (setup.Behavior is not null && !Behaviors.IsKnown(setup.Behavior))
-            throw new ArgumentException($"Unit {setup.Id} has an unknown behavior '{setup.Behavior}'.");
     }
 }

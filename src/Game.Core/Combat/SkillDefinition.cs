@@ -47,27 +47,12 @@ public sealed record SkillDefinition
 
     public bool IsCharged => ChargeMs > 0;
 
-    public static IReadOnlyList<SkillDefinition> ListFromJson(string json)
-    {
-        var skills = DataJson.Deserialize<List<SkillDefinition?>>(json);
-        ValidateAll(skills);
-        return skills!;
-    }
+    public static IReadOnlyList<SkillDefinition> ListFromJson(string json) =>
+        ValidateAll(DataJson.Deserialize<List<SkillDefinition?>>(json));
 
     /// <summary>Valide chaque compétence de la liste et l'unicité des identifiants.</summary>
-    public static void ValidateAll(IEnumerable<SkillDefinition?> skills)
-    {
-        ArgumentNullException.ThrowIfNull(skills);
-        var ids = new HashSet<string>();
-        foreach (var skill in skills)
-        {
-            if (skill is null)
-                throw new ArgumentException("Skill list contains a null entry.");
-            skill.Validate();
-            if (!ids.Add(skill.Id))
-                throw new ArgumentException($"Duplicate skill id '{skill.Id}'.");
-        }
-    }
+    public static IReadOnlyList<SkillDefinition> ValidateAll(IEnumerable<SkillDefinition?> skills) =>
+        DataJson.ValidateList(skills, s => s.Validate(), s => s.Id, "skill");
 
     public void Validate()
     {

@@ -24,41 +24,12 @@ public enum UnitStatus
     Removed,
 }
 
-/// <summary>Description d'une unité au début du combat. La liste des compétences est copiée.</summary>
+/// <summary>
+/// Une unité au début du combat : son type (<paramref name="Definition"/>, issu des données) et son placement.
+/// </summary>
 /// <param name="Team">Les unités d'une même équipe sont alliées, les autres ennemies.</param>
-/// <param name="Initiative">Points de jauge gagnés par tick.</param>
-/// <param name="Mobility">Nombre maximal de cases par déplacement.</param>
-/// <param name="BasicAttack">
-/// Identifiant de l'attaque de base parmi <paramref name="Skills"/>, utilisée pour les attaques d'opportunité.
-/// <c>null</c> : l'unité ne fait pas d'attaque d'opportunité.
-/// </param>
-/// <param name="OpportunityAttacksPerCycle">Attaques d'opportunité disponibles entre deux activations (donnée d'équilibrage).</param>
 /// <param name="InitialGauge">Jauge au début du combat, entre 0 et la capacité.</param>
-/// <param name="Behavior">
-/// Comportement d'IA (<see cref="Behaviors"/>), ou <c>null</c> pour une unité commandée par un joueur.
-/// </param>
-public sealed record UnitSetup(
-    UnitId Id,
-    int Team,
-    Cell Position,
-    int Initiative,
-    int Mobility,
-    int MaxHp,
-    IReadOnlyList<SkillDefinition> Skills,
-    DefeatOutcome OnDefeat,
-    string? BasicAttack,
-    int OpportunityAttacksPerCycle,
-    int InitialGauge = 0,
-    string? Behavior = null)
-{
-    private readonly IReadOnlyList<SkillDefinition> _skills = CombatSetup.ReadOnlyCopy(Skills);
-
-    public IReadOnlyList<SkillDefinition> Skills
-    {
-        get => _skills;
-        init => _skills = CombatSetup.ReadOnlyCopy(value);
-    }
-}
+public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinition Definition, int InitialGauge = 0);
 
 /// <summary>
 /// Intention d'une unité IA, fixée avant sa jauge pleine : la compétence prévue (<c>null</c> si aucune n'est
@@ -81,20 +52,22 @@ public sealed class Unit
 
     internal Unit(UnitSetup setup, int gaugeCapacity)
     {
+        var definition = setup.Definition;
         Id = setup.Id;
         Team = setup.Team;
         Position = setup.Position;
-        Initiative = setup.Initiative;
-        Mobility = setup.Mobility;
-        MaxHp = setup.MaxHp;
-        Hp = setup.MaxHp;
-        Skills = setup.Skills;
-        OnDefeat = setup.OnDefeat;
+        Definition = definition;
+        Initiative = definition.Initiative;
+        Mobility = definition.Mobility;
+        MaxHp = definition.MaxHp;
+        Hp = definition.MaxHp;
+        Skills = definition.Skills;
+        OnDefeat = definition.OnDefeat;
         Gauge = setup.InitialGauge;
-        BasicAttack = setup.BasicAttack is null ? null : FindSkill(setup.BasicAttack);
-        OpportunityAttacksPerCycle = setup.OpportunityAttacksPerCycle;
-        OpportunityAttacksLeft = setup.OpportunityAttacksPerCycle;
-        Behavior = setup.Behavior;
+        BasicAttack = definition.BasicAttack is null ? null : FindSkill(definition.BasicAttack);
+        OpportunityAttacksPerCycle = definition.OpportunityAttacksPerCycle;
+        OpportunityAttacksLeft = definition.OpportunityAttacksPerCycle;
+        Behavior = definition.Behavior;
         _gaugeCapacity = gaugeCapacity;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -102,6 +75,10 @@ public sealed class Unit
     public UnitId Id { get; }
     public int Team { get; }
     public Cell Position { get; internal set; }
+
+    /// <summary>Type de l'unité (données) : nom, stats et compétences de départ.</summary>
+    public UnitDefinition Definition { get; }
+
     public int Initiative { get; }
     public int Mobility { get; }
     public int MaxHp { get; }

@@ -92,7 +92,7 @@ public class ReplayTests
         skills[0] = Smash;
 
         Assert.Equal(new UnitId(1), setup.Units.Single().Id);
-        Assert.Equal("strike", setup.Units.Single().Skills.Single().Id);
+        Assert.Equal("strike", setup.Units.Single().Definition.Skills.Single().Id);
         Assert.IsNotType<UnitSetup[]>(setup.Units);
     }
 
