@@ -24,7 +24,7 @@ public static class Behaviors
     /// <summary>
     /// Comportement de base (docs/design.md) : vise l'ennemi le plus fragile qu'il peut frapper à son prochain tour,
     /// avec la compétence la plus forte qui l'atteint ; sinon se rapproche de l'ennemi le plus proche à pied.
-    /// Évite de prendre ses alliés dans ses zones. Les zones en ligne ne sont pas encore gérées.
+    /// Évite de prendre ses alliés dans ses zones. N'utilise pas encore les zones en ligne ni le soutien.
     /// </summary>
     public const string Basic = "basic";
 
@@ -90,10 +90,14 @@ internal sealed class BasicBehavior : IUnitBehavior
         return best.Distance < current ? new ActivateCommand(unit.Id, best.Cell) : null;
     }
 
-    /// <summary>Compétences hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).</summary>
+    /// <summary>
+    /// Attaques hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).
+    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié) ni les zones en ligne.
+    /// </summary>
     private static List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
-            .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id) && s.Zone?.Shape != ZoneShape.Line)
+            .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id))
+            .Where(s => s.Target == SkillTargeting.Enemy && s.Zone?.Shape != ZoneShape.Line)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();
 

@@ -100,6 +100,11 @@
     "skills": [
       { "id": "shot", "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 0 },
       {
+        "id": "tactical-order", // Ordre tactique : remplit une partie de la jauge d'un allié
+        "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+        "gaugeGainPercent": 50
+      },
+      {
         "id": "emp", // Impulsion électromagnétique : étourdit les ennemis d'une grande zone
         "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
         "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "enemies" },

@@ -375,12 +375,23 @@ public sealed class CombatSimulation
         if (use.Target is not { } targetId || use.Cell is not null)
             return (null, RejectionReason.InvalidTarget);
         var target = FindUnit(targetId);
-        if (target is null || target.Team == unit.Team)
+        if (target is null || !IsRightSide(unit, target, skill))
             return (null, RejectionReason.InvalidTarget);
+        // Remplir une jauge déjà pleine, ou bloquée à 0 par une charge, ne servirait à rien.
+        if (skill.GaugeGainPercent > 0 && (target.IsGaugeFull || target.Charge is not null))
+            return (null, RejectionReason.NoEffect);
         return CheckTarget(unit, position, target, skill) is { } reason
             ? (null, reason)
             : (new PlannedAction(skill, target, null), null);
     }
+
+    /// <summary>Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur.</summary>
+    private static bool IsRightSide(Unit caster, Unit target, SkillDefinition skill) => skill.Target switch
+    {
+        SkillTargeting.Enemy => target.Team != caster.Team,
+        SkillTargeting.Ally => target != caster && target.Team == caster.Team,
+        _ => throw new InvalidOperationException($"Unknown target kind {skill.Target}."),
+    };
 
     /// <summary>
     /// Une attaque ciblée de <paramref name="unit"/>, depuis <paramref name="from"/>, peut-elle toucher
@@ -547,6 +558,18 @@ public sealed class CombatSimulation
             return;
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect);
+        if (skill.GaugeGainPercent > 0)
+            GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
+    }
+
+    /// <summary>Remplit d'un coup la jauge (plafonnée à la capacité) ; l'unité peut devenir prête aussitôt.</summary>
+    private void GainGauge(Unit unit, int amount)
+    {
+        var gained = Math.Min(amount, Rules.GaugeCapacity - unit.Gauge);
+        if (gained <= 0)
+            return;
+        _events.Add(new GaugeGained(CurrentTick, unit.Id, gained, unit.Gauge + gained));
+        SetGauge(unit, unit.Gauge + gained);
     }
 
     /// <summary>Distance en cases (diagonale = 1), sans tenir compte des obstacles.</summary>

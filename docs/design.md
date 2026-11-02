@@ -92,7 +92,7 @@
 - **Nano-soin** : pose une **balise** qui soigne une zone ; elle a **sa propre jauge** et disparaît après **3 déclenchements** ; destructible par les ennemis.
 - **Tourelle** : pose une tourelle qui tire sur les ennemis à portée, avec **sa propre jauge** ; destructible.
 - *Limite : une balise et une tourelle actives à la fois.*
-- **Ordre tactique** : remplit instantanément une partie de la jauge d'un allié, qui rejoue plus tôt.
+- **Ordre tactique** : remplit instantanément une partie de la jauge d'un allié, qui rejoue plus tôt. ✅ Un **allié seulement** (pas le tech lui-même) ; refusé si sa jauge est déjà pleine (ou s'il charge une attaque). Permis sur un allié **étourdi** : sa jauge gelée monte d'un coup, il reste bloqué jusqu'à la fin de l'étourdissement puis agit plus tôt. La part remplie est un paramètre en données.
 - **Impulsion électromagnétique** (lourde) : **étourdit** tous les ennemis dans une grande zone ; **désactive aussi ses propres gadgets** dans la zone (dilemme) ; dévastatrice contre les robots.
 - **Passif équipé : Analyse tactique** : les ennemis proches du tech affichent leur **jauge** et leur **intention** (cible et action prévues), visibles par tous les alliés.
 

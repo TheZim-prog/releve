@@ -92,6 +92,9 @@ public sealed record OpportunityAttack(int Tick, UnitId Attacker, UnitId Target,
 /// </summary>
 public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
+/// <summary>La jauge de l'unité gagne <paramref name="Amount"/> points d'un coup (ex. Ordre tactique) et vaut <paramref name="Gauge"/>.</summary>
+public sealed record GaugeGained(int Tick, UnitId Unit, int Amount, int Gauge) : CombatEvent(Tick);
+
 /// <summary>
 /// L'unité tombe à terre sur <paramref name="Position"/> : elle y reste, sa jauge est gelée.
 /// C'est en général sa case actuelle ; si elle tombe en traversant un allié, la dernière case libre de son trajet.
@@ -142,6 +145,9 @@ public enum RejectionReason
     /// compétence à zone, case pour une attaque ciblée) ; ou case non alignée pour une zone en ligne.
     /// </summary>
     InvalidTarget,
+
+    /// <summary>La compétence n'aurait aucun effet sur cette cible (ex. Ordre tactique sur un allié déjà prêt ou qui charge).</summary>
+    NoEffect,
 
     /// <summary>Cible trop loin depuis la case d'arrivée.</summary>
     OutOfRange,
