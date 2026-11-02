@@ -40,10 +40,18 @@ public sealed record ZoneDefinition
     /// <summary>Par défaut, la zone touche tout le monde (docs/design.md).</summary>
     public ZoneTargets Affects { get; init; } = ZoneTargets.All;
 
+    /// <summary>
+    /// Une zone qui ne touche que les ennemis touche aussi les gadgets posés par le lanceur (ex. l'IEM désactive les
+    /// gadgets du tech : un dilemme). Faux par défaut.
+    /// </summary>
+    public bool AlsoHitsOwnSummons { get; init; }
+
     public void Validate(string skillId)
     {
         if (!Enum.IsDefined(Shape) || !Enum.IsDefined(Affects))
             throw new ArgumentException($"Skill '{skillId}' has an unknown zone shape or target filter.");
+        if (AlsoHitsOwnSummons && Affects != ZoneTargets.Enemies)
+            throw new ArgumentException($"Skill '{skillId}': only an enemies-only zone can also hit its caster's gadgets.");
         if (Size < (Shape == ZoneShape.Line ? 1 : 0))
             throw new ArgumentException($"Skill '{skillId}' has an invalid zone size {Size}.");
     }

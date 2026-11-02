@@ -907,7 +907,8 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// Unités debout qu'une zone de <paramref name="caster"/> toucherait, dans l'ordre des unités : jamais le lanceur,
-    /// puis tout le monde, les ennemis seulement ou les alliés seulement selon la zone.
+    /// puis tout le monde, les ennemis seulement ou les alliés seulement selon la zone ; une zone « ennemis » qui touche
+    /// aussi les gadgets du lanceur (IEM) y ajoute ceux-ci, de son équipe.
     /// </summary>
     internal List<Unit> UnitsAffectedBy(Unit caster, SkillDefinition skill, IReadOnlyList<Cell> zone)
     {
@@ -915,7 +916,8 @@ public sealed class CombatSimulation
         var affects = skill.Zone!.Affects;
         return _units
             .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
-            .Where(u => affects == ZoneTargets.All || (affects == ZoneTargets.Allies) == (u.Team == caster.Team))
+            .Where(u => affects == ZoneTargets.All || (affects == ZoneTargets.Allies) == (u.Team == caster.Team)
+                        || (skill.Zone.AlsoHitsOwnSummons && u.SummonedBy == caster.Id))
             .ToList();
     }
 
@@ -1175,7 +1177,10 @@ public sealed class CombatSimulation
             return false;
         }
 
-        if (skill.DealsDamage)
+        // Contre un robot adverse, l'effet renforcé de la compétence (dégâts en plus, états plus longs) ; pas sur ses
+        // propres gadgets pris dans son IEM, étourdis comme les ennemis ordinaires.
+        var robotBonus = target.Definition.IsRobot && target.Team != attacker.Team ? skill.VsRobots : null;
+        if (skill.DealsDamage || robotBonus is { DealsDamage: true })
         {
             int dealt;
             if (CanExecute(skill, target))
@@ -1185,7 +1190,10 @@ public sealed class CombatSimulation
             }
             else
             {
-                dealt = Scaled(_random.NextInt(skill.MinDamage, skill.MaxDamage), damagePercent, target);
+                var roll = skill.DealsDamage ? _random.NextInt(skill.MinDamage, skill.MaxDamage) : 0;
+                if (robotBonus is { DealsDamage: true })
+                    roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
+                dealt = Scaled(roll, damagePercent, target);
             }
             Damage(target, dealt, fallbackCell);
 
@@ -1199,7 +1207,7 @@ public sealed class CombatSimulation
         if (skill.Heals)
             Heal(target, _random.NextInt(skill.MinHeal, skill.MaxHeal));
         foreach (var effect in skill.Effects)
-            ApplyStatus(target, effect, attacker);
+            ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         return true;
@@ -1357,11 +1365,16 @@ public sealed class CombatSimulation
     /// Emprise : un état néfaste posé par une unité qui a ce passif dure plus longtemps.
     /// Étourdi : interrompt la charge. Confus ou dominé : l'unité change de décisions (et de camp, si dominée).
     /// </summary>
-    private void ApplyStatus(Unit target, StatusEffect effect, Unit source)
+    private void ApplyStatus(Unit target, StatusEffect effect, Unit source, int durationPercent = 100)
     {
-        var durationMs = (long)effect.DurationMs;
+        // Tous les multiplicateurs de durée (robot, Emprise) en une seule division.
+        long durationMs = (long)effect.DurationMs * durationPercent, scale = 100;
         if (effect.Status.IsHarmful() && source.HasPassive(PassiveKind.Grip))
-            durationMs = durationMs * Rules.GripDurationPercent / 100;
+        {
+            durationMs *= Rules.GripDurationPercent;
+            scale *= 100;
+        }
+        durationMs /= scale;
         var endTick = CurrentTick + Rules.MillisecondsToTicks((int)durationMs);
         if (target.StatusEndTicks.TryGetValue(effect.Status, out var currentEnd))
             endTick = Math.Max(endTick, currentEnd);

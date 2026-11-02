@@ -134,6 +134,9 @@ public sealed record SkillDefinition
     /// </summary>
     public int ExecuteAtOrBelowPercent { get; init; }
 
+    /// <summary>Effet renforcé sur les robots (ex. IEM : états plus longs, dégâts en plus), ou <c>null</c>.</summary>
+    public RobotBonusDefinition? VsRobots { get; init; }
+
     public static IReadOnlyList<SkillDefinition> ListFromJson(string json) =>
         ValidateAll(DataJson.Deserialize<List<SkillDefinition?>>(json));
 
@@ -257,8 +260,17 @@ public sealed record SkillDefinition
                          || GaugeGainPercent > 0 || ForcedMove is not null || SelfMove is not null || Summon is not null || CreatesDome))
             throw new ArgumentException($"Skill '{Id}': a rescue targets a downed ally, drops it within a radius of at least 1, and does nothing else.");
 
+        // Contre les robots : un coup offensif (un robot n'est jamais un allié visé par du soutien), pas mental (ils y
+        // sont insensibles).
+        VsRobots?.Validate(Id);
+        if (VsRobots is not null && (!IsOffensive || IsMental || CreatesDome || Summon is not null))
+            throw new ArgumentException($"Skill '{Id}': a robot bonus belongs to an offensive, non-mental attack.");
+        // Un bonus qui ne change rien est une erreur de données : des états à allonger, ou des dégâts.
+        if (VsRobots is not null && !VsRobots.DealsDamage && (VsRobots.StatusDurationPercent == 100 || Effects.Count == 0))
+            throw new ArgumentException($"Skill '{Id}': its robot bonus has no effect (no damage, no status to lengthen).");
+
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
-            && !Heals && Summon is null && !IsRescue)
+            && !Heals && Summon is null && !IsRescue && VsRobots is not { DealsDamage: true })
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }

@@ -281,16 +281,16 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
         // atteignent la cible.
         if (action is null || (skill.SelfMove == SelfMoveType.Rush && action.Target != target))
             return null;
-        // Une zone doit vraiment toucher la cible (selon qui elle touche) ; hors confusion, sans prendre d'allié.
-        if (action.Zone is { } zone
-            && (!sim.UnitsAffectedBy(unit, skill, zone).Contains(target)
-                || (!Confused && skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))
-            return null;
+        // Une zone doit vraiment toucher la cible (selon qui elle touche) ; hors confusion, sans prendre d'allié
+        // (ni ses propres gadgets, pour une IEM).
+        if (action.Zone is { } zone)
+        {
+            var affected = sim.UnitsAffectedBy(unit, skill, zone);
+            if (!affected.Contains(target) || (!Confused && affected.Any(u => u.Team == unit.Team)))
+                return null;
+        }
         return use;
     }
-
-    private static bool HitsAnAlly(CombatSimulation sim, Unit unit, IReadOnlyList<Cell> zone) =>
-        sim.Units.Any(u => u != unit && u.Team == unit.Team && u.Status == UnitStatus.Active && zone.Contains(u.Position));
 
     private static IReadOnlyList<Cell> ReachableCells(CombatSimulation sim, Unit unit) =>
         Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Mobility, cell => sim.OccupantFor(unit, cell)).Keys.ToList();
