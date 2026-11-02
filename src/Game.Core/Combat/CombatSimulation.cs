@@ -460,13 +460,15 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// Déplace l'unité pas à pas ; chaque pas qui sort de la portée d'un ennemi peut déclencher son attaque
-    /// d'opportunité (dans l'ordre des unités). Renvoie faux si l'unité est tombée ou étourdie en chemin.
+    /// d'opportunité (dans l'ordre des unités), sauf si l'unité a le passif qui les ignore.
+    /// Renvoie faux si l'unité est tombée ou étourdie en chemin.
     /// </summary>
     private bool MoveAlong(Unit unit, IReadOnlyList<Cell> path)
     {
         var segmentStart = unit.Position;
         var segment = new List<Cell>();
         var lastFreeCell = unit.Position;
+        var exposed = !unit.HasPassive(PassiveKind.IgnoresOpportunityAttacks);
 
         void FlushSegment()
         {
@@ -479,7 +481,7 @@ public sealed class CombatSimulation
 
         foreach (var next in path)
         {
-            foreach (var enemy in _units)
+            foreach (var enemy in exposed ? _units : Enumerable.Empty<Unit>())
             {
                 if (!CanMakeOpportunityAttack(enemy, unit, next))
                     continue;

@@ -68,6 +68,7 @@ public sealed class Unit
         OpportunityAttacksPerCycle = definition.OpportunityAttacksPerCycle;
         OpportunityAttacksLeft = definition.OpportunityAttacksPerCycle;
         Behavior = definition.Behavior;
+        Passive = definition.Passive;
         _gaugeCapacity = gaugeCapacity;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -128,6 +129,11 @@ public sealed class Unit
     internal void ClearStatus(StatusKind status) => _statusEndTicks.Remove(status);
 
     public SkillDefinition? FindSkill(string skillId) => Skills.FirstOrDefault(s => s.Id == skillId);
+
+    /// <summary>Passif équipé, s'il change une règle.</summary>
+    public PassiveKind? Passive { get; }
+
+    public bool HasPassive(PassiveKind passive) => Passive == passive;
 
     /// <summary>Tick à partir duquel la compétence est de nouveau utilisable (0 si jamais utilisée).</summary>
     public int CooldownEndTick(string skillId) => _cooldownEndTicks.GetValueOrDefault(skillId);

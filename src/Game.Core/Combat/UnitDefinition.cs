@@ -44,6 +44,12 @@ public sealed record UnitDefinition
         init => _skills = value is null ? null! : CombatSetup.ReadOnlyCopy(value);
     }
 
+    /// <summary>
+    /// Passif équipé, s'il change une règle (facultatif). Un seul emplacement de passif (docs/design.md 2.3).
+    /// Pour le prototype, le passif du colosse (plus d'attaques d'opportunité) est porté par ses stats.
+    /// </summary>
+    public PassiveKind? Passive { get; init; }
+
     /// <summary>Instance de cette unité pour un combat.</summary>
     public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0) => new(id, team, position, this, initialGauge);
 
@@ -69,6 +75,8 @@ public sealed record UnitDefinition
             throw new ArgumentException($"Unit '{Id}' has a negative number of opportunity attacks.");
         if (Behavior is not null && !Behaviors.IsKnown(Behavior))
             throw new ArgumentException($"Unit '{Id}' has an unknown behavior '{Behavior}'.");
+        if (Passive is { } passive && !Enum.IsDefined(passive))
+            throw new ArgumentException($"Unit '{Id}' has an unknown passive.");
 
         try
         {

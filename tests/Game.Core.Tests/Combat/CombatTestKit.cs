@@ -43,7 +43,8 @@ internal static class CombatTestKit
         int id, int team, int x, int y,
         int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
         DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null,
-        string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null)
+        string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null,
+        PassiveKind? passive = null)
     {
         var definition = new UnitDefinition
         {
@@ -57,6 +58,7 @@ internal static class CombatTestKit
             OpportunityAttacksPerCycle = opportunityAttacks,
             Behavior = behavior,
             Skills = skills ?? new[] { Strike, Smash },
+            Passive = passive,
         };
         return definition.ToSetup(new UnitId(id), team, new Cell(x, y), gauge);
     }

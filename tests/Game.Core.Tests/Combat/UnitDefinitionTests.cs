@@ -84,6 +84,8 @@ public class UnitDefinitionTests
     [InlineData("\"basicAttack\": \"punch\",", "")]               // attaque de base à écrire, même null
     [InlineData("\"onDefeat\": \"removed\"", "\"onDefeat\": \"fled\"")]
     [InlineData("\"maxHp\": 60", "\"maxHp\": 60, \"armor\": 3")]  // champ inconnu
+    [InlineData("\"maxHp\": 60", "\"maxHp\": 60, \"passive\": \"flying\"")]  // passif inconnu
+    [InlineData("\"maxHp\": 60", "\"maxHp\": 60, \"passives\": [ \"ignoresOpportunityAttacks\" ]")]  // un seul passif
     public void ListFromJson_RejectsMalformedUnits(string valid, string invalid)
     {
         Assert.Throws<JsonException>(() => UnitDefinition.ListFromJson($"[{Brawler.Replace(valid, invalid)}]"));

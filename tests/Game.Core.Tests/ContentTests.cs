@@ -46,6 +46,7 @@ public class ContentTests
             Assert.Equal(DefeatOutcome.Downed, h.OnDefeat);
             h.ValidateAgainst(Rules);
         });
+        Assert.Equal(PassiveKind.IgnoresOpportunityAttacks, Heroes["speedster"].Passive);
     }
 
     [Fact]

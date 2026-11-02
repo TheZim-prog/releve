@@ -126,6 +126,18 @@ public class OpportunityAttackTests
     }
 
     [Fact]
+    public void UnitWithThePassive_IgnoresOpportunityAttacks()
+    {
+        var speedster = Unit(1, team: 0, 1, 0, gauge: Capacity, mobility: 5, passive: PassiveKind.IgnoresOpportunityAttacks);
+        var sim = Simulation(new Grid(5, 1), speedster, GuardAt(2, 0, 0));
+
+        var events = Move(sim, new Cell(3, 0));
+
+        Assert.Equal(new UnitMoved(1, Runner, new Cell(1, 0), new[] { new Cell(2, 0), new Cell(3, 0) }), Assert.Single(events));
+        Assert.Equal(1, sim.Get(2).OpportunityAttacksLeft);
+    }
+
+    [Fact]
     public void UnitWithoutBasicAttack_DoesNotPunish()
     {
         var sim = Simulation(new Grid(5, 1), RunnerAt(1, 0), Unit(2, team: 1, 0, 0));
