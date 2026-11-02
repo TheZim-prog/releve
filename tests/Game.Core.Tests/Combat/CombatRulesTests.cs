@@ -14,6 +14,7 @@ public class CombatRulesTests
           "lightActionRestartPercent": 40,
           "heavyActionRestartPercent": 0,
           "offBalanceFillPercent": 50,
+          "intentionThresholdPercent": 50,
         }
         """;
 

@@ -131,6 +131,8 @@
 - ⏸ **Système de couverture** (murets, voitures réduisant les dégâts à distance, destructibles) : à décider plus tard.
 
 **Intentions ennemies (principe technique)** : chaque ennemi choisit son **intention** (action + cible) avant que sa jauge soit pleine (ex. à mi-jauge) et l'exécute quand elle se remplit ; il ne la change que si elle devient impossible. Les intentions sont **cachées par défaut**, révélées par l'analyse tactique (et éventuellement d'autres effets).
+- ✅ **Précisions** : le seuil de choix est un pourcentage de jauge (paramètre en données). Une intention devient **impossible** si sa cible est vaincue, si la compétence est en recharge, ou si la cible n'est **plus atteignable** à jauge pleine (déplacement compris) : l'ennemi en choisit alors une nouvelle et l'exécute ; si aucune cible n'est atteignable, il se rapproche. À un même tick, les **commandes des joueurs passent avant celles de l'IA**.
+- ✅ **Comportement de base** (avant les comportements propres à chaque ennemi) : cible = le héros **le plus fragile** (le moins de PV) parmi ceux qu'il peut frapper à son prochain tour, sinon le **plus proche** ; compétence = **la plus forte disponible** (dégâts moyens les plus élevés, hors recharge).
 - 🔁 Options « attendre avec jauge qui retombe » et « retarder jusqu'à un point de la timeline » : pensées pour le mode pausé, probablement inutiles en temps réel. **Réactions préparées** (overwatch) toujours pertinentes.
 - ✅ **Timeline prédictive** affichée, avec aperçu de l'effet d'une action.
 - ✅ Combat **pas trop long** : objectif prioritaire.

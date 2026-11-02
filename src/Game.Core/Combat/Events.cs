@@ -53,6 +53,13 @@ public sealed record ChargeStarted(int Tick, UnitId Unit, string SkillId, UnitId
     public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Unit, SkillId, Target, ReleaseTick, Zone?.Count);
 }
 
+/// <summary>
+/// L'unité IA fixe (ou change, si la précédente est devenue impossible) son intention ; <c>null</c> : elle n'en a
+/// plus (plus aucun ennemi). Le serveur la connaît toujours ; c'est l'affichage côté joueurs qui la cache sauf
+/// révélation. Une intention exécutée, ou celle d'une unité vaincue, disparaît sans événement dédié.
+/// </summary>
+public sealed record IntentionChosen(int Tick, UnitId Unit, Intention? Intention) : CombatEvent(Tick);
+
 /// <summary>La charge est interrompue (lanceur étourdi ou vaincu) : l'attaque n'a pas lieu.</summary>
 public sealed record ChargeInterrupted(int Tick, UnitId Unit, string SkillId) : CombatEvent(Tick);
 
@@ -103,6 +110,9 @@ public enum RejectionReason
 
     /// <summary>L'unité est à terre ou retirée.</summary>
     Incapacitated,
+
+    /// <summary>L'unité est commandée par l'IA : un joueur ne peut pas lui donner d'ordre.</summary>
+    NotControllable,
 
     /// <summary>L'unité est étourdie : elle ne peut pas agir, même jauge pleine.</summary>
     Stunned,

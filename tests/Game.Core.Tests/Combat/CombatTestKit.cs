@@ -20,6 +20,7 @@ internal static class CombatTestKit
         LightActionRestartPercent = 40,
         HeavyActionRestartPercent = 0,
         OffBalanceFillPercent = 50,
+        IntentionThresholdPercent = 50,
     };
 
     /// <summary>Attaque légère, 10 dégâts fixes, sans recharge.</summary>
@@ -42,9 +43,9 @@ internal static class CombatTestKit
         int id, int team, int x, int y,
         int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
         DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null,
-        string? basicAttack = null, int opportunityAttacks = 1) =>
+        string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null) =>
         new(new UnitId(id), team, new Cell(x, y), initiative, mobility, hp, skills ?? new[] { Strike, Smash }, onDefeat,
-            basicAttack, opportunityAttacks, gauge);
+            basicAttack, opportunityAttacks, gauge, behavior);
 
     public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);
 

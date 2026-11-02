@@ -34,6 +34,9 @@ public enum UnitStatus
 /// </param>
 /// <param name="OpportunityAttacksPerCycle">Attaques d'opportunité disponibles entre deux activations (donnée d'équilibrage).</param>
 /// <param name="InitialGauge">Jauge au début du combat, entre 0 et la capacité.</param>
+/// <param name="Behavior">
+/// Comportement d'IA (<see cref="Behaviors"/>), ou <c>null</c> pour une unité commandée par un joueur.
+/// </param>
 public sealed record UnitSetup(
     UnitId Id,
     int Team,
@@ -45,7 +48,8 @@ public sealed record UnitSetup(
     DefeatOutcome OnDefeat,
     string? BasicAttack,
     int OpportunityAttacksPerCycle,
-    int InitialGauge = 0)
+    int InitialGauge = 0,
+    string? Behavior = null)
 {
     private readonly IReadOnlyList<SkillDefinition> _skills = CombatSetup.ReadOnlyCopy(Skills);
 
@@ -55,6 +59,12 @@ public sealed record UnitSetup(
         init => _skills = CombatSetup.ReadOnlyCopy(value);
     }
 }
+
+/// <summary>
+/// Intention d'une unité IA, fixée avant sa jauge pleine : la compétence prévue (<c>null</c> si aucune n'est
+/// disponible : elle se rapprochera seulement) et sa cible. Cachée par défaut côté joueurs.
+/// </summary>
+public sealed record Intention(string? SkillId, UnitId Target);
 
 /// <summary>
 /// Attaque en cours de charge : cible (attaque ciblée) ou cases fixées au sol (zone), et tick de déclenchement.
@@ -84,6 +94,7 @@ public sealed class Unit
         BasicAttack = setup.BasicAttack is null ? null : FindSkill(setup.BasicAttack);
         OpportunityAttacksPerCycle = setup.OpportunityAttacksPerCycle;
         OpportunityAttacksLeft = setup.OpportunityAttacksPerCycle;
+        Behavior = setup.Behavior;
         _gaugeCapacity = gaugeCapacity;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -117,6 +128,12 @@ public sealed class Unit
 
     /// <summary>Attaque en cours de charge, ou <c>null</c>.</summary>
     public PendingCharge? Charge { get; internal set; }
+
+    /// <summary>Comportement d'IA, ou <c>null</c> pour une unité commandée par un joueur.</summary>
+    public string? Behavior { get; }
+
+    /// <summary>Intention en cours (unités IA), ou <c>null</c>.</summary>
+    public Intention? Intention { get; internal set; }
 
     /// <summary>États en cours, avec le tick où chacun se termine (ordre fixe).</summary>
     public IReadOnlyDictionary<StatusKind, int> StatusEndTicks { get; }

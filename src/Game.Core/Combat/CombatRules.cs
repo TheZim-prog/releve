@@ -24,6 +24,9 @@ public sealed record CombatRules
     /// <summary>Vitesse de remplissage de la jauge d'une unité déséquilibrée, en % de la normale.</summary>
     public required int OffBalanceFillPercent { get; init; }
 
+    /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
+    public required int IntentionThresholdPercent { get; init; }
+
     public static CombatRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<CombatRules>(json);
@@ -48,6 +51,7 @@ public sealed record CombatRules
         ValidatePercent(LightActionRestartPercent, nameof(LightActionRestartPercent));
         ValidatePercent(HeavyActionRestartPercent, nameof(HeavyActionRestartPercent));
         ValidatePercent(OffBalanceFillPercent, nameof(OffBalanceFillPercent), max: 100);
+        ValidatePercent(IntentionThresholdPercent, nameof(IntentionThresholdPercent), max: 100);
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

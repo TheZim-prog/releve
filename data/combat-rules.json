@@ -12,5 +12,8 @@
   "heavyActionRestartPercent": 0,
 
   // Une unité déséquilibrée remplit sa jauge à ce pourcentage de sa vitesse normale.
-  "offBalanceFillPercent": 50
+  "offBalanceFillPercent": 50,
+
+  // Une unité IA fixe son intention (action + cible) quand sa jauge atteint ce pourcentage.
+  "intentionThresholdPercent": 50
 }

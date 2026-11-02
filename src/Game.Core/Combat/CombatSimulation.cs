@@ -5,9 +5,14 @@ namespace Game.Core.Combat;
 /// <summary>
 /// Simulation d'un combat, à ticks fixes et entièrement déterministe.
 /// <para>
-/// Déroulement d'un tick : les états arrivés à échéance prennent fin ; les commandes soumises depuis
-/// le tick précédent sont appliquées dans leur ordre d'arrivée (la première validée l'emporte en cas
-/// de conflit) ; puis les jauges se remplissent.
+/// Déroulement d'un tick : les états arrivés à échéance prennent fin ; les attaques chargées arrivées à
+/// échéance se déclenchent ; les commandes des joueurs soumises depuis le tick précédent sont appliquées
+/// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les unités IA prêtes
+/// agissent ; les jauges se remplissent ; les unités IA qui passent le seuil fixent leur intention.
+/// </para>
+/// <para>
+/// L'IA fait partie de la simulation : ses décisions sont déterministes et se rejouent d'elles-mêmes,
+/// le journal des commandes ne contient donc que celles des joueurs.
 /// </para>
 /// <para>
 /// La pause n'existe pas ici : c'est la boucle qui appelle <see cref="Tick"/> qui s'arrête.
@@ -49,6 +54,9 @@ public sealed class CombatSimulation
     }
 
     public CombatRules Rules { get; }
+
+    /// <summary>Le terrain du combat (non modifiable hors de la simulation).</summary>
+    public Grid Grid => _grid;
 
     /// <summary>Numéro du dernier tick joué (0 avant le premier).</summary>
     public int CurrentTick { get; private set; }
@@ -92,11 +100,71 @@ public sealed class CombatSimulation
 
         foreach (var unit in _units)
         {
+            if (unit.Behavior is not null && unit.IsReady)
+                RunAi(unit, Behaviors.Find(unit.Behavior)!);
+        }
+
+        foreach (var unit in _units)
+        {
             if (unit.Status == UnitStatus.Active && !unit.IsGaugeFull)
                 SetGauge(unit, Math.Min(Rules.GaugeCapacity, unit.Gauge + FillAmount(unit)));
         }
 
+        UpdateIntentions();
+
         return _events.GetRange(firstEvent, _events.Count - firstEvent);
+    }
+
+    /// <summary>
+    /// Une unité IA prête exécute son intention. Si elle est absente ou devenue impossible (cible vaincue,
+    /// compétence en recharge, cible hors d'atteinte), l'unité en choisit une nouvelle ; si celle-ci non plus
+    /// ne peut pas être exécutée maintenant, l'unité se rapproche de sa cible, ou attend jauge pleine.
+    /// </summary>
+    private void RunAi(Unit unit, IUnitBehavior behavior)
+    {
+        var command = unit.Intention is { } intention ? behavior.Execute(this, unit, intention) : null;
+        if (command is null)
+        {
+            SetIntention(unit, behavior.ChooseIntention(this, unit));
+            if (unit.Intention is { } fresh)
+                command = behavior.Execute(this, unit, fresh) ?? behavior.Approach(this, unit, fresh);
+        }
+        if (command is null)
+            return;
+
+        // Même validation que pour un joueur : le comportement ne contourne aucune règle.
+        var (plan, reason) = ValidateActivation(command);
+        if (plan is null)
+            throw new InvalidOperationException($"Behavior '{unit.Behavior}' produced an invalid command ({reason}): {command}.");
+        ApplyActivation(plan);
+    }
+
+    /// <summary>
+    /// Les unités IA dont la jauge passe le seuil fixent leur intention (une fois par cycle). Une intention dont
+    /// la cible est tombée est remplacée aussitôt ; « hors d'atteinte » ne se juge qu'à jauge pleine (RunAi).
+    /// </summary>
+    private void UpdateIntentions()
+    {
+        var threshold = Rules.GaugeAt(Rules.IntentionThresholdPercent);
+        foreach (var unit in _units)
+        {
+            if (unit.Behavior is null || unit.Status != UnitStatus.Active || unit.Charge is not null)
+                continue;
+
+            var needsIntention = unit.Intention is null
+                ? unit.Gauge >= threshold
+                : FindUnit(unit.Intention.Target) is not { Status: UnitStatus.Active };
+            if (needsIntention)
+                SetIntention(unit, Behaviors.Find(unit.Behavior)!.ChooseIntention(this, unit));
+        }
+    }
+
+    private void SetIntention(Unit unit, Intention? intention)
+    {
+        if (intention == unit.Intention)
+            return;
+        unit.Intention = intention;
+        _events.Add(new IntentionChosen(CurrentTick, unit.Id, intention));
     }
 
     /// <summary>
@@ -176,55 +244,52 @@ public sealed class CombatSimulation
 
     private void ApplyActivate(ActivateCommand command)
     {
-        // Validation complète d'abord : la commande est atomique, rien n'est appliqué si une partie échoue.
+        // Commande d'un joueur : refusée pour une unité commandée par l'IA.
+        if (FindUnit(command.Unit) is { Behavior: not null })
+        {
+            Reject(command, RejectionReason.NotControllable);
+            return;
+        }
+
+        var (plan, reason) = ValidateActivation(command);
+        if (plan is null)
+            Reject(command, reason!.Value);
+        else
+            ApplyActivation(plan);
+    }
+
+    /// <summary>Activation validée, prête à être appliquée telle quelle.</summary>
+    internal sealed record ActivationPlan(Unit Unit, IReadOnlyList<Cell>? Path, PlannedAction? Action);
+
+    /// <summary>
+    /// Validation complète d'une activation, sans rien changer : la commande est atomique, rien n'est appliqué
+    /// si une partie échoue. Sert aux commandes des joueurs comme à l'IA.
+    /// </summary>
+    internal (ActivationPlan? Plan, RejectionReason? Reason) ValidateActivation(ActivateCommand command)
+    {
         var unit = FindUnit(command.Unit);
         if (unit is null)
-        {
-            Reject(command, RejectionReason.UnknownUnit);
-            return;
-        }
+            return (null, RejectionReason.UnknownUnit);
         if (unit.Status != UnitStatus.Active)
-        {
-            Reject(command, RejectionReason.Incapacitated);
-            return;
-        }
+            return (null, RejectionReason.Incapacitated);
         if (unit.HasStatus(StatusKind.Stunned))
-        {
-            Reject(command, RejectionReason.Stunned);
-            return;
-        }
+            return (null, RejectionReason.Stunned);
         if (unit.Charge is not null)
-        {
-            Reject(command, RejectionReason.Charging);
-            return;
-        }
+            return (null, RejectionReason.Charging);
         if (!unit.IsReady)
-        {
-            Reject(command, RejectionReason.NotReady);
-            return;
-        }
+            return (null, RejectionReason.NotReady);
         if (command.MoveTo is null && command.Skill is null)
-        {
-            Reject(command, RejectionReason.Empty);
-            return;
-        }
+            return (null, RejectionReason.Empty);
 
         var position = unit.Position;
         IReadOnlyList<Cell>? path = null;
         if (command.MoveTo is { } destination)
         {
             if (destination == unit.Position)
-            {
-                Reject(command, RejectionReason.InvalidDestination);
-                return;
-            }
-
+                return (null, RejectionReason.InvalidDestination);
             path = Pathfinder.FindPath(_grid, unit.Position, destination, unit.Mobility, cell => OccupantFor(unit, cell));
             if (path is null)
-            {
-                Reject(command, RejectionReason.Unreachable);
-                return;
-            }
+                return (null, RejectionReason.Unreachable);
             position = destination;
         }
 
@@ -233,26 +298,22 @@ public sealed class CombatSimulation
         {
             var skill = unit.FindSkill(use.SkillId);
             if (skill is null)
-            {
-                Reject(command, RejectionReason.UnknownSkill);
-                return;
-            }
+                return (null, RejectionReason.UnknownSkill);
             if (CurrentTick < unit.CooldownEndTick(skill.Id))
-            {
-                Reject(command, RejectionReason.OnCooldown);
-                return;
-            }
-
-            var (planned, reason) = PlanAction(unit, position, skill, use);
-            if (reason is { } rejection)
-            {
-                Reject(command, rejection);
-                return;
-            }
+                return (null, RejectionReason.OnCooldown);
+            var (planned, rejection) = PlanAction(unit, position, skill, use);
+            if (rejection is not null)
+                return (null, rejection);
             action = planned;
         }
 
-        // Application.
+        return (new ActivationPlan(unit, path, action), null);
+    }
+
+    private void ApplyActivation(ActivationPlan plan)
+    {
+        var (unit, path, action) = plan;
+        unit.Intention = null; // l'unité agit : son intention éventuelle est consommée
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
         unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue
 
@@ -288,14 +349,14 @@ public sealed class CombatSimulation
     }
 
     /// <summary>Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>).</summary>
-    private sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone);
+    internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone);
 
     /// <summary>
     /// Valide la cible d'une compétence utilisée depuis <paramref name="position"/> (case d'arrivée du lanceur).
     /// Compétence à zone : une case, à portée (0 = sur soi), libre et en vue pour un carré, alignée pour une ligne,
     /// et une zone non vide. Attaque ciblée : voir <see cref="CheckTarget"/>.
     /// </summary>
-    private (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
+    internal (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
     {
         if (skill.Zone is { } zone)
         {
@@ -516,10 +577,12 @@ public sealed class CombatSimulation
         // Le statut change d'abord, pour que la fin d'un étourdissement n'annonce pas l'unité prête.
         target.Status = target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed;
 
-        // Une unité vaincue perd ses états et sa charge, annoncés avant sa chute (rien n'arrive plus après).
+        // Une unité vaincue perd ses états et sa charge, annoncés avant sa chute (rien n'arrive plus après),
+        // ainsi que son intention.
         foreach (var status in target.StatusEndTicks.Keys.ToList())
             EndStatus(target, status);
         InterruptCharge(target);
+        target.Intention = null;
 
         if (target.Status == UnitStatus.Removed)
         {
@@ -608,5 +671,7 @@ public sealed class CombatSimulation
         }
         if (setup.OpportunityAttacksPerCycle < 0)
             throw new ArgumentException($"Unit {setup.Id} has a negative number of opportunity attacks.");
+        if (setup.Behavior is not null && !Behaviors.IsKnown(setup.Behavior))
+            throw new ArgumentException($"Unit {setup.Id} has an unknown behavior '{setup.Behavior}'.");
     }
 }
