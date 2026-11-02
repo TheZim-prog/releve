@@ -1,0 +1,11 @@
+{
+  // Fréquence de la simulation (à confirmer en jeu).
+  "ticksPerSecond": 20,
+
+  // Une jauge est pleine quand elle atteint cette valeur. Chaque tick, elle gagne
+  // l'initiative de l'unité : avec 1000 et une initiative de 10, il faut 100 ticks (5 s).
+  "gaugeCapacity": 1000,
+
+  // Après un déplacement seul, la jauge repart de ce pourcentage de sa capacité.
+  "moveOnlyRestartPercent": 50
+}

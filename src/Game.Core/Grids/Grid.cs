@@ -67,6 +67,14 @@ public sealed class Grid
         return grid;
     }
 
+    /// <summary>Copie indépendante (le décor d'une copie peut changer sans toucher l'original).</summary>
+    public Grid Clone()
+    {
+        var copy = new Grid(Width, Height);
+        Array.Copy(_blocked, copy._blocked, _blocked.Length);
+        return copy;
+    }
+
     public bool Contains(Cell cell) =>
         cell.X >= 0 && cell.X < Width && cell.Y >= 0 && cell.Y < Height;
 
