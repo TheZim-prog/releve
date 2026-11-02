@@ -124,7 +124,8 @@ internal sealed class BasicBehavior : IUnitBehavior
             var action = sim.PlanAction(unit, cell, skill, use).Action;
             if (action is null)
                 continue;
-            if (action.Zone is { } zone && (!zone.Contains(target.Position) || HitsAnAlly(sim, unit, zone)))
+            if (action.Zone is { } zone
+                && (!zone.Contains(target.Position) || (skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))
                 continue;
             return new ActivateCommand(unit.Id, cell == unit.Position ? null : cell, use);
         }

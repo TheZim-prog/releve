@@ -1,0 +1,127 @@
+// Héros jouables (kits du prologue, docs/design.md section 3).
+// Seules les compétences faisables avec le moteur actuel sont présentes ; les autres viendront
+// avec leurs mécaniques (dôme, projection, hypervitesse, tourelle, confusion…), de même que le passif
+// du speedster (ignorer les attaques d'opportunité).
+// Durées en millisecondes de combat. L'initiative est en points de jauge par tick (voir combat-rules.json
+// pour la capacité de la jauge, les ticks par seconde et le point de reprise selon le poids de l'action).
+[
+  {
+    "id": "colossus",
+    "name": "Colosse",
+    "maxHp": 160, "initiative": 7, "mobility": 3,
+    "onDefeat": "downed",
+    "basicAttack": "punch",
+    "opportunityAttacksPerCycle": 2, // passif : plus d'attaques d'opportunité que les autres
+    "behavior": null,
+    "skills": [
+      { "id": "punch", "weight": "light", "range": 1, "minDamage": 12, "maxDamage": 16, "cooldownMs": 0 },
+      {
+        "id": "shockwave", // Onde de choc : frappe au sol, vague en ligne, esquivable
+        "weight": "heavy", "range": 1, "minDamage": 20, "maxDamage": 26, "cooldownMs": 12000,
+        "chargeMs": 1500,
+        "zone": { "shape": "line", "size": 4, "throughWalls": false },
+        "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+      }
+    ]
+  },
+  {
+    "id": "speedster",
+    "name": "Speedster",
+    "maxHp": 85, "initiative": 16, "mobility": 6,
+    "onDefeat": "downed",
+    "basicAttack": "flurry",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": [
+      { "id": "flurry", "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 },
+      {
+        "id": "whirlwind", // Tourbillon : déséquilibre toutes les unités de la zone
+        "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+        "zone": { "shape": "square", "size": 1, "throughWalls": false },
+        "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+      }
+    ]
+  },
+  {
+    "id": "fighter",
+    "name": "Combattant",
+    "maxHp": 110, "initiative": 12, "mobility": 4,
+    "onDefeat": "downed",
+    "basicAttack": "combo",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": [
+      { "id": "combo", "weight": "light", "range": 1, "minDamage": 11, "maxDamage": 15, "cooldownMs": 0 },
+      { "id": "precise-strike", "weight": "light", "range": 1, "minDamage": 22, "maxDamage": 28, "cooldownMs": 8000 },
+      { "id": "throwing-blades", "weight": "light", "range": 4, "minDamage": 8, "maxDamage": 11, "cooldownMs": 4000 },
+      {
+        "id": "stunning-blow",
+        "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 12000,
+        "effects": [ { "status": "stunned", "durationMs": 2000 } ]
+      }
+    ]
+  },
+  {
+    "id": "energetic",
+    "name": "Énergétique",
+    "maxHp": 80, "initiative": 10, "mobility": 4,
+    "onDefeat": "downed",
+    "basicAttack": "bolt",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": [
+      { "id": "bolt", "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 13, "cooldownMs": 0 },
+      {
+        "id": "beam", // Rayon : traverse les ennemis et le décor
+        "weight": "light", "range": 1, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,
+        "zone": { "shape": "line", "size": 6, "throughWalls": true }
+      },
+      {
+        "id": "blast", // Déflagration : zone chargée à distance
+        "weight": "heavy", "range": 6, "minDamage": 22, "maxDamage": 28, "cooldownMs": 12000,
+        "chargeMs": 1500,
+        "zone": { "shape": "square", "size": 1, "throughWalls": false }
+      },
+      {
+        "id": "nova", // explosion autour de lui pour se dégager
+        "weight": "light", "range": 0, "minDamage": 12, "maxDamage": 16, "cooldownMs": 8000,
+        "zone": { "shape": "square", "size": 1, "throughWalls": false }
+      }
+    ]
+  },
+  {
+    "id": "tech",
+    "name": "Tech",
+    "maxHp": 85, "initiative": 10, "mobility": 4,
+    "onDefeat": "downed",
+    "basicAttack": "shot",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": [
+      { "id": "shot", "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 0 },
+      {
+        "id": "emp", // Impulsion électromagnétique : étourdit les ennemis d'une grande zone
+        "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+        "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "enemies" },
+        "effects": [ { "status": "stunned", "durationMs": 2000 } ]
+      }
+    ]
+  },
+  {
+    "id": "telepath",
+    "name": "Télépathe",
+    "maxHp": 75, "initiative": 10, "mobility": 3,
+    "onDefeat": "downed",
+    "basicAttack": "psi-dart",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": [
+      { "id": "psi-dart", "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 8, "cooldownMs": 0 },
+      {
+        "id": "paralysis", // étourdit plus longtemps que le coup du combattant
+        "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+        "effects": [ { "status": "stunned", "durationMs": 3000 } ]
+      }
+    ]
+  }
+]

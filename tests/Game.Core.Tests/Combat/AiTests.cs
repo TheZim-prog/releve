@@ -231,6 +231,22 @@ public class AiTests
     }
 
     [Fact]
+    public void Zone_ForEnemiesOnly_IsUsedEvenWithAnAllyInside()
+    {
+        var blast = new SkillDefinition
+        {
+            Id = "blast", Weight = SkillWeight.Heavy, Range = 3, MinDamage = 40, MaxDamage = 40, CooldownMs = 0,
+            Zone = new ZoneDefinition { Shape = ZoneShape.Square, Size = 1, ThroughWalls = false, Affects = ZoneTargets.Enemies },
+        };
+        var sim = Simulation(new Grid(7, 3),
+            HeroAt(1, 1, 1),
+            Unit(5, team: 1, 2, 1), // allié de l'IA, collé au héros, mais épargné par la zone
+            AiAt(4, 1, skills: new[] { blast, Strike }));
+
+        Assert.Contains(new IntentionChosen(5, Ai, new Intention("blast", HeroA)), sim.TickTimes(5));
+    }
+
+    [Fact]
     public void Intention_IsReplacedAsSoonAsItsTargetFalls()
     {
         var sim = Simulation(new Grid(9, 3),

@@ -1,0 +1,70 @@
+// Ennemis du prologue (docs/design.md section 3). Comportement de base pour tous en attendant
+// leurs comportements propres (le tireur qui garde ses distances, le caïd qui fuit…). L'IA de base
+// n'utilise pas encore les zones en ligne (Tir appuyé), ni la Charge du caïd (mécanique à venir).
+[
+  {
+    "id": "brawler",
+    "name": "Cogneur",
+    "maxHp": 60, "initiative": 9, "mobility": 4,
+    "onDefeat": "removed",
+    "basicAttack": "punch",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": "basic",
+    "skills": [
+      { "id": "punch", "weight": "light", "range": 1, "minDamage": 8, "maxDamage": 12, "cooldownMs": 0 }
+    ]
+  },
+  {
+    "id": "gunner",
+    "name": "Tireur",
+    "maxHp": 40, "initiative": 9, "mobility": 4,
+    "onDefeat": "removed",
+    "basicAttack": "shot",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": "basic",
+    "skills": [
+      { "id": "shot", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 },
+      {
+        "id": "aimed-burst", // Tir appuyé : ligne chargée, esquivable (pas encore utilisé par l'IA de base)
+        "weight": "heavy", "range": 1, "minDamage": 16, "maxDamage": 20, "cooldownMs": 10000,
+        "chargeMs": 1000,
+        "zone": { "shape": "line", "size": 6, "throughWalls": false }
+      }
+    ]
+  },
+  {
+    "id": "brute",
+    "name": "Brute",
+    "maxHp": 140, "initiative": 6, "mobility": 3,
+    "onDefeat": "removed",
+    "basicAttack": "heavy-blow",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": "basic",
+    "skills": [
+      { "id": "heavy-blow", "weight": "heavy", "range": 1, "minDamage": 18, "maxDamage": 24, "cooldownMs": 0 },
+      {
+        "id": "seismic-strike", // Frappe sismique : zone chargée autour d'elle
+        "weight": "heavy", "range": 0, "minDamage": 25, "maxDamage": 30, "cooldownMs": 14000,
+        "chargeMs": 2000,
+        "zone": { "shape": "square", "size": 1, "throughWalls": false }
+      }
+    ]
+  },
+  {
+    "id": "kingpin",
+    "name": "Le caïd",
+    "maxHp": 220, "initiative": 9, "mobility": 4,
+    "onDefeat": "removed",
+    "basicAttack": "power-punch",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": "basic",
+    "skills": [
+      { "id": "power-punch", "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 20, "cooldownMs": 0 },
+      {
+        "id": "impact-wave", // Onde d'impact : dégâts autour de lui
+        "weight": "light", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,
+        "zone": { "shape": "square", "size": 1, "throughWalls": false }
+      }
+    ]
+  }
+]

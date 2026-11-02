@@ -1,0 +1,107 @@
+using Game.Core.Combat;
+using Game.Core.Grids;
+using Xunit.Abstractions;
+
+namespace Game.Core.Tests;
+
+/// <summary>
+/// Vérifie le contenu réel de data/ : il se charge, respecte les règles, et des combats d'essai (IA contre IA)
+/// se jouent jusqu'au bout et se rejouent à l'identique. Les combats dépendent de l'équilibrage : s'ils
+/// échouent après un changement de valeurs, c'est le signe d'un combat qui s'enlise, pas forcément d'un bug.
+/// </summary>
+public class ContentTests
+{
+    private static readonly CombatRules Rules = CombatRules.FromJson(Data("combat-rules.json"));
+    private static readonly IReadOnlyDictionary<string, UnitDefinition> Heroes = Load("heroes.json");
+    private static readonly IReadOnlyDictionary<string, UnitDefinition> Enemies = Load("enemies.json");
+
+    private static readonly Grid Arena = Grid.FromRows(
+        "................",
+        "................",
+        "....##......##..",
+        "................",
+        "................",
+        "......####......",
+        "................",
+        "................");
+
+    private readonly ITestOutputHelper _output;
+
+    public ContentTests(ITestOutputHelper output) => _output = output;
+
+    private static string Data(string path) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", path));
+
+    private static IReadOnlyDictionary<string, UnitDefinition> Load(string file) =>
+        UnitDefinition.ListFromJson(Data(Path.Combine("units", file))).ToDictionary(u => u.Id);
+
+    [Fact]
+    public void Heroes_AreTheSixArchetypes()
+    {
+        Assert.Equal(
+            new[] { "colossus", "energetic", "fighter", "speedster", "tech", "telepath" },
+            Heroes.Keys.Order());
+        Assert.All(Heroes.Values, h =>
+        {
+            Assert.Null(h.Behavior);
+            Assert.Equal(DefeatOutcome.Downed, h.OnDefeat);
+            h.ValidateAgainst(Rules);
+        });
+    }
+
+    [Fact]
+    public void Enemies_AreThePrologueOnes()
+    {
+        Assert.Equal(new[] { "brawler", "brute", "gunner", "kingpin" }, Enemies.Keys.Order());
+        Assert.All(Enemies.Values, e =>
+        {
+            Assert.Equal(Behaviors.Basic, e.Behavior);
+            Assert.Equal(DefeatOutcome.Removed, e.OnDefeat);
+            e.ValidateAgainst(Rules);
+        });
+    }
+
+    public static TheoryData<string, string[], (string Id, int X, int Y)[]> Skirmishes => new()
+    {
+        {
+            "street",
+            new[] { "colossus", "fighter", "speedster", "energetic", "tech" },
+            new[] { ("brawler", 14, 1), ("brawler", 14, 3), ("brawler", 14, 5), ("gunner", 15, 0), ("gunner", 15, 7), ("brute", 13, 4) }
+        },
+        {
+            "kingpin",
+            new[] { "colossus", "fighter", "telepath", "energetic", "speedster" },
+            new[] { ("kingpin", 14, 4), ("brawler", 14, 2), ("brawler", 13, 6), ("gunner", 15, 0) }
+        },
+    };
+
+    [Theory]
+    [MemberData(nameof(Skirmishes))]
+    public void Skirmish_WithTheRealContent_EndsAndReplays(string name, string[] heroIds, (string Id, int X, int Y)[] enemies)
+    {
+        // Les héros sont confiés à l'IA de base pour que le combat se joue seul.
+        var units = new List<UnitSetup>();
+        var id = 1;
+        for (var i = 0; i < heroIds.Length; i++)
+            units.Add((Heroes[heroIds[i]] with { Behavior = Behaviors.Basic }).ToSetup(new UnitId(id++), team: 0, new Cell(0, 2 + i)));
+        foreach (var (enemy, x, y) in enemies)
+            units.Add(Enemies[enemy].ToSetup(new UnitId(id++), team: 1, new Cell(x, y)));
+
+        var setup = new CombatSetup(Rules, Arena, units, Seed: 2026);
+        var sim = new CombatSimulation(setup);
+        var maxTicks = Rules.TicksPerSecond * 60 * 10;
+        while (sim.CurrentTick < maxTicks && StandingTeams(sim).Count > 1)
+            sim.Tick();
+
+        var winners = StandingTeams(sim);
+        _output.WriteLine($"[{name}] durée : {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, équipe(s) debout : {string.Join(",", winners)}");
+        foreach (var unit in sim.Units)
+            _output.WriteLine($"  {unit.Definition.Name,-12} équipe {unit.Team}  {unit.Status,-8} {unit.Hp,4}/{unit.MaxHp} PV");
+
+        Assert.True(winners.Count <= 1, $"Combat '{name}' still running after {maxTicks} ticks.");
+        var replayed = CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick);
+        Assert.Equal(sim.EventLog, replayed.EventLog);
+    }
+
+    private static List<int> StandingTeams(CombatSimulation sim) =>
+        sim.Units.Where(u => u.Status == UnitStatus.Active).Select(u => u.Team).Distinct().ToList();
+}
