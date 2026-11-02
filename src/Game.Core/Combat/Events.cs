@@ -39,8 +39,25 @@ public sealed record StatusApplied(int Tick, UnitId Unit, StatusKind Status, int
 /// <summary>L'état de l'unité prend fin.</summary>
 public sealed record StatusEnded(int Tick, UnitId Unit, StatusKind Status) : CombatEvent(Tick);
 
-/// <summary>L'unité tombe à terre : elle reste sur sa case, sa jauge est gelée.</summary>
-public sealed record UnitDowned(int Tick, UnitId Unit) : CombatEvent(Tick);
+/// <summary>
+/// <paramref name="Attacker"/> frappe gratuitement <paramref name="Target"/>, qui quitte une case adjacente,
+/// avec son attaque de base (les effets suivent dans d'autres événements).
+/// Un déplacement interrompu est découpé : <see cref="UnitMoved"/> jusqu'à la case quittée, l'attaque, puis la suite.
+/// </summary>
+public sealed record OpportunityAttack(int Tick, UnitId Attacker, UnitId Target, string SkillId) : CombatEvent(Tick);
+
+/// <summary>
+/// Le déplacement de l'unité s'arrête en chemin (étourdie par une attaque d'opportunité) : elle est sur
+/// <paramref name="Position"/>, la case atteinte, ou la dernière case libre du trajet si elle traversait un allié.
+/// Son action est annulée.
+/// </summary>
+public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
+
+/// <summary>
+/// L'unité tombe à terre sur <paramref name="Position"/> : elle y reste, sa jauge est gelée.
+/// C'est en général sa case actuelle ; si elle tombe en traversant un allié, la dernière case libre de son trajet.
+/// </summary>
+public sealed record UnitDowned(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
 /// <summary>L'unité est vaincue et retirée de la grille.</summary>
 public sealed record UnitRemoved(int Tick, UnitId Unit) : CombatEvent(Tick);

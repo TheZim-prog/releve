@@ -258,12 +258,15 @@ public sealed class CombatSimulation
 
         // Application.
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
+        unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue
 
-        if (path is not null)
+        // Tombée ou étourdie en chemin par une attaque d'opportunité : le reste du trajet et l'action sont
+        // annulés. Étourdie, elle a quand même bougé : sa jauge repart comme après un déplacement seul.
+        if (path is not null && !MoveAlong(unit, path))
         {
-            var from = unit.Position;
-            unit.Position = position;
-            _events.Add(new UnitMoved(CurrentTick, unit.Id, from, path));
+            if (unit.Status == UnitStatus.Active)
+                SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
+            return;
         }
 
         var restartPercent = Rules.MoveOnlyRestartPercent;
@@ -272,18 +275,99 @@ public sealed class CombatSimulation
             var (skill, target) = validAction;
             unit.StartCooldown(skill.Id, CurrentTick + Rules.MillisecondsToTicks(skill.CooldownMs));
             _events.Add(new SkillUsed(CurrentTick, unit.Id, skill.Id, target.Id));
-            if (skill.DealsDamage)
-                Damage(target, _random.NextInt(skill.MinDamage, skill.MaxDamage));
-            if (target.Status == UnitStatus.Active)
-            {
-                foreach (var effect in skill.Effects)
-                    ApplyStatus(target, effect);
-            }
+            ResolveHit(skill, target);
             restartPercent = skill.Weight == SkillWeight.Heavy
                 ? Rules.HeavyActionRestartPercent
                 : Rules.LightActionRestartPercent;
         }
         SetGauge(unit, Rules.GaugeAt(restartPercent));
+    }
+
+    /// <summary>
+    /// Déplace l'unité pas à pas ; chaque pas qui sort de la portée d'un ennemi peut déclencher son attaque
+    /// d'opportunité (dans l'ordre des unités). Renvoie faux si l'unité est tombée ou étourdie en chemin.
+    /// </summary>
+    private bool MoveAlong(Unit unit, IReadOnlyList<Cell> path)
+    {
+        var segmentStart = unit.Position;
+        var segment = new List<Cell>();
+        var lastFreeCell = unit.Position;
+
+        void FlushSegment()
+        {
+            if (segment.Count == 0)
+                return;
+            _events.Add(new UnitMoved(CurrentTick, unit.Id, segmentStart, segment));
+            segmentStart = unit.Position;
+            segment = new List<Cell>();
+        }
+
+        foreach (var next in path)
+        {
+            foreach (var enemy in _units)
+            {
+                if (!CanMakeOpportunityAttack(enemy, unit, next))
+                    continue;
+
+                FlushSegment();
+                var attack = enemy.BasicAttack!;
+                enemy.OpportunityAttacksLeft--;
+                _events.Add(new OpportunityAttack(CurrentTick, enemy.Id, unit.Id, attack.Id));
+                ResolveHit(attack, unit, lastFreeCell);
+                if (unit.Status != UnitStatus.Active)
+                    return false;
+                if (unit.HasStatus(StatusKind.Stunned))
+                {
+                    if (IsOccupiedByOther(unit, unit.Position))
+                        unit.Position = lastFreeCell;
+                    _events.Add(new UnitStopped(CurrentTick, unit.Id, unit.Position));
+                    return false;
+                }
+            }
+
+            unit.Position = next;
+            segment.Add(next);
+            if (!IsOccupiedByOther(unit, next))
+                lastFreeCell = next;
+        }
+
+        FlushSegment();
+        return true;
+    }
+
+    /// <summary>
+    /// <paramref name="enemy"/> peut punir <paramref name="mover"/> qui va en <paramref name="next"/> : le pas sort
+    /// de sa portée, et c'est un ennemi debout, non étourdi, avec une attaque de base et une attaque d'opportunité restante.
+    /// </summary>
+    private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell next) =>
+        enemy != mover
+        && enemy.Team != mover.Team
+        && enemy.Status == UnitStatus.Active
+        && !enemy.HasStatus(StatusKind.Stunned)
+        && enemy.BasicAttack is not null
+        && enemy.OpportunityAttacksLeft > 0
+        && IsInMeleeReach(enemy, mover.Position)
+        && !IsInMeleeReach(enemy, next);
+
+    /// <summary>Case que l'unité peut frapper au contact : adjacente, sans coupe d'angle par un mur.</summary>
+    private bool IsInMeleeReach(Unit unit, Cell cell) => _grid.CanStep(unit.Position, cell);
+
+    private bool IsOccupiedByOther(Unit unit, Cell cell) =>
+        _units.Any(u => u != unit && u.Status != UnitStatus.Removed && u.Position == cell);
+
+    /// <summary>
+    /// Effets d'un coup sur sa cible : dégâts (s'il y en a), puis états si elle est encore debout.
+    /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
+    /// (seulement possible en plein déplacement, en traversant un allié).
+    /// </summary>
+    private void ResolveHit(SkillDefinition skill, Unit target, Cell? fallbackCell = null)
+    {
+        if (skill.DealsDamage)
+            Damage(target, _random.NextInt(skill.MinDamage, skill.MaxDamage), fallbackCell);
+        if (target.Status != UnitStatus.Active)
+            return;
+        foreach (var effect in skill.Effects)
+            ApplyStatus(target, effect);
     }
 
     /// <summary>Distance en cases (diagonale = 1), sans tenir compte des obstacles.</summary>
@@ -305,7 +389,7 @@ public sealed class CombatSimulation
         return LineOfSight.IsClear(_grid, from, to, cell => BlocksSightOf(attacker, cell));
     }
 
-    private void Damage(Unit target, int amount)
+    private void Damage(Unit target, int amount, Cell? fallbackCell)
     {
         target.Hp = Math.Max(0, target.Hp - amount);
         _events.Add(new UnitDamaged(CurrentTick, target.Id, amount, target.Hp));
@@ -320,9 +404,16 @@ public sealed class CombatSimulation
         foreach (var status in target.StatusEndTicks.Keys.ToList())
             EndStatus(target, status);
 
-        _events.Add(target.Status == UnitStatus.Downed
-            ? new UnitDowned(CurrentTick, target.Id)
-            : new UnitRemoved(CurrentTick, target.Id));
+        if (target.Status == UnitStatus.Removed)
+        {
+            _events.Add(new UnitRemoved(CurrentTick, target.Id));
+            return;
+        }
+
+        // Une unité par case : à terre en traversant un allié, elle tombe sur la dernière case libre.
+        if (IsOccupiedByOther(target, target.Position))
+            target.Position = fallbackCell ?? throw new InvalidOperationException($"Unit {target.Id} fell on an occupied cell.");
+        _events.Add(new UnitDowned(CurrentTick, target.Id, target.Position));
     }
 
     /// <summary>Applique un état ; s'il est déjà là, garde la plus longue des deux durées.</summary>
@@ -348,8 +439,11 @@ public sealed class CombatSimulation
     // Qui fait obstacle à qui. Les deux règles diffèrent volontairement (docs/design.md, section 3) :
     // un héros à terre occupe toujours sa case pour le déplacement, mais on tire par-dessus lui.
 
-    /// <summary>Pour le déplacement : toute unité présente (debout ou à terre), alliée ou ennemie.</summary>
-    private Occupant OccupantFor(Unit mover, Cell cell)
+    /// <summary>
+    /// Pour le déplacement : toute unité présente (debout ou à terre), alliée ou ennemie, vue par
+    /// <paramref name="mover"/>. Public pour l'aperçu des cases atteignables (<see cref="Pathfinder"/>).
+    /// </summary>
+    public Occupant OccupantFor(Unit mover, Cell cell)
     {
         var other = UnitAt(cell);
         if (other is null || other == mover)
@@ -385,5 +479,9 @@ public sealed class CombatSimulation
         if (!Enum.IsDefined(setup.OnDefeat))
             throw new ArgumentException($"Unit {setup.Id} has an unknown defeat outcome.");
         SkillDefinition.ValidateAll(setup.Skills);
+        if (setup.BasicAttack is not null && setup.Skills.All(s => s.Id != setup.BasicAttack))
+            throw new ArgumentException($"Unit {setup.Id}: basic attack '{setup.BasicAttack}' is not one of its skills.");
+        if (setup.OpportunityAttacksPerCycle < 0)
+            throw new ArgumentException($"Unit {setup.Id} has a negative number of opportunity attacks.");
     }
 }

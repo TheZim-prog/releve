@@ -34,11 +34,17 @@ internal static class CombatTestKit
         Id = "smash", Weight = SkillWeight.Heavy, Range = 1, MinDamage = 30, MaxDamage = 30, CooldownMs = 5000,
     };
 
+    /// <summary>
+    /// Unité de test. Sans <paramref name="basicAttack"/>, elle ne fait pas d'attaque d'opportunité :
+    /// les tests qui ne portent pas dessus n'en subissent pas par surprise.
+    /// </summary>
     public static UnitSetup Unit(
         int id, int team, int x, int y,
         int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
-        DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null) =>
-        new(new UnitId(id), team, new Cell(x, y), initiative, mobility, hp, skills ?? new[] { Strike, Smash }, onDefeat, gauge);
+        DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null,
+        string? basicAttack = null, int opportunityAttacks = 1) =>
+        new(new UnitId(id), team, new Cell(x, y), initiative, mobility, hp, skills ?? new[] { Strike, Smash }, onDefeat,
+            basicAttack, opportunityAttacks, gauge);
 
     public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);
 

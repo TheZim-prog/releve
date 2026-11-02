@@ -76,7 +76,7 @@ public class RangedAttackTests
             Unit(2, team: 0, 4, 0, onDefeat: DefeatOutcome.Downed));
 
         sim.Submit(new ActivateCommand(Shooter, null, new SkillUse("strike", new UnitId(5))));
-        Assert.Contains(new UnitDowned(1, new UnitId(5)), sim.Tick());
+        Assert.Contains(new UnitDowned(1, new UnitId(5), new Cell(1, 0)), sim.Tick());
 
         Assert.IsType<SkillUsed>(Outcome(sim, Shoot(2)));
     }

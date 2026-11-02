@@ -28,6 +28,11 @@ public enum UnitStatus
 /// <param name="Team">Les unités d'une même équipe sont alliées, les autres ennemies.</param>
 /// <param name="Initiative">Points de jauge gagnés par tick.</param>
 /// <param name="Mobility">Nombre maximal de cases par déplacement.</param>
+/// <param name="BasicAttack">
+/// Identifiant de l'attaque de base parmi <paramref name="Skills"/>, utilisée pour les attaques d'opportunité.
+/// <c>null</c> : l'unité ne fait pas d'attaque d'opportunité.
+/// </param>
+/// <param name="OpportunityAttacksPerCycle">Attaques d'opportunité disponibles entre deux activations (donnée d'équilibrage).</param>
 /// <param name="InitialGauge">Jauge au début du combat, entre 0 et la capacité.</param>
 public sealed record UnitSetup(
     UnitId Id,
@@ -38,6 +43,8 @@ public sealed record UnitSetup(
     int MaxHp,
     IReadOnlyList<SkillDefinition> Skills,
     DefeatOutcome OnDefeat,
+    string? BasicAttack,
+    int OpportunityAttacksPerCycle,
     int InitialGauge = 0)
 {
     private readonly IReadOnlyList<SkillDefinition> _skills = CombatSetup.ReadOnlyCopy(Skills);
@@ -68,6 +75,9 @@ public sealed class Unit
         Skills = setup.Skills;
         OnDefeat = setup.OnDefeat;
         Gauge = setup.InitialGauge;
+        BasicAttack = setup.BasicAttack is null ? null : FindSkill(setup.BasicAttack);
+        OpportunityAttacksPerCycle = setup.OpportunityAttacksPerCycle;
+        OpportunityAttacksLeft = setup.OpportunityAttacksPerCycle;
         _gaugeCapacity = gaugeCapacity;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -83,6 +93,14 @@ public sealed class Unit
     public DefeatOutcome OnDefeat { get; }
     public UnitStatus Status { get; internal set; } = UnitStatus.Active;
     public int Gauge { get; internal set; }
+
+    /// <summary>Attaque utilisée pour les attaques d'opportunité (<c>null</c> : aucune).</summary>
+    public SkillDefinition? BasicAttack { get; }
+
+    public int OpportunityAttacksPerCycle { get; }
+
+    /// <summary>Attaques d'opportunité restantes ; rechargées quand l'unité rejoue.</summary>
+    public int OpportunityAttacksLeft { get; internal set; }
 
     public bool IsGaugeFull => Gauge >= _gaugeCapacity;
 

@@ -30,28 +30,44 @@ public class ReplayTests
             "....#...");
         var skills = new[] { RandomStrike, DazingStrike };
         var setup = Setup(grid,
-            Unit(1, team: 0, 0, 0, initiative: 20, mobility: 3, hp: 60, onDefeat: DefeatOutcome.Downed, skills: skills),
-            Unit(2, team: 0, 0, 2, initiative: 15, mobility: 4, hp: 60, onDefeat: DefeatOutcome.Downed, skills: skills),
-            Unit(3, team: 1, 7, 0, initiative: 12, mobility: 2, hp: 40, skills: skills),
-            Unit(4, team: 1, 7, 3, initiative: 25, mobility: 3, hp: 40, skills: skills));
+            Unit(1, team: 0, 0, 0, initiative: 20, mobility: 3, hp: 60, onDefeat: DefeatOutcome.Downed, skills: skills, basicAttack: RandomStrike.Id),
+            Unit(2, team: 0, 0, 2, initiative: 15, mobility: 4, hp: 60, onDefeat: DefeatOutcome.Downed, skills: skills, basicAttack: RandomStrike.Id),
+            Unit(3, team: 1, 7, 0, initiative: 12, mobility: 2, hp: 40, skills: skills, basicAttack: RandomStrike.Id),
+            Unit(4, team: 1, 7, 3, initiative: 25, mobility: 3, hp: 40, skills: skills, basicAttack: RandomStrike.Id, opportunityAttacks: 2));
         var original = new CombatSimulation(setup);
 
-        // Chaque unité prête frappe un ennemi adjacent s'il y en a un, sinon avance vers l'autre camp.
-        for (var tick = 0; tick < 200; tick++)
+        // Petite IA de test : au contact d'un ennemi, frapper, ou une fois sur trois reculer au plus loin
+        // (attaque d'opportunité) ; sinon s'approcher au plus près de l'ennemi debout le plus proche.
+        for (var tick = 0; tick < 300; tick++)
         {
             foreach (var unit in original.Units.Where(u => u.IsReady))
             {
-                var enemy = original.Units.FirstOrDefault(e =>
-                    e.Team != unit.Team && e.Status == UnitStatus.Active && e.Position.IsAdjacentTo(unit.Position));
+                var enemies = original.Units.Where(e => e.Team != unit.Team && e.Status == UnitStatus.Active).ToList();
+                if (enemies.Count == 0)
+                    continue;
+                var nearest = enemies.OrderBy(e => e.Position.DistanceTo(unit.Position)).First();
+                var reachable = Pathfinder.ReachableCells(grid, unit.Position, unit.Mobility, cell => original.OccupantFor(unit, cell))
+                    .Keys.Where(c => c != unit.Position).ToList();
                 var skill = original.CurrentTick >= unit.CooldownEndTick(DazingStrike.Id) ? DazingStrike : RandomStrike;
-                var command = enemy is not null
-                    ? new ActivateCommand(unit.Id, MoveTo: null, new SkillUse(skill.Id, enemy.Id))
-                    : new ActivateCommand(unit.Id, new Cell(unit.Position.X + (unit.Team == 0 ? 1 : -1), unit.Position.Y));
-                original.Submit(command);
+
+                ActivateCommand? command = null;
+                if (!nearest.Position.IsAdjacentTo(unit.Position))
+                {
+                    if (reachable.Count > 0)
+                        command = new ActivateCommand(unit.Id, reachable.MinBy(c => c.DistanceTo(nearest.Position)));
+                }
+                else if (tick % 3 == 0 && reachable.Count > 0)
+                    command = new ActivateCommand(unit.Id, reachable.MaxBy(c => c.DistanceTo(nearest.Position)));
+                else
+                    command = new ActivateCommand(unit.Id, MoveTo: null, new SkillUse(skill.Id, nearest.Id));
+
+                if (command is not null)
+                    original.Submit(command);
             }
             original.Tick();
         }
         Assert.Contains(original.EventLog, e => e is UnitMoved);
+        Assert.Contains(original.EventLog, e => e is OpportunityAttack);
         Assert.Contains(original.EventLog, e => e is UnitDamaged);
         Assert.Contains(original.EventLog, e => e is CommandRejected);
         Assert.Contains(original.EventLog, e => e is StatusApplied);

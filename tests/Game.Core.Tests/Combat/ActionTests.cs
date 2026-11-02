@@ -213,7 +213,7 @@ public class ActionTests
             Unit(3, team: 1, 3, 0, initiative: Capacity, gauge: Capacity));
 
         sim.Submit(Attack(Foe, Hero));
-        Assert.Contains(new UnitDowned(1, Hero), sim.Tick());
+        Assert.Contains(new UnitDowned(1, Hero, new Cell(1, 0)), sim.Tick());
 
         var hero = sim.Get(1);
         Assert.Equal(UnitStatus.Downed, hero.Status);
