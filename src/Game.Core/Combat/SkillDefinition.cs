@@ -37,6 +37,16 @@ public sealed record SkillDefinition
     /// <summary>Une compétence à 0 dégât maximum n'en inflige pas (contrôle pur) : aucun tirage, aucun événement.</summary>
     public bool DealsDamage => MaxDamage > 0;
 
+    /// <summary>
+    /// Durée de charge en millisecondes de combat (0 = instantanée). Pendant la charge, le lanceur est immobilisé.
+    /// </summary>
+    public int ChargeMs { get; init; }
+
+    /// <summary>Zone d'effet (facultative). Avec une zone, la compétence vise une case ; sinon, une unité ennemie.</summary>
+    public ZoneDefinition? Zone { get; init; }
+
+    public bool IsCharged => ChargeMs > 0;
+
     public static IReadOnlyList<SkillDefinition> ListFromJson(string json)
     {
         var skills = DataJson.Deserialize<List<SkillDefinition?>>(json);
@@ -65,8 +75,13 @@ public sealed record SkillDefinition
             throw new ArgumentException("Skill id is required.");
         if (!Enum.IsDefined(Weight))
             throw new ArgumentException($"Skill '{Id}' has an unknown weight.");
-        if (Range < 1)
-            throw new ArgumentException($"Skill '{Id}' needs a range of at least 1.");
+        // Un carré peut être centré sur le lanceur (portée 0) ; une ligne part vers une case voisine au moins ;
+        // une attaque ciblée vise une autre unité.
+        if (Range < (Zone?.Shape == ZoneShape.Square ? 0 : 1))
+            throw new ArgumentException($"Skill '{Id}' has an invalid range {Range}.");
+        if (ChargeMs < 0)
+            throw new ArgumentException($"Skill '{Id}' has a negative charge time.");
+        Zone?.Validate(Id);
         if (MinDamage < 0 || MaxDamage < MinDamage)
             throw new ArgumentException($"Skill '{Id}' needs 0 <= minDamage <= maxDamage.");
         if (CooldownMs < 0)

@@ -82,6 +82,7 @@ public sealed class CombatSimulation
         var firstEvent = _events.Count;
 
         ExpireStatuses();
+        ReleaseCharges();
 
         while (_pending.TryDequeue(out var command))
         {
@@ -104,7 +105,7 @@ public sealed class CombatSimulation
     /// </summary>
     private int FillAmount(Unit unit)
     {
-        if (unit.HasStatus(StatusKind.Stunned))
+        if (unit.HasStatus(StatusKind.Stunned) || unit.Charge is not null)
             return 0;
         if (!unit.HasStatus(StatusKind.OffBalance))
             return unit.Initiative;
@@ -192,6 +193,11 @@ public sealed class CombatSimulation
             Reject(command, RejectionReason.Stunned);
             return;
         }
+        if (unit.Charge is not null)
+        {
+            Reject(command, RejectionReason.Charging);
+            return;
+        }
         if (!unit.IsReady)
         {
             Reject(command, RejectionReason.NotReady);
@@ -222,7 +228,7 @@ public sealed class CombatSimulation
             position = destination;
         }
 
-        (SkillDefinition Skill, Unit Target)? action = null;
+        PlannedAction? action = null;
         if (command.Skill is { } use)
         {
             var skill = unit.FindSkill(use.SkillId);
@@ -237,23 +243,13 @@ public sealed class CombatSimulation
                 return;
             }
 
-            var target = FindUnit(use.Target);
-            if (target is null || target.Status != UnitStatus.Active || target.Team == unit.Team)
+            var (planned, reason) = PlanAction(unit, position, skill, use);
+            if (reason is { } rejection)
             {
-                Reject(command, RejectionReason.InvalidTarget);
+                Reject(command, rejection);
                 return;
             }
-            if (!IsWithinRange(position, target.Position, skill.Range))
-            {
-                Reject(command, RejectionReason.OutOfRange);
-                return;
-            }
-            if (!HasLineOfSight(unit, position, target.Position))
-            {
-                Reject(command, RejectionReason.NoLineOfSight);
-                return;
-            }
-            action = (skill, target);
+            action = planned;
         }
 
         // Application.
@@ -269,18 +265,136 @@ public sealed class CombatSimulation
             return;
         }
 
-        var restartPercent = Rules.MoveOnlyRestartPercent;
-        if (action is { } validAction)
+        if (action is null)
         {
-            var (skill, target) = validAction;
-            unit.StartCooldown(skill.Id, CurrentTick + Rules.MillisecondsToTicks(skill.CooldownMs));
-            _events.Add(new SkillUsed(CurrentTick, unit.Id, skill.Id, target.Id));
-            ResolveHit(skill, target);
-            restartPercent = skill.Weight == SkillWeight.Heavy
-                ? Rules.HeavyActionRestartPercent
-                : Rules.LightActionRestartPercent;
+            SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
+            return;
         }
-        SetGauge(unit, Rules.GaugeAt(restartPercent));
+
+        var actionSkill = action.Skill;
+        unit.StartCooldown(actionSkill.Id, CurrentTick + Rules.MillisecondsToTicks(actionSkill.CooldownMs));
+        if (actionSkill.IsCharged)
+        {
+            // Immobilisée, jauge à 0 jusqu'au déclenchement (ReleaseCharges).
+            var charge = new PendingCharge(actionSkill, action.Target?.Id, action.Zone,
+                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs));
+            unit.Charge = charge;
+            _events.Add(new ChargeStarted(CurrentTick, unit.Id, actionSkill.Id, charge.Target, charge.Zone, charge.ReleaseTick));
+            return;
+        }
+
+        Execute(unit, actionSkill, action.Target, action.Zone);
+        SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
+    }
+
+    /// <summary>Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>).</summary>
+    private sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone);
+
+    /// <summary>
+    /// Valide la cible d'une compétence utilisée depuis <paramref name="position"/> (case d'arrivée du lanceur).
+    /// Compétence à zone : une case, à portée (0 = sur soi), libre et en vue pour un carré, alignée pour une ligne,
+    /// et une zone non vide. Attaque ciblée : voir <see cref="CheckTarget"/>.
+    /// </summary>
+    private (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
+    {
+        if (skill.Zone is { } zone)
+        {
+            if (use.Cell is not { } cell || use.Target is not null)
+                return (null, RejectionReason.InvalidTarget);
+            if (position.DistanceTo(cell) > skill.Range)
+                return (null, RejectionReason.OutOfRange);
+            var cells = zone.Cells(_grid, position, cell);
+            if (cells is null || cells.Count == 0)
+                return (null, RejectionReason.InvalidTarget);
+            if (zone.Shape == ZoneShape.Square && cell != position && !HasLineOfSight(unit, position, cell))
+                return (null, RejectionReason.NoLineOfSight);
+            return (new PlannedAction(skill, null, cells), null);
+        }
+
+        if (use.Target is not { } targetId || use.Cell is not null)
+            return (null, RejectionReason.InvalidTarget);
+        var target = FindUnit(targetId);
+        if (target is null || target.Team == unit.Team)
+            return (null, RejectionReason.InvalidTarget);
+        return CheckTarget(unit, position, target, skill) is { } reason
+            ? (null, reason)
+            : (new PlannedAction(skill, target, null), null);
+    }
+
+    /// <summary>
+    /// Une attaque ciblée de <paramref name="unit"/>, depuis <paramref name="from"/>, peut-elle toucher
+    /// <paramref name="target"/> : debout, à portée et en vue ? Vérifié au lancement et, pour une attaque chargée,
+    /// de nouveau au déclenchement.
+    /// </summary>
+    private RejectionReason? CheckTarget(Unit unit, Cell from, Unit target, SkillDefinition skill)
+    {
+        if (target.Status != UnitStatus.Active)
+            return RejectionReason.InvalidTarget;
+        if (!IsWithinRange(from, target.Position, skill.Range))
+            return RejectionReason.OutOfRange;
+        if (!HasLineOfSight(unit, from, target.Position))
+            return RejectionReason.NoLineOfSight;
+        return null;
+    }
+
+    /// <summary>
+    /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ;
+    /// un coup ne touche que sa cible, donc la liste ne change pas en cours de route).
+    /// </summary>
+    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone)
+    {
+        if (zone is null)
+        {
+            _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
+            ResolveHit(skill, target);
+            return;
+        }
+
+        _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, zone));
+        var cells = zone.ToHashSet();
+        var affected = _units
+            .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
+            .Where(u => skill.Zone!.Affects == ZoneTargets.All || u.Team != caster.Team)
+            .ToList();
+        foreach (var unit in affected)
+            ResolveHit(skill, unit);
+    }
+
+    private int RestartPercentAfter(SkillDefinition skill) =>
+        skill.Weight == SkillWeight.Heavy ? Rules.HeavyActionRestartPercent : Rules.LightActionRestartPercent;
+
+    /// <summary>
+    /// Déclenche les attaques chargées arrivées à échéance, dans l'ordre des unités. Une attaque ciblée ne touche
+    /// que si la cible est encore debout, à portée et en vue ; une zone touche ce qui s'y trouve maintenant.
+    /// </summary>
+    private void ReleaseCharges()
+    {
+        foreach (var unit in _units)
+        {
+            // Une charge peut être interrompue par le déclenchement d'une autre, plus tôt dans la boucle.
+            if (unit.Charge is not { } charge || charge.ReleaseTick > CurrentTick)
+                continue;
+
+            unit.Charge = null;
+            var skill = charge.Skill;
+            if (charge.Zone is not null)
+                Execute(unit, skill, null, charge.Zone);
+            else if (charge.Target is { } targetId && FindUnit(targetId) is { } target
+                     && CheckTarget(unit, unit.Position, target, skill) is null)
+                Execute(unit, skill, target, null);
+            else
+                _events.Add(new ChargeMissed(CurrentTick, unit.Id, skill.Id, charge.Target!.Value));
+
+            SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(skill)));
+        }
+    }
+
+    private void InterruptCharge(Unit unit)
+    {
+        if (unit.Charge is not { } charge)
+            return;
+        unit.Charge = null;
+        _events.Add(new ChargeInterrupted(CurrentTick, unit.Id, charge.Skill.Id));
     }
 
     /// <summary>
@@ -337,13 +451,15 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// <paramref name="enemy"/> peut punir <paramref name="mover"/> qui va en <paramref name="next"/> : le pas sort
-    /// de sa portée, et c'est un ennemi debout, non étourdi, avec une attaque de base et une attaque d'opportunité restante.
+    /// de sa portée, et c'est un ennemi debout, non étourdi, pas en train de charger, avec une attaque de base et
+    /// une attaque d'opportunité restante.
     /// </summary>
     private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell next) =>
         enemy != mover
         && enemy.Team != mover.Team
         && enemy.Status == UnitStatus.Active
         && !enemy.HasStatus(StatusKind.Stunned)
+        && enemy.Charge is null
         && enemy.BasicAttack is not null
         && enemy.OpportunityAttacksLeft > 0
         && IsInMeleeReach(enemy, mover.Position)
@@ -400,9 +516,10 @@ public sealed class CombatSimulation
         // Le statut change d'abord, pour que la fin d'un étourdissement n'annonce pas l'unité prête.
         target.Status = target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed;
 
-        // Une unité vaincue perd ses états, annoncés avant sa chute (rien n'arrive plus après).
+        // Une unité vaincue perd ses états et sa charge, annoncés avant sa chute (rien n'arrive plus après).
         foreach (var status in target.StatusEndTicks.Keys.ToList())
             EndStatus(target, status);
+        InterruptCharge(target);
 
         if (target.Status == UnitStatus.Removed)
         {
@@ -425,6 +542,8 @@ public sealed class CombatSimulation
 
         target.SetStatus(effect.Status, endTick);
         _events.Add(new StatusApplied(CurrentTick, target.Id, effect.Status, endTick));
+        if (effect.Status == StatusKind.Stunned)
+            InterruptCharge(target);
     }
 
     /// <summary>Change la jauge et annonce l'unité prête si elle vient de se remplir.</summary>
@@ -479,8 +598,14 @@ public sealed class CombatSimulation
         if (!Enum.IsDefined(setup.OnDefeat))
             throw new ArgumentException($"Unit {setup.Id} has an unknown defeat outcome.");
         SkillDefinition.ValidateAll(setup.Skills);
-        if (setup.BasicAttack is not null && setup.Skills.All(s => s.Id != setup.BasicAttack))
-            throw new ArgumentException($"Unit {setup.Id}: basic attack '{setup.BasicAttack}' is not one of its skills.");
+        if (setup.BasicAttack is not null)
+        {
+            var basic = setup.Skills.FirstOrDefault(s => s.Id == setup.BasicAttack)
+                ?? throw new ArgumentException($"Unit {setup.Id}: basic attack '{setup.BasicAttack}' is not one of its skills.");
+            // Elle sert aux attaques d'opportunité, instantanées et sur une seule unité.
+            if (basic.IsCharged || basic.Zone is not null)
+                throw new ArgumentException($"Unit {setup.Id}: basic attack '{basic.Id}' cannot be charged or a zone.");
+        }
         if (setup.OpportunityAttacksPerCycle < 0)
             throw new ArgumentException($"Unit {setup.Id} has a negative number of opportunity attacks.");
     }

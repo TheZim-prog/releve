@@ -55,6 +55,61 @@ public class SkillDefinitionTests
     }
 
     [Fact]
+    public void ListFromJson_ReadsChargeAndZone()
+    {
+        var skill = SkillDefinition.ListFromJson("""
+            [{ "id": "quake", "weight": "heavy", "range": 1, "minDamage": 10, "maxDamage": 20, "cooldownMs": 9000,
+               "chargeMs": 1500, "zone": { "shape": "line", "size": 4, "throughWalls": true, "affects": "enemies" } }]
+            """).Single();
+
+        Assert.True(skill.IsCharged);
+        Assert.Equal(1500, skill.ChargeMs);
+        Assert.Equal(
+            new ZoneDefinition { Shape = ZoneShape.Line, Size = 4, ThroughWalls = true, Affects = ZoneTargets.Enemies },
+            skill.Zone);
+    }
+
+    [Fact]
+    public void Zone_AffectsEveryoneByDefault()
+    {
+        var skill = SkillDefinition.ListFromJson("""
+            [{ "id": "blast", "weight": "heavy", "range": 3, "minDamage": 10, "maxDamage": 20, "cooldownMs": 0,
+               "zone": { "shape": "square", "size": 1, "throughWalls": false } }]
+            """).Single();
+
+        Assert.Equal(ZoneTargets.All, skill.Zone!.Affects);
+        Assert.False(skill.IsCharged);
+    }
+
+    [Fact]
+    public void Zone_MustSayWhetherItGoesThroughWalls()
+    {
+        Assert.Throws<JsonException>(() => SkillDefinition.ListFromJson("""
+            [{ "id": "blast", "weight": "heavy", "range": 3, "minDamage": 10, "maxDamage": 20, "cooldownMs": 0,
+               "zone": { "shape": "square", "size": 1 } }]
+            """));
+    }
+
+    [Theory]
+    [InlineData(1, """{ "shape": "line", "size": 0, "throughWalls": false }""")]
+    [InlineData(1, """{ "shape": "square", "size": -1, "throughWalls": false }""")]
+    [InlineData(0, """{ "shape": "line", "size": 3, "throughWalls": false }""")]
+    public void ListFromJson_RejectsInvalidZones(int range, string zone)
+    {
+        var json = $$"""[{ "id": "x", "weight": "heavy", "range": {{range}}, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0, "zone": {{zone}} }]""";
+
+        Assert.Throws<ArgumentException>(() => SkillDefinition.ListFromJson(json));
+    }
+
+    [Fact]
+    public void ListFromJson_RejectsNegativeChargeTime()
+    {
+        Assert.Throws<ArgumentException>(() => SkillDefinition.ListFromJson("""
+            [{ "id": "x", "weight": "heavy", "range": 1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0, "chargeMs": -1 }]
+            """));
+    }
+
+    [Fact]
     public void ListFromJson_AcceptsRangedSkills()
     {
         var skills = SkillDefinition.ListFromJson("""

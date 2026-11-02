@@ -5,8 +5,11 @@ namespace Game.Core.Combat;
 /// <summary>Ordre envoyé par un joueur ou par l'IA. La simulation le valide avant de l'appliquer.</summary>
 public abstract record CombatCommand(UnitId Unit);
 
-/// <summary>Utilisation d'une compétence sur une unité.</summary>
-public sealed record SkillUse(string SkillId, UnitId Target);
+/// <summary>
+/// Utilisation d'une compétence : sur une unité (<paramref name="Target"/>) pour une attaque ciblée,
+/// ou sur une case (<paramref name="Cell"/>) pour une compétence à zone.
+/// </summary>
+public sealed record SkillUse(string SkillId, UnitId? Target, Cell? Cell = null);
 
 /// <summary>
 /// Activation d'une unité à jauge pleine : un déplacement et/ou une action, en une seule commande atomique.

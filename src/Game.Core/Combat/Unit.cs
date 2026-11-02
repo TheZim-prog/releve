@@ -56,6 +56,12 @@ public sealed record UnitSetup(
     }
 }
 
+/// <summary>
+/// Attaque en cours de charge : cible (attaque ciblée) ou cases fixées au sol (zone), et tick de déclenchement.
+/// Exactement l'un de <paramref name="Target"/> et <paramref name="Zone"/> est renseigné.
+/// </summary>
+public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick);
+
 /// <summary>État courant d'une unité. Seule la <see cref="CombatSimulation"/> le modifie.</summary>
 public sealed class Unit
 {
@@ -105,9 +111,12 @@ public sealed class Unit
     public bool IsGaugeFull => Gauge >= _gaugeCapacity;
 
     /// <summary>
-    /// Peut agir : debout, jauge pleine et pas étourdie. Le reste tant qu'elle n'a pas agi.
+    /// Peut agir : debout, jauge pleine, pas étourdie, pas en train de charger. Le reste tant qu'elle n'a pas agi.
     /// </summary>
-    public bool IsReady => Status == UnitStatus.Active && IsGaugeFull && !HasStatus(StatusKind.Stunned);
+    public bool IsReady => Status == UnitStatus.Active && IsGaugeFull && !HasStatus(StatusKind.Stunned) && Charge is null;
+
+    /// <summary>Attaque en cours de charge, ou <c>null</c>.</summary>
+    public PendingCharge? Charge { get; internal set; }
 
     /// <summary>États en cours, avec le tick où chacun se termine (ordre fixe).</summary>
     public IReadOnlyDictionary<StatusKind, int> StatusEndTicks { get; }

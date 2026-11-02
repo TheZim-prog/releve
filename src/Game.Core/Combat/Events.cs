@@ -24,8 +24,40 @@ public sealed record UnitMoved(int Tick, UnitId Unit, Cell From, IReadOnlyList<C
     public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Unit, From, Path.Count);
 }
 
-/// <summary>L'unité utilise une compétence sur une cible (les effets suivent dans d'autres événements).</summary>
-public sealed record SkillUsed(int Tick, UnitId Unit, string SkillId, UnitId Target) : CombatEvent(Tick);
+/// <summary>
+/// La compétence prend effet maintenant (pour une attaque chargée : à son déclenchement), sur une unité
+/// (<paramref name="Target"/>) ou sur une zone (<paramref name="Zone"/>). Les effets suivent dans d'autres événements.
+/// </summary>
+public sealed record SkillUsed(int Tick, UnitId Unit, string SkillId, UnitId? Target, IReadOnlyList<Cell>? Zone = null)
+    : CombatEvent(Tick)
+{
+    public bool Equals(SkillUsed? other) =>
+        other is not null && base.Equals(other) && Unit == other.Unit && SkillId == other.SkillId && Target == other.Target
+        && (Zone is null ? other.Zone is null : other.Zone is not null && Zone.SequenceEqual(other.Zone));
+
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Unit, SkillId, Target, Zone?.Count);
+}
+
+/// <summary>
+/// L'unité commence à charger une compétence, qui se déclenchera au tick <paramref name="ReleaseTick"/>, sur une unité
+/// (<paramref name="Target"/>) ou sur une zone (<paramref name="Zone"/> : les cases fixées au sol, à afficher).
+/// </summary>
+public sealed record ChargeStarted(int Tick, UnitId Unit, string SkillId, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick)
+    : CombatEvent(Tick)
+{
+    public bool Equals(ChargeStarted? other) =>
+        other is not null && base.Equals(other) && Unit == other.Unit && SkillId == other.SkillId && Target == other.Target
+        && ReleaseTick == other.ReleaseTick
+        && (Zone is null ? other.Zone is null : other.Zone is not null && Zone.SequenceEqual(other.Zone));
+
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Unit, SkillId, Target, ReleaseTick, Zone?.Count);
+}
+
+/// <summary>La charge est interrompue (lanceur étourdi ou vaincu) : l'attaque n'a pas lieu.</summary>
+public sealed record ChargeInterrupted(int Tick, UnitId Unit, string SkillId) : CombatEvent(Tick);
+
+/// <summary>Attaque chargée ciblée déclenchée, mais la cible n'est plus à portée, plus en vue ou plus debout.</summary>
+public sealed record ChargeMissed(int Tick, UnitId Unit, string SkillId, UnitId Target) : CombatEvent(Tick);
 
 /// <summary>L'unité perd <paramref name="Amount"/> PV (dégâts tirés) ; il lui en reste <paramref name="Hp"/>.</summary>
 public sealed record UnitDamaged(int Tick, UnitId Unit, int Amount, int Hp) : CombatEvent(Tick);
@@ -75,6 +107,9 @@ public enum RejectionReason
     /// <summary>L'unité est étourdie : elle ne peut pas agir, même jauge pleine.</summary>
     Stunned,
 
+    /// <summary>L'unité charge une attaque : elle est immobilisée jusqu'au déclenchement.</summary>
+    Charging,
+
     NotReady,
 
     /// <summary>Ni déplacement ni action.</summary>
@@ -92,7 +127,10 @@ public enum RejectionReason
     /// <summary>Compétence en recharge.</summary>
     OnCooldown,
 
-    /// <summary>Cible inconnue, alliée, l'unité elle-même, à terre ou retirée.</summary>
+    /// <summary>
+    /// Cible inconnue, alliée, l'unité elle-même, à terre ou retirée ; ou cible du mauvais type (unité pour une
+    /// compétence à zone, case pour une attaque ciblée) ; ou case non alignée pour une zone en ligne.
+    /// </summary>
     InvalidTarget,
 
     /// <summary>Cible trop loin depuis la case d'arrivée.</summary>
