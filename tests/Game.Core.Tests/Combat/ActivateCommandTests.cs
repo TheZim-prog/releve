@@ -31,17 +31,21 @@ public class ActivateCommandTests
     }
 
     [Fact]
-    public void Move_WithFullRestart_AnnouncesReadyAgainOnTheSameTick()
+    public void ReadyUnit_ActsOnlyOncePerTick()
     {
-        var rules = Rules with { MoveOnlyRestartPercent = 100 };
-        var sim = new CombatSimulation(rules, new Grid(3, 1), new[] { Unit(1, team: 0, 0, 0, gauge: Capacity) });
+        // Initiative = capacité : la jauge se remplit en un tick, mais seulement après les commandes.
+        var sim = Simulation(new Grid(4, 1), Unit(1, team: 0, 0, 0, initiative: Capacity, gauge: Capacity));
 
-        sim.Submit(new ActivateCommand(Id1, new Cell(1, 0)));
+        var first = new ActivateCommand(Id1, new Cell(1, 0));
+        var second = new ActivateCommand(Id1, new Cell(2, 0));
+        sim.Submit(first);
+        sim.Submit(second);
 
         Assert.Equal(
             new CombatEvent[]
             {
                 new UnitMoved(1, Id1, new Cell(0, 0), new[] { new Cell(1, 0) }),
+                new CommandRejected(1, second, RejectionReason.NotReady),
                 new UnitReady(1, Id1),
             },
             sim.Tick());

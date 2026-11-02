@@ -53,6 +53,9 @@
 - ✅ **Grille de carrés** (adaptée à l'environnement urbain : rues, murs, pièces). **Diagonale = 1 case** (de a1, aller en b2 coûte autant qu'aller en a2 ou b1). **Pas de coupe d'angle** : un déplacement en diagonale est interdit si un mur ou un obstacle bloque l'un des deux passages orthogonaux qu'il « frôle » (ex. mur entre a2 et b1 → impossible d'aller de a1 à b2 directement). Conséquence assumée : portées et zones de forme carrée.
 - ✅ **Murs et obstacles** : ils occupent des **cases entières** (pas de murs fins entre deux cases).
 - ✅ **Unités et déplacement** : une unité par case. On peut **traverser** la case d'un **allié** (sans s'y arrêter), mais **pas celle d'un ennemi**. Un ennemi compte **comme un mur** pour la coupe d'angle : il bloque aussi les diagonales qui frôlent sa case (deux ennemis en diagonale forment un barrage). Un allié ne bloque pas les diagonales.
+- ✅ **Dégâts** : chaque compétence inflige des dégâts dans une **fourchette aléatoire** (min-max, en données), tirés par le générateur à graine. La **puissance** du héros s'y ajoutera avec la progression.
+- ✅ **À 0 PV** : un **héros** tombe **à terre** : il reste sur sa case (qu'il occupe toujours), sa jauge est gelée, il ne peut plus agir ; il pourra être relevé (cf. 1.4). Un **ennemi** vaincu est **retiré** de la grille.
+- ✅ **Corps à corps en diagonale** : soumis à la même règle que le déplacement, **pas de coupe d'angle** (un mur sur l'un des deux coins frôlés empêche l'attaque). Seul le **décor** compte ici : une unité (alliée ou ennemie) sur un coin ne bloque pas l'attaque.
 - ✅ Chaque unité a une **jauge** qui se remplit selon sa vitesse ; elle agit quand la jauge est pleine.
 - ✅ **Déplacement instantané** sur la timeline : il ne fait que vider la jauge, pas de mouvement simultané.
 - ✅ **Le coût d'une action vide la jauge** plus ou moins (remplace les points d'action).

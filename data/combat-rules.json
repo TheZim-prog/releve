@@ -6,6 +6,8 @@
   // l'initiative de l'unité : avec 1000 et une initiative de 10, il faut 100 ticks (5 s).
   "gaugeCapacity": 1000,
 
-  // Après un déplacement seul, la jauge repart de ce pourcentage de sa capacité.
-  "moveOnlyRestartPercent": 50
+  // Pourcentage de la capacité dont repart la jauge selon le poids de l'activation.
+  "moveOnlyRestartPercent": 50,
+  "lightActionRestartPercent": 40,
+  "heavyActionRestartPercent": 0
 }

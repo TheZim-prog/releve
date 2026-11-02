@@ -20,12 +20,28 @@ public sealed record UnitMoved(int Tick, UnitId Unit, Cell From, IReadOnlyList<C
     public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Unit, From, Path.Count);
 }
 
+/// <summary>L'unité utilise une compétence sur une cible (les effets suivent dans d'autres événements).</summary>
+public sealed record SkillUsed(int Tick, UnitId Unit, string SkillId, UnitId Target) : CombatEvent(Tick);
+
+/// <summary>L'unité perd <paramref name="Amount"/> PV (dégâts tirés) ; il lui en reste <paramref name="Hp"/>.</summary>
+public sealed record UnitDamaged(int Tick, UnitId Unit, int Amount, int Hp) : CombatEvent(Tick);
+
+/// <summary>L'unité tombe à terre : elle reste sur sa case, sa jauge est gelée.</summary>
+public sealed record UnitDowned(int Tick, UnitId Unit) : CombatEvent(Tick);
+
+/// <summary>L'unité est vaincue et retirée de la grille.</summary>
+public sealed record UnitRemoved(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 /// <summary>Commande refusée : rien n'a changé, la jauge de l'unité reste pleine.</summary>
 public sealed record CommandRejected(int Tick, CombatCommand Command, RejectionReason Reason) : CombatEvent(Tick);
 
 public enum RejectionReason
 {
     UnknownUnit,
+
+    /// <summary>L'unité est à terre ou retirée.</summary>
+    Incapacitated,
+
     NotReady,
 
     /// <summary>Ni déplacement ni action.</summary>
@@ -36,6 +52,18 @@ public enum RejectionReason
 
     /// <summary>Case d'arrivée bloquée, occupée, inaccessible ou hors de portée de la mobilité.</summary>
     Unreachable,
+
+    /// <summary>L'unité ne possède pas cette compétence.</summary>
+    UnknownSkill,
+
+    /// <summary>Compétence en recharge.</summary>
+    OnCooldown,
+
+    /// <summary>Cible inconnue, alliée, l'unité elle-même, à terre ou retirée.</summary>
+    InvalidTarget,
+
+    /// <summary>Cible hors de portée depuis la case d'arrivée (coupe d'angle comprise).</summary>
+    OutOfRange,
 }
 
 /// <summary>Commande telle qu'appliquée, avec son tick : de quoi rejouer le combat à l'identique.</summary>

@@ -3,6 +3,8 @@ namespace Game.Core.Grids;
 /// <summary>
 /// Grille de cases carrées. Une case est libre ou bloquée (mur, obstacle).
 /// Hors de la grille, tout est considéré bloqué.
+/// Vue de l'extérieur de Game.Core, une grille est immuable : seule la simulation change le décor,
+/// sinon un combat ne pourrait plus être rejoué à l'identique.
 ///
 /// Règles de déplacement (docs/design.md, section 3) : la diagonale coûte 1 case,
 /// mais il n'y a pas de coupe d'angle (voir <see cref="CanStep"/>).
@@ -68,7 +70,7 @@ public sealed class Grid
     }
 
     /// <summary>Copie indépendante (le décor d'une copie peut changer sans toucher l'original).</summary>
-    public Grid Clone()
+    internal Grid Clone()
     {
         var copy = new Grid(Width, Height);
         Array.Copy(_blocked, copy._blocked, _blocked.Length);
@@ -83,7 +85,7 @@ public sealed class Grid
 
     public bool IsWalkable(Cell cell) => !IsBlocked(cell);
 
-    public void SetBlocked(Cell cell, bool blocked)
+    internal void SetBlocked(Cell cell, bool blocked)
     {
         if (!Contains(cell))
             throw new ArgumentOutOfRangeException(nameof(cell), cell, "Cell is outside the grid.");

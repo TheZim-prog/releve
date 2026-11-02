@@ -89,5 +89,7 @@ public class GaugeTests
         Assert.Throws<ArgumentException>(() => Simulation(grid, Unit(1, 0, 0, 0, mobility: -1)));
         Assert.Throws<ArgumentException>(() => Simulation(grid, Unit(1, 0, 0, 0, initiative: Capacity + 1)));
         Assert.Throws<ArgumentException>(() => Simulation(grid, Unit(1, 0, 0, 0, gauge: Capacity + 1)));
+        Assert.Throws<ArgumentException>(() => Simulation(grid, Unit(1, 0, 0, 0, hp: 0)));
+        Assert.Throws<ArgumentException>(() => Simulation(grid, Unit(1, 0, 0, 0, skills: new[] { Strike, Strike })));
     }
 }

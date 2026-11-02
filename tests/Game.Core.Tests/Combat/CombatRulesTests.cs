@@ -5,6 +5,17 @@ namespace Game.Core.Tests.Combat;
 
 public class CombatRulesTests
 {
+    private const string ValidJson = """
+        {
+          // commentaire
+          "ticksPerSecond": 20,
+          "gaugeCapacity": 1000,
+          "moveOnlyRestartPercent": 50,
+          "lightActionRestartPercent": 40,
+          "heavyActionRestartPercent": 0,
+        }
+        """;
+
     [Fact]
     public void DataFile_Loads()
     {
@@ -18,37 +29,40 @@ public class CombatRulesTests
     [Fact]
     public void FromJson_ReadsValues_AndAcceptsComments()
     {
-        var rules = CombatRules.FromJson("""
-            {
-              // commentaire
-              "ticksPerSecond": 20,
-              "gaugeCapacity": 1000,
-              "moveOnlyRestartPercent": 50,
-            }
-            """);
+        var rules = CombatRules.FromJson(ValidJson);
 
         Assert.Equal(20, rules.TicksPerSecond);
         Assert.Equal(1000, rules.GaugeCapacity);
-        Assert.Equal(500, rules.MoveOnlyRestartGauge);
+        Assert.Equal(500, rules.GaugeAt(rules.MoveOnlyRestartPercent));
+        Assert.Equal(400, rules.GaugeAt(rules.LightActionRestartPercent));
+        Assert.Equal(0, rules.GaugeAt(rules.HeavyActionRestartPercent));
     }
 
     [Fact]
     public void FromJson_RejectsMissingOrUnknownFields()
     {
-        Assert.Throws<JsonException>(() => CombatRules.FromJson("""{ "ticksPerSecond": 20, "gaugeCapacity": 1000 }"""));
-        Assert.Throws<JsonException>(() => CombatRules.FromJson(
-            """{ "ticksPerSecond": 20, "gaugeCapacity": 1000, "moveOnlyRestartPercent": 50, "typo": 1 }"""));
+        Assert.Throws<JsonException>(() => CombatRules.FromJson(ValidJson.Replace("\"heavyActionRestartPercent\": 0,", "")));
+        Assert.Throws<JsonException>(() => CombatRules.FromJson(ValidJson.Replace("\"ticksPerSecond\"", "\"typo\": 1, \"ticksPerSecond\"")));
     }
 
     [Theory]
-    [InlineData(0, 1000, 50)]
-    [InlineData(20, 0, 50)]
-    [InlineData(20, 1000, -1)]
-    [InlineData(20, 1000, 101)]
-    public void FromJson_RejectsOutOfRangeValues(int ticksPerSecond, int capacity, int restartPercent)
+    [InlineData("\"ticksPerSecond\": 20", "\"ticksPerSecond\": 0")]
+    [InlineData("\"gaugeCapacity\": 1000", "\"gaugeCapacity\": 0")]
+    [InlineData("\"moveOnlyRestartPercent\": 50", "\"moveOnlyRestartPercent\": -1")]
+    [InlineData("\"lightActionRestartPercent\": 40", "\"lightActionRestartPercent\": 100")]
+    [InlineData("\"heavyActionRestartPercent\": 0", "\"heavyActionRestartPercent\": -5")]
+    public void FromJson_RejectsOutOfRangeValues(string valid, string invalid)
     {
-        var json = $$"""{ "ticksPerSecond": {{ticksPerSecond}}, "gaugeCapacity": {{capacity}}, "moveOnlyRestartPercent": {{restartPercent}} }""";
+        Assert.Throws<ArgumentException>(() => CombatRules.FromJson(ValidJson.Replace(valid, invalid)));
+    }
 
-        Assert.Throws<ArgumentException>(() => CombatRules.FromJson(json));
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(50, 1)]   // 1 tick = 50 ms à 20 ticks/s
+    [InlineData(51, 2)]   // arrondi au tick supérieur
+    [InlineData(5000, 100)]
+    public void MillisecondsToTicks_RoundsUp(int milliseconds, int ticks)
+    {
+        Assert.Equal(ticks, CombatTestKit.Rules.MillisecondsToTicks(milliseconds));
     }
 }

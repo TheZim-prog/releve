@@ -8,19 +8,37 @@ internal static class CombatTestKit
 {
     public const int Capacity = 100;
 
-    /// <summary>Jauge pleine à 100, reprise à 50 % après un déplacement seul.</summary>
+    /// <summary>Jauge pleine à 100 ; reprise à 50 % (déplacement seul), 40 % (léger), 0 % (lourd).</summary>
     public static readonly CombatRules Rules = new()
     {
         TicksPerSecond = 20,
         GaugeCapacity = Capacity,
         MoveOnlyRestartPercent = 50,
+        LightActionRestartPercent = 40,
+        HeavyActionRestartPercent = 0,
     };
 
-    public static UnitSetup Unit(int id, int team, int x, int y, int initiative = 10, int mobility = 3, int gauge = 0) =>
-        new(new UnitId(id), team, new Cell(x, y), initiative, mobility, gauge);
+    /// <summary>Attaque légère, 10 dégâts fixes, sans recharge.</summary>
+    public static readonly SkillDefinition Strike = new()
+    {
+        Id = "strike", Weight = SkillWeight.Light, Range = 1, MinDamage = 10, MaxDamage = 10, CooldownMs = 0,
+    };
 
-    public static CombatSimulation Simulation(Grid grid, params UnitSetup[] units) =>
-        new(Rules, grid, units);
+    /// <summary>Attaque lourde, 30 dégâts fixes, 5 s de recharge (100 ticks).</summary>
+    public static readonly SkillDefinition Smash = new()
+    {
+        Id = "smash", Weight = SkillWeight.Heavy, Range = 1, MinDamage = 30, MaxDamage = 30, CooldownMs = 5000,
+    };
+
+    public static UnitSetup Unit(
+        int id, int team, int x, int y,
+        int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
+        DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null) =>
+        new(new UnitId(id), team, new Cell(x, y), initiative, mobility, hp, skills ?? new[] { Strike, Smash }, onDefeat, gauge);
+
+    public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);
+
+    public static CombatSimulation Simulation(Grid grid, params UnitSetup[] units) => new(Setup(grid, units));
 
     public static IReadOnlyList<CombatEvent> TickTimes(this CombatSimulation simulation, int count)
     {

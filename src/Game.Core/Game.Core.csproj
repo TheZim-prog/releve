@@ -2,4 +2,8 @@
 
   <!-- Bibliothèque pure : aucune dépendance (ni Godot, ni NuGet). -->
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Game.Core.Tests" />
+  </ItemGroup>
+
 </Project>

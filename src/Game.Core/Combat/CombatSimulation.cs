@@ -19,28 +19,31 @@ public sealed class CombatSimulation
     private readonly Queue<CombatCommand> _pending = new();
     private readonly List<CombatEvent> _events = new();
     private readonly List<LoggedCommand> _commandLog = new();
+    private readonly DeterministicRandom _random;
 
     // Copie privée : le décor ne doit changer que par la simulation, sinon le rejeu diverge.
     // Le client connaît la grille initiale ; ses changements futurs passeront par des événements.
     private readonly Grid _grid;
 
-    public CombatSimulation(CombatRules rules, Grid grid, IEnumerable<UnitSetup> units)
+    public CombatSimulation(CombatSetup setup)
     {
-        ArgumentNullException.ThrowIfNull(rules);
-        ArgumentNullException.ThrowIfNull(grid);
-        ArgumentNullException.ThrowIfNull(units);
-        rules.Validate();
+        ArgumentNullException.ThrowIfNull(setup);
+        ArgumentNullException.ThrowIfNull(setup.Rules);
+        ArgumentNullException.ThrowIfNull(setup.Grid);
+        ArgumentNullException.ThrowIfNull(setup.Units);
+        setup.Rules.Validate();
 
-        Rules = rules;
-        _grid = grid.Clone();
+        Rules = setup.Rules;
+        _grid = setup.Grid.Clone();
+        _random = new DeterministicRandom(setup.Seed);
         Units = _units.AsReadOnly();
         EventLog = _events.AsReadOnly();
         CommandLog = _commandLog.AsReadOnly();
 
-        foreach (var setup in units)
+        foreach (var unit in setup.Units)
         {
-            Validate(setup);
-            _units.Add(new Unit(setup, rules.GaugeCapacity));
+            Validate(unit);
+            _units.Add(new Unit(unit, Rules.GaugeCapacity));
         }
     }
 
@@ -49,7 +52,7 @@ public sealed class CombatSimulation
     /// <summary>Numéro du dernier tick joué (0 avant le premier).</summary>
     public int CurrentTick { get; private set; }
 
-    /// <summary>Unités, dans l'ordre de mise en place (ordre de traitement des jauges).</summary>
+    /// <summary>Unités (retirées comprises), dans l'ordre de mise en place (ordre de traitement des jauges).</summary>
     public IReadOnlyList<Unit> Units { get; }
 
     public IReadOnlyList<CombatEvent> EventLog { get; }
@@ -59,7 +62,8 @@ public sealed class CombatSimulation
 
     public Unit? FindUnit(UnitId id) => _units.Find(u => u.Id == id);
 
-    public Unit? UnitAt(Cell cell) => _units.Find(u => u.Position == cell);
+    /// <summary>Unité présente sur la case (active ou à terre ; une unité retirée n'occupe plus rien).</summary>
+    public Unit? UnitAt(Cell cell) => _units.Find(u => u.Position == cell && u.Status != UnitStatus.Removed);
 
     /// <summary>Met une commande en attente ; elle sera validée et appliquée au prochain tick.</summary>
     public void Submit(CombatCommand command)
@@ -84,7 +88,7 @@ public sealed class CombatSimulation
 
         foreach (var unit in _units)
         {
-            if (!unit.IsReady)
+            if (unit.Status == UnitStatus.Active && !unit.IsReady)
                 SetGauge(unit, Math.Min(Rules.GaugeCapacity, unit.Gauge + unit.Initiative));
         }
 
@@ -94,10 +98,9 @@ public sealed class CombatSimulation
     /// <summary>
     /// Rejoue un combat depuis son état initial et son journal de commandes, jusqu'au tick <paramref name="untilTick"/>.
     /// </summary>
-    public static CombatSimulation Replay(
-        CombatRules rules, Grid grid, IEnumerable<UnitSetup> units, IEnumerable<LoggedCommand> commandLog, int untilTick)
+    public static CombatSimulation Replay(CombatSetup setup, IEnumerable<LoggedCommand> commandLog, int untilTick)
     {
-        var simulation = new CombatSimulation(rules, grid, units);
+        var simulation = new CombatSimulation(setup);
         var commands = new Queue<LoggedCommand>(commandLog);
 
         while (simulation.CurrentTick < untilTick)
@@ -129,10 +132,16 @@ public sealed class CombatSimulation
 
     private void ApplyActivate(ActivateCommand command)
     {
+        // Validation complète d'abord : la commande est atomique, rien n'est appliqué si une partie échoue.
         var unit = FindUnit(command.Unit);
         if (unit is null)
         {
             Reject(command, RejectionReason.UnknownUnit);
+            return;
+        }
+        if (unit.Status != UnitStatus.Active)
+        {
+            Reject(command, RejectionReason.Incapacitated);
             return;
         }
         if (!unit.IsReady)
@@ -140,29 +149,116 @@ public sealed class CombatSimulation
             Reject(command, RejectionReason.NotReady);
             return;
         }
-        if (command.MoveTo is not { } destination)
+        if (command.MoveTo is null && command.Skill is null)
         {
             Reject(command, RejectionReason.Empty);
             return;
         }
-        if (destination == unit.Position)
+
+        var position = unit.Position;
+        IReadOnlyList<Cell>? path = null;
+        if (command.MoveTo is { } destination)
         {
-            Reject(command, RejectionReason.InvalidDestination);
-            return;
+            if (destination == unit.Position)
+            {
+                Reject(command, RejectionReason.InvalidDestination);
+                return;
+            }
+
+            path = Pathfinder.FindPath(_grid, unit.Position, destination, unit.Mobility, cell => OccupantFor(unit, cell));
+            if (path is null)
+            {
+                Reject(command, RejectionReason.Unreachable);
+                return;
+            }
+            position = destination;
         }
 
-        var path = Pathfinder.FindPath(_grid, unit.Position, destination, unit.Mobility, cell => OccupantFor(unit, cell));
-        if (path is null)
+        (SkillDefinition Skill, Unit Target)? action = null;
+        if (command.Skill is { } use)
         {
-            Reject(command, RejectionReason.Unreachable);
-            return;
+            var skill = unit.FindSkill(use.SkillId);
+            if (skill is null)
+            {
+                Reject(command, RejectionReason.UnknownSkill);
+                return;
+            }
+            if (CurrentTick < unit.CooldownEndTick(skill.Id))
+            {
+                Reject(command, RejectionReason.OnCooldown);
+                return;
+            }
+
+            var target = FindUnit(use.Target);
+            if (target is null || target.Status != UnitStatus.Active || target.Team == unit.Team)
+            {
+                Reject(command, RejectionReason.InvalidTarget);
+                return;
+            }
+            if (!IsInRange(position, target.Position, skill.Range))
+            {
+                Reject(command, RejectionReason.OutOfRange);
+                return;
+            }
+            action = (skill, target);
         }
 
-        var from = unit.Position;
-        unit.Position = destination;
+        // Application.
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
-        _events.Add(new UnitMoved(CurrentTick, unit.Id, from, path));
-        SetGauge(unit, Rules.MoveOnlyRestartGauge);
+
+        if (path is not null)
+        {
+            var from = unit.Position;
+            unit.Position = position;
+            _events.Add(new UnitMoved(CurrentTick, unit.Id, from, path));
+        }
+
+        var restartPercent = Rules.MoveOnlyRestartPercent;
+        if (action is { } validAction)
+        {
+            var (skill, target) = validAction;
+            unit.StartCooldown(skill.Id, CurrentTick + Rules.MillisecondsToTicks(skill.CooldownMs));
+            _events.Add(new SkillUsed(CurrentTick, unit.Id, skill.Id, target.Id));
+            Damage(target, _random.NextInt(skill.MinDamage, skill.MaxDamage));
+            restartPercent = skill.Weight == SkillWeight.Heavy
+                ? Rules.HeavyActionRestartPercent
+                : Rules.LightActionRestartPercent;
+        }
+        SetGauge(unit, Rules.GaugeAt(restartPercent));
+    }
+
+    /// <summary>
+    /// Portée en cases (diagonale = 1). Au contact, pas de coupe d'angle : même règle que le déplacement,
+    /// limitée au décor (les unités ne gênent pas une attaque au corps à corps).
+    /// </summary>
+    private bool IsInRange(Cell from, Cell to, int range)
+    {
+        var distance = from.DistanceTo(to);
+        if (distance == 0 || distance > range)
+            return false;
+        if (distance == 1)
+            return _grid.CanStep(from, to);
+        throw new NotSupportedException("Ranged skills need line of sight, not implemented yet.");
+    }
+
+    private void Damage(Unit target, int amount)
+    {
+        target.Hp = Math.Max(0, target.Hp - amount);
+        _events.Add(new UnitDamaged(CurrentTick, target.Id, amount, target.Hp));
+        if (target.Hp > 0)
+            return;
+
+        // La jauge est gelée à sa valeur : seules les unités actives la remplissent.
+        if (target.OnDefeat == DefeatOutcome.Downed)
+        {
+            target.Status = UnitStatus.Downed;
+            _events.Add(new UnitDowned(CurrentTick, target.Id));
+        }
+        else
+        {
+            target.Status = UnitStatus.Removed;
+            _events.Add(new UnitRemoved(CurrentTick, target.Id));
+        }
     }
 
     /// <summary>Change la jauge et annonce l'unité prête si elle vient de se remplir.</summary>
@@ -201,5 +297,10 @@ public sealed class CombatSimulation
             throw new ArgumentException($"Unit {setup.Id} has an initiative above the gauge capacity.");
         if (setup.InitialGauge < 0 || setup.InitialGauge > Rules.GaugeCapacity)
             throw new ArgumentException($"Unit {setup.Id} has an initial gauge outside [0, {Rules.GaugeCapacity}].");
+        if (setup.MaxHp <= 0)
+            throw new ArgumentException($"Unit {setup.Id} needs positive max HP.");
+        if (!Enum.IsDefined(setup.OnDefeat))
+            throw new ArgumentException($"Unit {setup.Id} has an unknown defeat outcome.");
+        SkillDefinition.ValidateAll(setup.Skills);
     }
 }
