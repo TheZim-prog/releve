@@ -1,0 +1,15 @@
+// Civils (docs/design.md section 3) : neutres, ils fuient seuls vers le bord de carte et sont évacués
+// en l'atteignant. Seules les zones qui touchent tout le monde les blessent ; à 0 PV, ils sont perdus.
+[
+  {
+    "id": "civilian",
+    "name": "Civil",
+    "isCivilian": true,
+    "maxHp": 30, "initiative": 7, "mobility": 3,
+    "onDefeat": "removed",
+    "basicAttack": null,
+    "opportunityAttacksPerCycle": 0,
+    "behavior": "flee",
+    "skills": []
+  }
+]

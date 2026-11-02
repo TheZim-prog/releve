@@ -128,6 +128,9 @@ public sealed class Unit
     /// <summary>Mise à l'abri à terre par un coéquipier (Sauvetage éclair) : compte pour la règle de campagne des chutes.</summary>
     public bool WasRescued { get; internal set; }
 
+    /// <summary>Civil (neutre) : voir <see cref="UnitDefinition.IsCivilian"/>.</summary>
+    public bool IsCivilian => Definition.IsCivilian;
+
     /// <summary>En fuite (sous son seuil de PV) : ne fait plus que courir vers le bord de carte, jusqu'à la fin du combat.</summary>
     public bool IsFleeing { get; internal set; }
 

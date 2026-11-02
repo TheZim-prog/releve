@@ -56,6 +56,13 @@ public sealed record UnitDefinition
     /// <summary>Robot : insensible aux pouvoirs mentaux (pas à la télékinésie). Faux par défaut.</summary>
     public bool IsRobot { get; init; }
 
+    /// <summary>
+    /// Civil : neutre, il fuit seul vers le bord de carte (comportement <see cref="Behaviors.Flee"/>) et est évacué en
+    /// l'atteignant. Personne ne le vise directement ; seules les zones qui touchent tout le monde le blessent. Il ne
+    /// bloque ni le passage ni la vue. Faux par défaut.
+    /// </summary>
+    public bool IsCivilian { get; init; }
+
     /// <summary>Nombre d'activations après lequel l'unité disparaît (ex. balise : 3), ou <c>null</c> (illimité).</summary>
     public int? MaxActivations { get; init; }
 
@@ -99,6 +106,13 @@ public sealed record UnitDefinition
             throw new ArgumentException($"Unit '{Id}' needs a flee threshold between 1 and 99 percent.");
         if (FleeAtHpPercent is not null && Behavior is null)
             throw new ArgumentException($"Unit '{Id}': only AI units can flee.");
+        if (IsCivilian && (Behavior != Behaviors.Flee || Skills is not { Count: 0 } || BasicAttack is not null
+                           || OpportunityAttacksPerCycle != 0 || OnDefeat != DefeatOutcome.Removed || IsBoss
+                           || Initiative == 0 || Mobility == 0))
+            throw new ArgumentException(
+                $"Unit '{Id}': a civilian flees ('{Behaviors.Flee}', so it can act and move), has no skill or opportunity attack, and is lost (removed) at 0 HP.");
+        if (Behavior == Behaviors.Flee && !IsCivilian)
+            throw new ArgumentException($"Unit '{Id}': only civilians always flee (others flee below fleeAtHpPercent).");
 
         try
         {

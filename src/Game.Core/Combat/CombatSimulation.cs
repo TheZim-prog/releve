@@ -183,6 +183,9 @@ public sealed class CombatSimulation
     /// </summary>
     internal IUnitBehavior? ControllerOf(Unit unit)
     {
+        // Un civil ne fait que fuir, même confus (il n'a rien pour attaquer).
+        if (unit.IsCivilian)
+            return Behaviors.FleeInstance;
         if (unit.HasStatus(StatusKind.Confused))
             return Behaviors.ConfusedInstance;
         if (unit.DominatedBy is null && unit.IsFleeing)
@@ -522,15 +525,16 @@ public sealed class CombatSimulation
         Cell? Origin = null);
 
     /// <summary>
-    /// Sauvetage, depuis <paramref name="position"/> : un allié <b>à terre</b> à <see cref="SkillDefinition.Range"/> pas au
+    /// Sauvetage, depuis <paramref name="position"/> : un allié <b>à terre</b> (ou un civil debout) à <see cref="SkillDefinition.Range"/> pas au
     /// plus, à pied (chemin réel jusqu'à son contact, sans coupe d'angle) ; une case de dépôt libre, autre que celle du
     /// lanceur, au plus à <see cref="SkillDefinition.RescueDropRadius"/> et en vue ; et une case d'arrivée pour le lanceur
     /// (<see cref="RescuerEnd"/>).
     /// </summary>
     private (PlannedAction? Action, RejectionReason? Reason) PlanRescue(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
     {
-        if (use.Target is not { } allyId || use.Cell is not { } drop || FindUnit(allyId) is not { } ally
-            || ally == unit || ally.Team != unit.Team || ally.Status != UnitStatus.Downed)
+        // Un allié à terre, ou un civil (debout : à 0 PV, il est perdu).
+        if (use.Target is not { } allyId || use.Cell is not { } drop || FindUnit(allyId) is not { } ally || ally == unit
+            || !(ally.IsCivilian ? ally.Status == UnitStatus.Active : ally.Team == unit.Team && ally.Status == UnitStatus.Downed))
             return (null, RejectionReason.InvalidTarget);
 
         // Range pas jusqu'à l'allié : Range - 1 jusqu'à une case à son contact, puis le dernier pas sur lui.
@@ -576,7 +580,8 @@ public sealed class CombatSimulation
         var end = RescuerEnd(rescuer, ally, rescuer.Position, drop, skill.RescueDropRadius!.Value)!.Value;
         _events.Add(new SkillUsed(CurrentTick, rescuer.Id, skill.Id, ally.Id));
         _events.Add(new UnitRescued(CurrentTick, ally.Id, rescuer.Id));
-        ally.WasRescued = true;
+        if (!ally.IsCivilian) // la marque compte pour la règle de campagne des chutes des héros
+            ally.WasRescued = true;
         Displace(ally, drop);
         if (rescuer.Position != end)
             Displace(rescuer, end);
@@ -596,7 +601,8 @@ public sealed class CombatSimulation
             {
                 if (use.Cell is not { } aim || use.Target is not null || position.DirectionTo(aim) is not { } step)
                     return (null, RejectionReason.InvalidTarget);
-                // Course à travers les unités, arrêtée par les murs et les obstacles bas (sans coupe d'angle par le décor).
+                // Course à travers les unités (les civils traversés ne sont pas touchés), arrêtée par les murs et les
+                // obstacles bas (sans coupe d'angle par le décor).
                 var course = new List<Cell>();
                 var previous = position;
                 for (var i = 0; i < skill.Range; i++)
@@ -640,8 +646,9 @@ public sealed class CombatSimulation
                 if (!IsWithinRange(position, target.Position, skill.Range))
                     return (null, RejectionReason.OutOfRange);
 
-                // Fonce jusqu'à la première unité debout de la ligne, par-dessus les unités à terre ; le décor (ou un
-                // coin bouché) l'arrête sans qu'il touche personne. Il finit sur la dernière case libre de sa course.
+                // Fonce jusqu'à la première unité debout de la ligne, par-dessus les unités à terre et les civils ; le
+                // décor (ou un coin bouché) l'arrête sans qu'il touche personne. Il finit sur la dernière case libre de
+                // sa course ; si elle n'est pas au contact de l'unité (une case occupée juste devant), il ne la frappe pas.
                 Unit? struck = null;
                 var lastFree = position;
                 var previous = position;
@@ -652,9 +659,10 @@ public sealed class CombatSimulation
                         break;
                     if (UnitAt(next) is { } other && other != unit)
                     {
-                        if (other.Status == UnitStatus.Active)
+                        if (other.Status == UnitStatus.Active && !other.IsCivilian)
                         {
-                            struck = other;
+                            if (lastFree == previous)
+                                struck = other;
                             break;
                         }
                     }
@@ -684,7 +692,7 @@ public sealed class CombatSimulation
         if (!from.IsDiagonalTo(to))
             return true;
         bool Blocks(Cell corner) =>
-            UnitAt(corner) is { } other && other.Team != unit.Team && (downedBlockCorners || other.Status == UnitStatus.Active);
+            UnitAt(corner) is { } other && AreOpponents(other, unit) && (downedBlockCorners || other.Status == UnitStatus.Active);
         return !Blocks(new Cell(from.X, to.Y)) && !Blocks(new Cell(to.X, from.Y));
     }
 
@@ -764,7 +772,7 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// Immunités : les robots aux pouvoirs mentaux, les boss à la domination. Une cible directe immunisée est refusée ;
-    /// dans une zone, elle résiste.
+    /// dans une zone, elle résiste. (Un civil ne peut pas être visé, et une domination ne se fait jamais en zone.)
     /// </summary>
     private static bool IsImmune(SkillDefinition skill, Unit target) =>
         (skill.IsMental && target.Definition.IsRobot)
@@ -782,9 +790,9 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur ; une télékinésie,
-    /// n'importe quelle unité sauf le lanceur.
+    /// n'importe quelle unité sauf le lanceur. Personne ne vise un civil directement (le sauvetage a sa propre règle).
     /// </summary>
-    private static bool IsRightSide(Unit caster, Unit target, SkillDefinition skill) => skill.Target switch
+    private static bool IsRightSide(Unit caster, Unit target, SkillDefinition skill) => !target.IsCivilian && skill.Target switch
     {
         // Une unité confuse frappe n'importe qui (sauf elle-même).
         SkillTargeting.Enemy => target.Team != caster.Team || (caster.HasStatus(StatusKind.Confused) && target != caster),
@@ -888,7 +896,8 @@ public sealed class CombatSimulation
                 var course = cells!;
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, course));
                 var crossed = course.Take(course.Count - 1).ToHashSet();
-                var hit = _units.Where(u => u != caster && u.Status == UnitStatus.Active && crossed.Contains(u.Position)).ToList();
+                var hit = _units.Where(u => u != caster && u.Status == UnitStatus.Active && !u.IsCivilian
+                                            && crossed.Contains(u.Position)).ToList();
                 Displace(caster, destination);
                 foreach (var unit in hit)
                     ResolveHit(caster, skill, unit, damagePercent);
@@ -914,7 +923,8 @@ public sealed class CombatSimulation
     /// <summary>
     /// Unités debout qu'une zone de <paramref name="caster"/> toucherait, dans l'ordre des unités : jamais le lanceur,
     /// puis tout le monde, les ennemis seulement ou les alliés seulement selon la zone ; une zone « ennemis » qui touche
-    /// aussi les gadgets du lanceur (IEM) y ajoute ceux-ci, de son équipe.
+    /// aussi les gadgets du lanceur (IEM) y ajoute ceux-ci, de son équipe. Les civils ne sont touchés que par les zones
+    /// qui touchent tout le monde.
     /// </summary>
     internal List<Unit> UnitsAffectedBy(Unit caster, SkillDefinition skill, IReadOnlyList<Cell> zone)
     {
@@ -922,7 +932,8 @@ public sealed class CombatSimulation
         var affects = skill.Zone!.Affects;
         return _units
             .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
-            .Where(u => affects == ZoneTargets.All || (affects == ZoneTargets.Allies) == (u.Team == caster.Team)
+            .Where(u => affects == ZoneTargets.All
+                        || (!u.IsCivilian && (affects == ZoneTargets.Allies) == (u.Team == caster.Team))
                         || (skill.Zone.AlsoHitsOwnSummons && u.SummonedBy == caster.Id))
             .ToList();
     }
@@ -956,7 +967,8 @@ public sealed class CombatSimulation
     {
         if (!skill.IsOffensive)
             return false;
-        var dome = _domes.FirstOrDefault(d => d.Owner.Team == target.Team && d.Cells.Contains(target.Position));
+        // Un dôme protège son équipe et les civils sous lui.
+        var dome = _domes.FirstOrDefault(d => (d.Owner.Team == target.Team || target.IsCivilian) && d.Cells.Contains(target.Position));
         if (dome is null)
             return false;
         dome.Absorbing = true;
@@ -1023,7 +1035,8 @@ public sealed class CombatSimulation
         {
             // La cible (projetée sous un dôme de son équipe) ou l'unité percutée peuvent être protégées :
             // la collision fait partie de la même source.
-            if (hit is { Status: UnitStatus.Active } && !IsBlockedByDome(skill, hit))
+            // Un civil percuté n'est pas blessé (seules les zones les touchent).
+            if (hit is { Status: UnitStatus.Active, IsCivilian: false } && !IsBlockedByDome(skill, hit))
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
                 Damage(hit, Scaled(damage, damagePercent, hit), fallbackCell: null);
@@ -1142,7 +1155,7 @@ public sealed class CombatSimulation
     /// </summary>
     private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell next) =>
         enemy != mover
-        && enemy.Team != mover.Team
+        && AreOpponents(enemy, mover)
         && enemy.Status == UnitStatus.Active
         && !enemy.HasStatus(StatusKind.Stunned)
         && enemy.Charge is null
@@ -1188,7 +1201,7 @@ public sealed class CombatSimulation
 
         // Contre un robot adverse, l'effet renforcé de la compétence (dégâts en plus, états plus longs) ; pas sur ses
         // propres gadgets pris dans son IEM, étourdis comme les ennemis ordinaires.
-        var robotBonus = target.Definition.IsRobot && target.Team != attacker.Team ? skill.VsRobots : null;
+        var robotBonus = target.Definition.IsRobot && AreOpponents(target, attacker) ? skill.VsRobots : null;
         if (skill.DealsDamage || robotBonus is { DealsDamage: true })
         {
             int dealt;
@@ -1209,7 +1222,7 @@ public sealed class CombatSimulation
             Damage(target, dealt, fallbackCell);
 
             // Point faible : un coup qui a vraiment fait des dégâts à un ennemi le rend vulnérable.
-            if (dealt > 0 && target.Status == UnitStatus.Active && target.Team != attacker.Team
+            if (dealt > 0 && target.Status == UnitStatus.Active && AreOpponents(target, attacker)
                 && attacker.HasPassive(PassiveKind.WeakPoint))
                 ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs }, attacker);
         }
@@ -1471,12 +1484,16 @@ public sealed class CombatSimulation
         var other = UnitAt(cell);
         if (other is null || other == mover)
             return Occupant.None;
-        return other.Team == mover.Team ? Occupant.Ally : Occupant.Enemy;
+        // On traverse un civil comme un allié, et un civil traverse tout le monde.
+        return AreOpponents(other, mover) ? Occupant.Enemy : Occupant.Ally;
     }
+
+    /// <summary>Adversaires : de camps différents, et aucun des deux n'est un civil (neutre).</summary>
+    internal static bool AreOpponents(Unit a, Unit b) => a.Team != b.Team && !a.IsCivilian && !b.IsCivilian;
 
     /// <summary>Pour la ligne de vue : seuls les ennemis debout bloquent.</summary>
     private bool BlocksSightOf(Unit viewer, Cell cell) =>
-        UnitAt(cell) is { Status: UnitStatus.Active } other && other.Team != viewer.Team;
+        UnitAt(cell) is { Status: UnitStatus.Active } other && AreOpponents(other, viewer);
 
     private void Reject(CombatCommand command, RejectionReason reason) =>
         _events.Add(new CommandRejected(CurrentTick, command, reason));

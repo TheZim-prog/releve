@@ -62,7 +62,7 @@
         "selfMove": "pierce"
       },
       {
-        "id": "flash-rescue", // Sauvetage éclair : va chercher un allié à terre (6 cases à pied) et le pose à l'abri (rayon 4)
+        "id": "flash-rescue", // Sauvetage éclair : va chercher un allié à terre ou un civil (6 cases à pied) et le pose à l'abri (rayon 4)
         "target": "ally", "weight": "light", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "rescueDropRadius": 4
       },

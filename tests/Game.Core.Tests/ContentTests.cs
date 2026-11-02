@@ -14,6 +14,7 @@ public class ContentTests
     private static readonly CombatRules Rules = CombatRules.FromJson(Data("combat-rules.json"));
     private static readonly IReadOnlyDictionary<string, UnitDefinition> Heroes = Load("heroes.json");
     private static readonly IReadOnlyDictionary<string, UnitDefinition> Enemies = Load("enemies.json");
+    private static readonly IReadOnlyDictionary<string, UnitDefinition> Civilians = Load("civilians.json");
 
     private static readonly Grid Arena = Grid.FromRows(
         "................",
@@ -82,6 +83,15 @@ public class ContentTests
         });
     }
 
+    [Fact]
+    public void Civilians_AreNeutralAndFlee()
+    {
+        var civilian = Civilians["civilian"];
+        Assert.True(civilian.IsCivilian);
+        Assert.Equal(Behaviors.Flee, civilian.Behavior);
+        civilian.ValidateAgainst(Rules);
+    }
+
     public static TheoryData<string, string[], (string Id, int X, int Y)[]> Skirmishes => new()
     {
         {
@@ -107,6 +117,9 @@ public class ContentTests
             units.Add((Heroes[heroIds[i]] with { Behavior = Behaviors.Basic }).ToSetup(new UnitId(id++), team: 0, new Cell(0, 2 + i)));
         foreach (var (enemy, x, y) in enemies)
             units.Add(Enemies[enemy].ToSetup(new UnitId(id++), team: 1, new Cell(x, y)));
+        // Des civils pris entre les deux camps : ils fuient, et les zones peuvent les blesser.
+        foreach (var (x, y) in new[] { (7, 3), (8, 4), (9, 1) })
+            units.Add(Civilians["civilian"].ToSetup(new UnitId(id++), team: 2, new Cell(x, y)));
 
         var setup = new CombatSetup(Rules, Arena, units, Seed: 2026);
         var sim = new CombatSimulation(setup);
@@ -125,5 +138,5 @@ public class ContentTests
     }
 
     private static List<int> StandingTeams(CombatSimulation sim) =>
-        sim.Units.Where(u => u.Status == UnitStatus.Active).Select(u => u.Team).Distinct().ToList();
+        sim.Units.Where(u => u.Status == UnitStatus.Active && !u.IsCivilian).Select(u => u.Team).Distinct().ToList();
 }

@@ -47,7 +47,12 @@ public static class Behaviors
     /// <summary>Unité confuse (état, pas une donnée) : attaque l'unité debout la plus proche, quel que soit son camp.</summary>
     internal static readonly IUnitBehavior ConfusedInstance = new BasicBehavior(BasicBehavior.Mode.Confused);
 
-    /// <summary>Unité en fuite (sous son seuil de PV) : ne fait que courir vers le bord de carte le plus proche.</summary>
+    /// <summary>
+    /// Fuite : ne fait que courir vers le bord de carte le plus proche, et quitte le combat en l'atteignant. Celui des
+    /// civils, et de toute unité passée sous son seuil de fuite.
+    /// </summary>
+    public const string Flee = "flee";
+
     internal static readonly IUnitBehavior FleeInstance = new FleeBehavior();
 
     public static bool IsKnown(string id) => Find(id) is not null;
@@ -57,6 +62,7 @@ public static class Behaviors
         Basic => BasicInstance,
         Beacon => BeaconInstance,
         Gunner => GunnerInstance,
+        Flee => FleeInstance,
         _ => null,
     };
 }
@@ -137,7 +143,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
     public Intention? ChooseIntention(CombatSimulation sim, Unit unit)
     {
         var enemies = sim.Units
-            .Where(e => e != unit && e.Status == UnitStatus.Active && (Confused || e.Team != unit.Team))
+            .Where(e => e != unit && e.Status == UnitStatus.Active && (Confused ? !e.IsCivilian : CombatSimulation.AreOpponents(e, unit)))
             .ToList();
         if (enemies.Count == 0)
             return null;
@@ -244,7 +250,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
 
             // Tireur : la case la plus loin de l'ennemi le plus proche (à égalité, la première dans l'ordre).
             threats ??= sim.Units
-                .Where(e => e.Team != unit.Team && e.Status == UnitStatus.Active)
+                .Where(e => CombatSimulation.AreOpponents(e, unit) && e.Status == UnitStatus.Active)
                 .Select(e => e.Position)
                 .ToList();
             var distance = threats.Count == 0 ? int.MaxValue : threats.Min(p => p.DistanceTo(cell));
@@ -286,7 +292,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
         if (action.Zone is { } zone)
         {
             var affected = sim.UnitsAffectedBy(unit, skill, zone);
-            if (!affected.Contains(target) || (!Confused && affected.Any(u => u.Team == unit.Team)))
+            if (!affected.Contains(target) || (!Confused && affected.Any(u => !u.IsCivilian && u.Team == unit.Team)))
                 return null;
         }
         return use;
