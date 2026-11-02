@@ -98,6 +98,12 @@ public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatE
 /// </summary>
 public sealed record UnitSummoned(int Tick, UnitId Unit, string DefinitionId, UnitId Owner, int Team, Cell Position) : CombatEvent(Tick);
 
+/// <summary>
+/// <paramref name="By"/> met à l'abri l'allié à terre <paramref name="Unit"/> (Sauvetage éclair) ; les déplacements
+/// suivent (<see cref="UnitDisplaced"/>).
+/// </summary>
+public sealed record UnitRescued(int Tick, UnitId Unit, UnitId By) : CombatEvent(Tick);
+
 /// <summary>L'unité change de camp (dominée, ou fin de la domination) : elle est maintenant dans l'équipe <paramref name="Team"/>.</summary>
 public sealed record TeamChanged(int Tick, UnitId Unit, int Team) : CombatEvent(Tick);
 

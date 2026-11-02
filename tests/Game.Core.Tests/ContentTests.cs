@@ -56,6 +56,7 @@ public class ContentTests
         Assert.Contains(Heroes["fighter"].Skills, s => s.Id == "execution" && s.ExecuteAtOrBelowPercent > 0);
         Assert.True(Enemies["kingpin"].IsBoss);
         Assert.Contains(Heroes["speedster"].Skills, s => s.SelfMove == SelfMoveType.Pierce);
+        Assert.Contains(Heroes["speedster"].Skills, s => s.IsRescue);
         Assert.Equal(PassiveKind.Grip, Heroes["telepath"].Passive);
         Assert.All(new[] { "paralysis", "confusion", "domination" },
             id => Assert.True(Heroes["telepath"].Skills.Single(s => s.Id == id).IsMental));

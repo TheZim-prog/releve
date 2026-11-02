@@ -123,6 +123,9 @@ public sealed class Unit
     /// <summary>Lanceur qui a posé cette unité (gadget), ou <c>null</c> pour une unité présente dès le début.</summary>
     public UnitId? SummonedBy { get; internal set; }
 
+    /// <summary>Mise à l'abri à terre par un coéquipier (Sauvetage éclair) : compte pour la règle de campagne des chutes.</summary>
+    public bool WasRescued { get; internal set; }
+
     /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
     public int Activations { get; internal set; }
 

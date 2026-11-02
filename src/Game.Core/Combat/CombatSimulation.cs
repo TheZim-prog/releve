@@ -432,6 +432,67 @@ public sealed class CombatSimulation
     internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone, Cell? Destination = null);
 
     /// <summary>
+    /// Sauvetage, depuis <paramref name="position"/> : un allié <b>à terre</b> à <see cref="SkillDefinition.Range"/> pas au
+    /// plus, à pied (chemin réel jusqu'à son contact, sans coupe d'angle) ; une case de dépôt libre, autre que celle du
+    /// lanceur, au plus à <see cref="SkillDefinition.RescueDropRadius"/> et en vue ; et une case d'arrivée pour le lanceur
+    /// (<see cref="RescuerEnd"/>).
+    /// </summary>
+    private (PlannedAction? Action, RejectionReason? Reason) PlanRescue(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
+    {
+        if (use.Target is not { } allyId || use.Cell is not { } drop || FindUnit(allyId) is not { } ally
+            || ally == unit || ally.Team != unit.Team || ally.Status != UnitStatus.Downed)
+            return (null, RejectionReason.InvalidTarget);
+
+        // Range pas jusqu'à l'allié : Range - 1 jusqu'à une case à son contact, puis le dernier pas sur lui.
+        bool ReachesAlly(Cell cell) =>
+            cell.IsAdjacentTo(ally.Position) && CanStepIgnoringDestination(unit, cell, ally.Position, downedBlockCorners: true);
+        var reaches = ReachesAlly(position)
+            || Pathfinder.ReachableCells(_grid, position, skill.Range - 1, cell => OccupantFor(unit, cell)).Keys.Any(ReachesAlly);
+        if (!reaches)
+            return (null, RejectionReason.OutOfRange);
+
+        if (drop == ally.Position || drop == position || position.DistanceTo(drop) > skill.RescueDropRadius!.Value
+            || !IsFreeForRescue(unit, ally, drop) || !HasLineOfSight(unit, position, drop))
+            return (null, RejectionReason.InvalidDestination);
+        if (RescuerEnd(unit, ally, position, drop, skill.RescueDropRadius.Value) is null)
+            return (null, RejectionReason.InvalidDestination);
+        return (new PlannedAction(skill, ally, null, drop), null);
+    }
+
+    /// <summary>Case libre une fois le sauvetage fait : le lanceur et l'allié la quittent.</summary>
+    private bool IsFreeForRescue(Unit rescuer, Unit ally, Cell cell) =>
+        _grid.IsWalkable(cell) && (UnitAt(cell) is not { } occupant || occupant == rescuer || occupant == ally);
+
+    /// <summary>
+    /// Où finit le lanceur d'un sauvetage : à côté du dépôt, sur sa case s'il y est déjà, sinon sur la première case
+    /// voisine du dépôt (ordre fixe) qui est libre, dans le rayon et en vue depuis <paramref name="position"/>, et
+    /// accessible depuis le dépôt sans coupe d'angle.
+    /// </summary>
+    private Cell? RescuerEnd(Unit rescuer, Unit ally, Cell position, Cell drop, int radius)
+    {
+        if (position.IsAdjacentTo(drop) && CanStepIgnoringDestination(rescuer, drop, position, downedBlockCorners: true))
+            return position;
+        return _grid.Neighbors(drop)
+            .Where(c => c != drop && IsFreeForRescue(rescuer, ally, c) && position.DistanceTo(c) <= radius
+                        && HasLineOfSight(rescuer, position, c)
+                        && CanStepIgnoringDestination(rescuer, drop, c, downedBlockCorners: true))
+            .Select(c => (Cell?)c)
+            .FirstOrDefault();
+    }
+
+    /// <summary>Sauvetage (sans attaque d'opportunité) : l'allié est posé sur le dépôt, puis le lanceur à côté.</summary>
+    private void Rescue(Unit rescuer, SkillDefinition skill, Unit ally, Cell drop)
+    {
+        var end = RescuerEnd(rescuer, ally, rescuer.Position, drop, skill.RescueDropRadius!.Value)!.Value;
+        _events.Add(new SkillUsed(CurrentTick, rescuer.Id, skill.Id, ally.Id));
+        _events.Add(new UnitRescued(CurrentTick, ally.Id, rescuer.Id));
+        ally.WasRescued = true;
+        Displace(ally, drop);
+        if (rescuer.Position != end)
+            Displace(rescuer, end);
+    }
+
+    /// <summary>
     /// Mouvements spéciaux, depuis <paramref name="position"/>. <see cref="PlannedAction.Destination"/> : où finit le
     /// lanceur. Percée : <see cref="PlannedAction.Zone"/> = la course (arrivée comprise). Saut : la zone autour de
     /// l'atterrissage. Charge : <see cref="PlannedAction.Target"/> = l'unité percutée.
@@ -546,6 +607,9 @@ public sealed class CombatSimulation
     {
         if (skill.SelfMove is { } selfMove)
             return PlanSelfMove(unit, position, skill, use, selfMove);
+
+        if (skill.IsRescue)
+            return PlanRescue(unit, position, skill, use);
 
         if (skill.Summon is not null)
         {
@@ -680,6 +744,10 @@ public sealed class CombatSimulation
         if (skill.SelfMove is { } selfMove)
         {
             ExecuteSelfMove(caster, skill, selfMove, target, zone!, destination!.Value, damagePercent);
+        }
+        else if (skill.IsRescue)
+        {
+            Rescue(caster, skill, target!, destination!.Value);
         }
         else if (skill.Summon is not null)
         {

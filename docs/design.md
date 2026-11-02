@@ -84,7 +84,7 @@
 - **Attaque de base** : rafale de petits coups rapides sur une cible.
 - **Percée** (légère) : course en ligne droite, inflige des dégâts à toutes les unités traversées.
 - **Tourbillon** : court en cercle autour d'une zone et **déséquilibre** toutes les unités à l'intérieur ; peut aussi dissiper fumées et gaz, voire dévier les projectiles qui la traversent.
-- **Sauvetage éclair** : fonce attraper un civil ou un allié à terre et le ramène en lieu sûr, en une seule action.
+- **Sauvetage éclair** : fonce attraper un civil ou un allié à terre et le ramène en lieu sûr, en une seule action. ✅ L'allié à terre doit être à **N cases à pied** (chemin réel, comme un déplacement) ; on choisit une **case libre dans un rayon** autour du speedster (en vue) où l'allié est posé, et le speedster finit à côté. Pas d'attaque d'opportunité. L'allié **reste à terre** (le relever sera l'action « interagir »), mais il est **marqué sauvé** pour la règle de campagne (1.4). *(Les civils : plus tard.)*
 - **Hypervitesse** (lourde) : pendant quelques secondes, sa jauge se remplit **trois fois plus vite** ; pour lui, le monde ralentit.
 - **Passif équipé** : ignore les attaques d'opportunité.
 

@@ -102,6 +102,14 @@ public sealed record SkillDefinition
 
     public bool Heals => MaxHeal > 0;
 
+    /// <summary>
+    /// Sauvetage (ex. Sauvetage éclair) : vise un allié <b>à terre</b> à <see cref="Range"/> cases à pied et une case
+    /// libre à ce rayon au plus du lanceur, en vue ; l'allié y est posé, le lanceur finit à côté. <c>null</c> : pas un sauvetage.
+    /// </summary>
+    public int? RescueDropRadius { get; init; }
+
+    public bool IsRescue => RescueDropRadius is not null;
+
     /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
     public bool IsMental { get; init; }
 
@@ -244,8 +252,13 @@ public sealed record SkillDefinition
                 throw new ArgumentException($"Skill '{Id}': a leap needs a square zone, a pierce or a rush none.");
         }
 
+        // Sauvetage : sur un allié (à terre), rien d'autre (zone, charge et dégâts sont déjà exclus pour un allié).
+        if (IsRescue && (Target != SkillTargeting.Ally || RescueDropRadius < 1 || Heals || Effects.Count > 0
+                         || GaugeGainPercent > 0 || ForcedMove is not null || SelfMove is not null || Summon is not null || CreatesDome))
+            throw new ArgumentException($"Skill '{Id}': a rescue targets a downed ally, drops it within a radius of at least 1, and does nothing else.");
+
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
-            && !Heals && Summon is null)
+            && !Heals && Summon is null && !IsRescue)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }
