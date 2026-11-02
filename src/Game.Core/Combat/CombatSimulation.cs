@@ -26,6 +26,7 @@ public sealed class CombatSimulation
     private readonly List<CombatEvent> _events = new();
     private readonly List<LoggedCommand> _commandLog = new();
     private readonly DeterministicRandom _random;
+    private readonly List<Dome> _domes = new();
 
     // Copie privée : le décor ne doit changer que par la simulation, sinon le rejeu diverge.
     // Le client connaît la grille initiale ; ses changements futurs passeront par des événements.
@@ -330,6 +331,7 @@ public sealed class CombatSimulation
     {
         var (unit, path, action) = plan;
         unit.Intention = null; // l'unité agit : son intention éventuelle est consommée
+        RemoveDome(unit); // et son dôme éventuel tombe (un nouveau peut être posé par cette action)
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
         unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue
 
@@ -469,28 +471,88 @@ public sealed class CombatSimulation
     private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damagePercent,
         Cell? destination = null)
     {
+        // Une compétence exécutée est une « source » : un dôme bloque toute la source, pour tous ses protégés.
         if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
-            ResolveHit(caster, skill, target, damagePercent);
-            if (target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
+            var landed = ResolveHit(caster, skill, target, damagePercent);
+            if (landed && target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
             {
                 if (move.Type == ForcedMoveType.Push)
-                    Push(caster.Position, target, move, damagePercent);
+                    Push(caster, skill, target, move, damagePercent);
                 else
                     Displace(target, destination!.Value);
             }
-            return;
         }
+        else
+        {
+            _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, zone));
+            if (skill.CreatesDome)
+            {
+                RaiseDome(caster, zone);
+            }
+            else
+            {
+                var cells = zone.ToHashSet();
+                var affected = _units
+                    .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
+                    .Where(u => skill.Zone!.Affects == ZoneTargets.All || u.Team != caster.Team)
+                    .ToList();
+                foreach (var unit in affected)
+                    ResolveHit(caster, skill, unit, damagePercent);
+            }
+        }
+        EndSource();
+    }
 
-        _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, zone));
-        var cells = zone.ToHashSet();
-        var affected = _units
-            .Where(u => u != caster && u.Status == UnitStatus.Active && cells.Contains(u.Position))
-            .Where(u => skill.Zone!.Affects == ZoneTargets.All || u.Team != caster.Team)
-            .ToList();
-        foreach (var unit in affected)
-            ResolveHit(caster, skill, unit, damagePercent);
+    /// <summary>Dôme posé par une unité : ses cases, et s'il a déjà bloqué quelque chose pendant la source en cours.</summary>
+    private sealed class Dome(Unit owner, IReadOnlyList<Cell> cells)
+    {
+        public Unit Owner { get; } = owner;
+        public HashSet<Cell> Cells { get; } = cells.ToHashSet();
+        public bool Absorbing { get; set; }
+    }
+
+    /// <summary>Pose le dôme (l'ancien est déjà tombé : poser un dôme est une action du lanceur).</summary>
+    private void RaiseDome(Unit owner, IReadOnlyList<Cell> cells)
+    {
+        _domes.Add(new Dome(owner, cells));
+        _events.Add(new DomeRaised(CurrentTick, owner.Id, cells));
+    }
+
+    private void RemoveDome(Unit owner)
+    {
+        if (_domes.RemoveAll(d => d.Owner == owner) > 0)
+            _events.Add(new DomeEnded(CurrentTick, owner.Id));
+    }
+
+    /// <summary>
+    /// Un coup offensif (compétence visant un ennemi ou une zone) sur <paramref name="target"/> est-il bloqué par
+    /// un dôme de son équipe qui la couvre ? Si oui, le dôme absorbe la source en cours (il tombera à sa fin).
+    /// </summary>
+    private bool IsBlockedByDome(SkillDefinition skill, Unit target)
+    {
+        if (skill.Target != SkillTargeting.Enemy)
+            return false;
+        var dome = _domes.FirstOrDefault(d => d.Owner.Team == target.Team && d.Cells.Contains(target.Position));
+        if (dome is null)
+            return false;
+        dome.Absorbing = true;
+        _events.Add(new HitBlocked(CurrentTick, target.Id, dome.Owner.Id));
+        return true;
+    }
+
+    /// <summary>
+    /// Fin d'une source (compétence ou attaque d'opportunité) : les dômes qui l'ont absorbée disparaissent, ainsi que
+    /// ceux dont le lanceur est tombé pendant cette source (pas avant : l'attaque reste bloquée pour tous).
+    /// Tous les dégâts arrivent pendant une source, donc tout lanceur tombé passe par ici.
+    /// </summary>
+    private void EndSource()
+    {
+        if (_domes.Count == 0)
+            return;
+        foreach (var dome in _domes.Where(d => d.Absorbing || d.Owner.Status != UnitStatus.Active).ToList())
+            RemoveDome(dome.Owner);
     }
 
     /// <summary>
@@ -499,8 +561,9 @@ public sealed class CombatSimulation
     /// d'angle qu'un déplacement de la cible) ; une collision fait des dégâts à la cible et à l'unité percutée si
     /// elle est debout.
     /// </summary>
-    private void Push(Cell origin, Unit target, ForcedMoveDefinition move, int damagePercent)
+    private void Push(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damagePercent)
     {
+        var origin = caster.Position;
         var step = (X: Math.Sign(target.Position.X - origin.X), Y: Math.Sign(target.Position.Y - origin.Y));
         if (step == (0, 0))
             return;
@@ -535,7 +598,9 @@ public sealed class CombatSimulation
             return;
         foreach (var hit in new[] { target, obstacle })
         {
-            if (hit is { Status: UnitStatus.Active })
+            // La cible (projetée sous un dôme de son équipe) ou l'unité percutée peuvent être protégées :
+            // la collision fait partie de la même source.
+            if (hit is { Status: UnitStatus.Active } && !IsBlockedByDome(skill, hit))
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
                 Damage(hit, Scaled(damage, damagePercent, hit), fallbackCell: null);
@@ -622,6 +687,7 @@ public sealed class CombatSimulation
                 enemy.OpportunityAttacksLeft--;
                 _events.Add(new OpportunityAttack(CurrentTick, enemy.Id, unit.Id, attack.Id));
                 ResolveHit(enemy, attack, unit, DamagePercentOf(enemy), lastFreeCell);
+                EndSource(); // chaque attaque d'opportunité est une source à part
                 if (unit.Status != UnitStatus.Active)
                     return false;
                 if (unit.HasStatus(StatusKind.Stunned))
@@ -671,9 +737,13 @@ public sealed class CombatSimulation
     /// de la cible), Point faible de l'attaquant, puis états si la cible est encore debout, puis gain de jauge.
     /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
     /// (seulement possible en plein déplacement, en traversant un allié).
+    /// Renvoie faux si un dôme a bloqué le coup (il n'a alors aucun effet).
     /// </summary>
-    private void ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null)
+    private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null)
     {
+        if (IsBlockedByDome(skill, target))
+            return false;
+
         if (skill.DealsDamage)
         {
             int dealt;
@@ -694,11 +764,12 @@ public sealed class CombatSimulation
                 ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs });
         }
         if (target.Status != UnitStatus.Active)
-            return;
+            return true;
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect);
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
+        return true;
     }
 
     /// <summary>Exécution : la cible est au plus au seuil de PV de la compétence, et ce n'est pas un boss.</summary>
@@ -765,7 +836,7 @@ public sealed class CombatSimulation
         foreach (var status in target.StatusEndTicks.Keys.ToList())
             EndStatus(target, status);
         InterruptCharge(target);
-        target.Intention = null;
+        target.Intention = null; // son dôme éventuel tombe à la fin de la source en cours (EndSource)
 
         if (target.Status == UnitStatus.Removed)
         {

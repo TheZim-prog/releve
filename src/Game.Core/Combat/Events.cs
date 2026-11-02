@@ -92,6 +92,21 @@ public sealed record OpportunityAttack(int Tick, UnitId Attacker, UnitId Target,
 /// </summary>
 public sealed record UnitStopped(int Tick, UnitId Unit, Cell Position) : CombatEvent(Tick);
 
+/// <summary>Le dôme de <paramref name="Owner"/> se lève sur ces cases.</summary>
+public sealed record DomeRaised(int Tick, UnitId Owner, IReadOnlyList<Cell> Cells) : CombatEvent(Tick)
+{
+    public bool Equals(DomeRaised? other) =>
+        other is not null && base.Equals(other) && Owner == other.Owner && Cells.SequenceEqual(other.Cells);
+
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Owner, Cells.Count);
+}
+
+/// <summary>Le dôme de <paramref name="Owner"/> bloque un coup sur <paramref name="Unit"/> : ce coup n'a aucun effet sur elle.</summary>
+public sealed record HitBlocked(int Tick, UnitId Unit, UnitId Owner) : CombatEvent(Tick);
+
+/// <summary>Le dôme de <paramref name="Owner"/> disparaît (il a absorbé une attaque, son lanceur a agi ou est tombé).</summary>
+public sealed record DomeEnded(int Tick, UnitId Owner) : CombatEvent(Tick);
+
 /// <summary>L'unité est achevée par une exécution (ses PV restants suivent en dégâts).</summary>
 public sealed record UnitExecuted(int Tick, UnitId Attacker, UnitId Target) : CombatEvent(Tick);
 

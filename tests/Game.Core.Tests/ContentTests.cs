@@ -49,6 +49,7 @@ public class ContentTests
         Assert.Equal(PassiveKind.IgnoresOpportunityAttacks, Heroes["speedster"].Passive);
         Assert.Contains(Heroes["speedster"].Skills, s => s.Id == "hyperspeed" && s.Target == SkillTargeting.Self);
         Assert.Contains(Heroes["colossus"].Skills, s => s.Id == "projection" && s.ForcedMove!.Type == ForcedMoveType.Push);
+        Assert.Contains(Heroes["colossus"].Skills, s => s.Id == "dome" && s.CreatesDome);
         Assert.Equal(PassiveKind.WeakPoint, Heroes["fighter"].Passive);
         Assert.Contains(Heroes["fighter"].Skills, s => s.Id == "execution" && s.ExecuteAtOrBelowPercent > 0);
         Assert.True(Enemies["kingpin"].IsBoss);

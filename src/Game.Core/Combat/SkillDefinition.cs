@@ -74,6 +74,12 @@ public sealed record SkillDefinition
     public ForcedMoveDefinition? ForcedMove { get; init; }
 
     /// <summary>
+    /// Dôme : au lieu de frapper, la compétence (zone carrée) pose un dôme sur ses cases. Il bloque la prochaine
+    /// attaque entière contre l'équipe du lanceur à l'intérieur, et disparaît alors, ou à la prochaine action du lanceur.
+    /// </summary>
+    public bool CreatesDome { get; init; }
+
+    /// <summary>
     /// Exécution : si les PV de la cible sont au plus à ce % de son maximum, elle est achevée au lieu de prendre les
     /// dégâts normaux (sauf un boss). 0 = pas d'exécution.
     /// </summary>
@@ -141,7 +147,11 @@ public sealed record SkillDefinition
         if (ExecuteAtOrBelowPercent > 0 && (Target != SkillTargeting.Enemy || Zone is not null || !DealsDamage))
             throw new ArgumentException($"Skill '{Id}': an execution is a damaging attack on one enemy.");
 
-        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null)
+        if (CreatesDome && (Zone?.Shape != ZoneShape.Square || IsCharged || DealsDamage || Effects.Count > 0
+                            || GaugeGainPercent > 0 || ForcedMove is not null || ExecuteAtOrBelowPercent > 0))
+            throw new ArgumentException($"Skill '{Id}': a dome is an instant square zone that does nothing else.");
+
+        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }

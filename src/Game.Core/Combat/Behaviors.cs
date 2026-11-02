@@ -92,12 +92,12 @@ internal sealed class BasicBehavior : IUnitBehavior
 
     /// <summary>
     /// Attaques hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).
-    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi) ni les zones en ligne.
+    /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi), ni les zones en ligne, ni les dômes.
     /// </summary>
     private static List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
             .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id))
-            .Where(s => s.Target == SkillTargeting.Enemy && s.Zone?.Shape != ZoneShape.Line)
+            .Where(s => s.Target == SkillTargeting.Enemy && s.Zone?.Shape != ZoneShape.Line && !s.CreatesDome)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();
 
