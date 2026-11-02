@@ -32,7 +32,8 @@ public sealed record ZoneDefinition
 
     /// <summary>
     /// Vrai : la zone ignore les murs (seules les cases de mur sont exclues). Faux : un carré ne couvre que les
-    /// cases visibles depuis son centre, une ligne s'arrête au premier mur (sans coupe d'angle). Propre à chaque compétence.
+    /// cases visibles depuis son centre, une ligne s'arrête au premier mur (sans coupe d'angle). Dans les deux cas,
+    /// les obstacles bas ne gênent pas (on voit par-dessus). Propre à chaque compétence.
     /// </summary>
     public required bool ThroughWalls { get; init; }
 
@@ -77,12 +78,9 @@ public sealed record ZoneDefinition
 
     private IReadOnlyList<Cell>? LineCells(Grid grid, Cell caster, Cell target)
     {
-        int dx = target.X - caster.X, dy = target.Y - caster.Y;
-        var aligned = dx == 0 || dy == 0 || Math.Abs(dx) == Math.Abs(dy);
-        if (!aligned || caster == target)
+        if (caster.DirectionTo(target) is not { } step)
             return null;
 
-        var step = (X: Math.Sign(dx), Y: Math.Sign(dy));
         var cells = new List<Cell>();
         var previous = caster;
         for (var i = 0; i < Size; i++)
@@ -90,17 +88,12 @@ public sealed record ZoneDefinition
             var next = new Cell(previous.X + step.X, previous.Y + step.Y);
             if (!grid.Contains(next))
                 break;
-            if (ThroughWalls)
-            {
-                if (grid.IsWalkable(next))
-                    cells.Add(next);
-            }
-            else
-            {
-                if (!grid.CanStep(previous, next))
-                    break;
+            // Sans traverser les murs : arrêt au premier mur (y compris sur un coin frôlé en diagonale) ; un obstacle
+            // bas se survole (sa case, où personne ne se tient, n'est simplement pas dans la zone).
+            if (!ThroughWalls && !grid.CanSeeStep(previous, next))
+                break;
+            if (grid.IsWalkable(next))
                 cells.Add(next);
-            }
             previous = next;
         }
         return cells;

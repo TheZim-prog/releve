@@ -91,6 +91,19 @@ public class ZoneDefinitionTests
     }
 
     [Fact]
+    public void Zones_SeeOverLowObstacles()
+    {
+        var grid = Grid.FromRows("..o..");
+
+        // Ligne sans traverser les murs : elle survole l'obstacle bas (sa case, vide, n'en fait pas partie).
+        Assert.Equal(
+            new[] { new Cell(1, 0), new Cell(3, 0) },
+            Line3.Cells(grid, new Cell(0, 0), new Cell(1, 0)));
+        // Carré de rayon 2 centré en (1,0), sans traverser les murs : (3,0), derrière l'obstacle bas (2,0), est couverte.
+        Assert.Contains(new Cell(3, 0), (Square1 with { Size = 2 }).Cells(grid, new Cell(0, 0), new Cell(1, 0))!);
+    }
+
+    [Fact]
     public void Line_NeedsAnAlignedTargetOtherThanTheCaster()
     {
         var grid = new Grid(6, 6);

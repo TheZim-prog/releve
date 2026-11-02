@@ -123,12 +123,13 @@ internal sealed class BasicBehavior : IUnitBehavior
     /// <summary>
     /// Attaques hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).
     /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi, zones de soin), ni les zones
-    /// en ligne, ni les dômes, ni les invocations.
+    /// en ligne, ni les dômes, ni les invocations, ni la Percée ou le Saut (la Charge, oui).
     /// </summary>
     private static List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
             .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id))
-            .Where(s => s.IsOffensive && s.Zone?.Shape != ZoneShape.Line && !s.CreatesDome && s.Summon is null)
+            .Where(s => s.IsOffensive && s.Zone?.Shape != ZoneShape.Line && !s.CreatesDome && s.Summon is null
+                        && s.SelfMove is null or SelfMoveType.Rush)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();
 
@@ -162,7 +163,9 @@ internal sealed class BasicBehavior : IUnitBehavior
                 ? new SkillUse(skill.Id, target.Id)
                 : new SkillUse(skill.Id, null, skill.Range == 0 ? cell : target.Position);
             var action = sim.PlanAction(unit, cell, skill, use).Action;
-            if (action is null)
+            // Une charge peut percuter quelqu'un d'autre en chemin (ou personne) : on ne garde que celles qui
+            // atteignent la cible.
+            if (action is null || (skill.SelfMove == SelfMoveType.Rush && action.Target != target))
                 continue;
             if (action.Zone is { } zone
                 && (!zone.Contains(target.Position) || (skill.Zone!.Affects == ZoneTargets.All && HitsAnAlly(sim, unit, zone))))

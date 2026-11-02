@@ -1,8 +1,20 @@
 namespace Game.Core.Grids;
 
+/// <summary>Ce qu'il y a sur une case de la grille (hors unités).</summary>
+public enum Terrain : byte
+{
+    Floor,
+
+    /// <summary>Bloque le déplacement, la vue et le saut.</summary>
+    Wall,
+
+    /// <summary>Obstacle bas (ex. une voiture) : bloque le déplacement, mais pas la vue ; on peut le sauter.</summary>
+    LowObstacle,
+}
+
 /// <summary>
-/// Grille de cases carrées. Une case est libre ou bloquée (mur, obstacle).
-/// Hors de la grille, tout est considéré bloqué.
+/// Grille de cases carrées. Une case est libre, un mur ou un obstacle bas. Hors de la grille, tout est
+/// considéré comme un mur.
 /// Vue de l'extérieur de Game.Core, une grille est immuable : seule la simulation change le décor,
 /// sinon un combat ne pourrait plus être rejoué à l'identique.
 ///
@@ -19,7 +31,7 @@ public sealed class Grid
         (1, -1), (1, 1), (-1, 1), (-1, -1),
     };
 
-    private readonly bool[] _blocked;
+    private readonly Terrain[] _terrain;
 
     public int Width { get; }
     public int Height { get; }
@@ -30,11 +42,11 @@ public sealed class Grid
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
         Width = width;
         Height = height;
-        _blocked = new bool[checked(width * height)];
+        _terrain = new Terrain[checked(width * height)];
     }
 
     /// <summary>
-    /// Construit une grille depuis des lignes de texte : '.' = libre, '#' = bloquée.
+    /// Construit une grille depuis des lignes de texte : '.' = libre, '#' = mur, 'o' = obstacle bas.
     /// Toutes les lignes doivent avoir la même longueur. La première ligne est Y = 0.
     /// </summary>
     public static Grid FromRows(params string[] rows)
@@ -53,16 +65,13 @@ public sealed class Grid
 
             for (var x = 0; x < rows[y].Length; x++)
             {
-                switch (rows[y][x])
+                grid.SetTerrain(new Cell(x, y), rows[y][x] switch
                 {
-                    case '.':
-                        break;
-                    case '#':
-                        grid.SetBlocked(new Cell(x, y), true);
-                        break;
-                    default:
-                        throw new ArgumentException($"Unknown character '{rows[y][x]}' at ({x},{y}).", nameof(rows));
-                }
+                    '.' => Terrain.Floor,
+                    '#' => Terrain.Wall,
+                    'o' => Terrain.LowObstacle,
+                    var other => throw new ArgumentException($"Unknown character '{other}' at ({x},{y}).", nameof(rows)),
+                });
             }
         }
 
@@ -73,24 +82,41 @@ public sealed class Grid
     internal Grid Clone()
     {
         var copy = new Grid(Width, Height);
-        Array.Copy(_blocked, copy._blocked, _blocked.Length);
+        Array.Copy(_terrain, copy._terrain, _terrain.Length);
         return copy;
     }
 
     public bool Contains(Cell cell) =>
         cell.X >= 0 && cell.X < Width && cell.Y >= 0 && cell.Y < Height;
 
-    /// <summary>Vrai si la case est hors de la grille ou bloquée.</summary>
-    public bool IsBlocked(Cell cell) => !Contains(cell) || _blocked[Index(cell)];
+    /// <summary>Terrain de la case ; hors de la grille, un mur.</summary>
+    public Terrain TerrainAt(Cell cell) => Contains(cell) ? _terrain[Index(cell)] : Terrain.Wall;
+
+    /// <summary>Vrai si on ne peut pas se tenir ni passer sur la case : hors de la grille, mur ou obstacle bas.</summary>
+    public bool IsBlocked(Cell cell) => TerrainAt(cell) != Terrain.Floor;
 
     public bool IsWalkable(Cell cell) => !IsBlocked(cell);
 
-    internal void SetBlocked(Cell cell, bool blocked)
+    /// <summary>Vrai si la case bloque la vue (tirs, zones) et le saut : un mur ou hors de la grille.</summary>
+    public bool BlocksSight(Cell cell) => TerrainAt(cell) == Terrain.Wall;
+
+    /// <summary>
+    /// La vue passe-t-elle d'une case à sa voisine ? Pas de mur sur la case d'arrivée ni, en diagonale, sur l'un des
+    /// deux coins frôlés (pas de coupe d'angle). Les obstacles bas ne gênent pas.
+    /// </summary>
+    public bool CanSeeStep(Cell from, Cell to) =>
+        from.IsAdjacentTo(to) && !BlocksSight(to)
+        && (!from.IsDiagonalTo(to) || (!BlocksSight(new Cell(from.X, to.Y)) && !BlocksSight(new Cell(to.X, from.Y))));
+
+    internal void SetTerrain(Cell cell, Terrain terrain)
     {
         if (!Contains(cell))
             throw new ArgumentOutOfRangeException(nameof(cell), cell, "Cell is outside the grid.");
-        _blocked[Index(cell)] = blocked;
+        _terrain[Index(cell)] = terrain;
     }
+
+    /// <summary>Raccourci : mur ou sol.</summary>
+    internal void SetBlocked(Cell cell, bool blocked) => SetTerrain(cell, blocked ? Terrain.Wall : Terrain.Floor);
 
     /// <summary>
     /// Vrai si une unité peut passer de <paramref name="from"/> à <paramref name="to"/> en un pas :

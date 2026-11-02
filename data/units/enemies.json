@@ -1,6 +1,6 @@
 // Ennemis du prologue (docs/design.md section 3). Comportement de base pour tous en attendant
 // leurs comportements propres (le tireur qui garde ses distances, le caïd qui fuit…). L'IA de base
-// n'utilise pas encore les zones en ligne (Tir appuyé), ni la Charge du caïd (mécanique à venir).
+// n'utilise pas encore les zones en ligne (Tir appuyé).
 [
   {
     "id": "brawler",
@@ -61,6 +61,12 @@
     "behavior": "basic",
     "skills": [
       { "id": "power-punch", "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 20, "cooldownMs": 0 },
+      {
+        "id": "charge", // Charge : fonce sur un ennemi aligné, percute la première unité de sa ligne et la déséquilibre
+        "weight": "light", "range": 5, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
+        "selfMove": "rush",
+        "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+      },
       {
         "id": "impact-wave", // Onde d'impact : dégâts autour de lui
         "weight": "light", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,

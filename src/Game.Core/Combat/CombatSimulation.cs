@@ -397,12 +397,121 @@ public sealed class CombatSimulation
     internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone, Cell? Destination = null);
 
     /// <summary>
+    /// Mouvements spéciaux, depuis <paramref name="position"/>. <see cref="PlannedAction.Destination"/> : où finit le
+    /// lanceur. Percée : <see cref="PlannedAction.Zone"/> = la course (arrivée comprise). Saut : la zone autour de
+    /// l'atterrissage. Charge : <see cref="PlannedAction.Target"/> = l'unité percutée.
+    /// </summary>
+    private (PlannedAction? Action, RejectionReason? Reason) PlanSelfMove(
+        Unit unit, Cell position, SkillDefinition skill, SkillUse use, SelfMoveType selfMove)
+    {
+        switch (selfMove)
+        {
+            case SelfMoveType.Pierce:
+            {
+                if (use.Cell is not { } aim || use.Target is not null || position.DirectionTo(aim) is not { } step)
+                    return (null, RejectionReason.InvalidTarget);
+                // Course à travers les unités, arrêtée par les murs et les obstacles bas (sans coupe d'angle par le décor).
+                var course = new List<Cell>();
+                var previous = position;
+                for (var i = 0; i < skill.Range; i++)
+                {
+                    var next = new Cell(previous.X + step.X, previous.Y + step.Y);
+                    if (!_grid.CanStep(previous, next))
+                        break;
+                    course.Add(next);
+                    previous = next;
+                }
+                // Arrivée : la dernière case libre de la course.
+                var end = course.FindLastIndex(c => UnitAt(c) is not { } occupant || occupant == unit);
+                if (end < 0)
+                    return (null, RejectionReason.Unreachable);
+                return (new PlannedAction(skill, null, course.GetRange(0, end + 1), course[end]), null);
+            }
+
+            case SelfMoveType.Leap:
+            {
+                if (use.Cell is not { } landing || use.Target is not null)
+                    return (null, RejectionReason.InvalidTarget);
+                if (!IsWithinRange(position, landing, skill.Range))
+                    return (null, RejectionReason.OutOfRange);
+                if (!_grid.IsWalkable(landing) || (UnitAt(landing) is { } occupant && occupant != unit))
+                    return (null, RejectionReason.InvalidDestination);
+                // Par-dessus les unités et les obstacles bas, pas les murs.
+                if (!LineOfSight.IsClear(_grid, position, landing))
+                    return (null, RejectionReason.NoLineOfSight);
+                var zone = skill.Zone!.Cells(_grid, landing, landing);
+                return zone is null
+                    ? (null, RejectionReason.InvalidTarget)
+                    : (new PlannedAction(skill, null, zone, landing), null);
+            }
+
+            case SelfMoveType.Rush:
+            {
+                if (use.Target is not { } targetId || use.Cell is not null || FindUnit(targetId) is not { } target
+                    || target.Status != UnitStatus.Active || !IsRightSide(unit, target, skill)
+                    || position.DirectionTo(target.Position) is not { } step)
+                    return (null, RejectionReason.InvalidTarget);
+                if (!IsWithinRange(position, target.Position, skill.Range))
+                    return (null, RejectionReason.OutOfRange);
+
+                // Fonce jusqu'à la première unité debout de la ligne, par-dessus les unités à terre ; le décor (ou un
+                // coin bouché) l'arrête sans qu'il touche personne. Il finit sur la dernière case libre de sa course.
+                Unit? struck = null;
+                var lastFree = position;
+                var previous = position;
+                for (var i = 0; i < skill.Range; i++)
+                {
+                    var next = new Cell(previous.X + step.X, previous.Y + step.Y);
+                    if (!CanStepIgnoringDestination(unit, previous, next, downedBlockCorners: false))
+                        break;
+                    if (UnitAt(next) is { } other && other != unit)
+                    {
+                        if (other.Status == UnitStatus.Active)
+                        {
+                            struck = other;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        lastFree = next;
+                    }
+                    previous = next;
+                }
+                return (new PlannedAction(skill, struck, null, lastFree), null);
+            }
+
+            default:
+                throw new InvalidOperationException($"Unknown self move {selfMove}.");
+        }
+    }
+
+    /// <summary>
+    /// Pas de <paramref name="from"/> à <paramref name="to"/> pour <paramref name="unit"/>, sans tenir compte de qui
+    /// occupe <paramref name="to"/> (on peut s'y écraser) : le décor (coupe d'angle comprise) et, en diagonale, les
+    /// ennemis de l'unité sur les coins (à terre compris, sauf si <paramref name="downedBlockCorners"/> est faux).
+    /// </summary>
+    private bool CanStepIgnoringDestination(Unit unit, Cell from, Cell to, bool downedBlockCorners)
+    {
+        if (!_grid.CanStep(from, to))
+            return false;
+        if (!from.IsDiagonalTo(to))
+            return true;
+        bool Blocks(Cell corner) =>
+            UnitAt(corner) is { } other && other.Team != unit.Team && (downedBlockCorners || other.Status == UnitStatus.Active);
+        return !Blocks(new Cell(from.X, to.Y)) && !Blocks(new Cell(to.X, from.Y));
+    }
+
+    /// <summary>
     /// Valide la cible d'une compétence utilisée depuis <paramref name="position"/> (case d'arrivée du lanceur).
     /// Compétence à zone : une case, à portée (0 = sur soi), libre et en vue pour un carré, alignée pour une ligne,
     /// et une zone non vide. Attaque ciblée : voir <see cref="CheckTarget"/>.
     /// </summary>
     internal (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
     {
+        if (skill.SelfMove is { } selfMove)
+            return PlanSelfMove(unit, position, skill, use, selfMove);
+
         if (skill.Summon is not null)
         {
             // Une case libre (une fois le lanceur arrivé), à portée et en vue.
@@ -519,7 +628,11 @@ public sealed class CombatSimulation
         Cell? destination = null)
     {
         // Une compétence exécutée est une « source » : un dôme bloque toute la source, pour tous ses protégés.
-        if (skill.Summon is not null)
+        if (skill.SelfMove is { } selfMove)
+        {
+            ExecuteSelfMove(caster, skill, selfMove, target, zone!, destination!.Value, damagePercent);
+        }
+        else if (skill.Summon is not null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null));
             Summon(caster, skill.Summon, destination!.Value);
@@ -550,6 +663,44 @@ public sealed class CombatSimulation
             }
         }
         EndSource();
+    }
+
+    /// <summary>
+    /// Mouvement spécial planifié par <see cref="PlanSelfMove"/> (sans attaque d'opportunité) :
+    /// Percée = course puis coups sur tout ce qui a été traversé ; Saut = atterrissage puis zone ;
+    /// Charge = course jusqu'à l'unité percutée, puis le coup (aucun si le décor l'a arrêtée).
+    /// </summary>
+    private void ExecuteSelfMove(Unit caster, SkillDefinition skill, SelfMoveType selfMove, Unit? struck,
+        IReadOnlyList<Cell>? cells, Cell destination, int damagePercent)
+    {
+        switch (selfMove)
+        {
+            case SelfMoveType.Pierce:
+            {
+                var course = cells!;
+                _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, course));
+                var crossed = course.Take(course.Count - 1).ToHashSet();
+                var hit = _units.Where(u => u != caster && u.Status == UnitStatus.Active && crossed.Contains(u.Position)).ToList();
+                Displace(caster, destination);
+                foreach (var unit in hit)
+                    ResolveHit(caster, skill, unit, damagePercent);
+                break;
+            }
+            case SelfMoveType.Leap:
+                _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, cells));
+                Displace(caster, destination);
+                foreach (var unit in UnitsAffectedBy(caster, skill, cells!))
+                    ResolveHit(caster, skill, unit, damagePercent);
+                break;
+            case SelfMoveType.Rush:
+                // Même ordre que les autres : la compétence, la course, puis le coup (s'il a percuté quelqu'un).
+                _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, struck?.Id));
+                if (destination != caster.Position)
+                    Displace(caster, destination);
+                if (struck is not null)
+                    ResolveHit(caster, skill, struck, damagePercent);
+                break;
+        }
     }
 
     /// <summary>
@@ -635,15 +786,16 @@ public sealed class CombatSimulation
         for (var i = 0; i < move.Distance; i++)
         {
             var next = new Cell(position.X + step.X, position.Y + step.Y);
+            // Le décor (ou un coin bouché) arrête d'abord : on ne percute pas une unité à travers un coin de mur.
+            if (!CanStepIgnoringDestination(target, position, next, downedBlockCorners: true))
+            {
+                collided = true;
+                break;
+            }
             if (UnitAt(next) is { } other && other != target)
             {
                 collided = true;
                 obstacle = other;
-                break;
-            }
-            if (!_grid.CanStep(position, next, cell => OccupantFor(target, cell)))
-            {
-                collided = true;
                 break;
             }
             position = next;
@@ -787,8 +939,12 @@ public sealed class CombatSimulation
         && IsInMeleeReach(enemy, mover.Position)
         && !IsInMeleeReach(enemy, next);
 
-    /// <summary>Case que l'unité peut frapper au contact : adjacente, sans coupe d'angle par un mur.</summary>
-    private bool IsInMeleeReach(Unit unit, Cell cell) => _grid.CanStep(unit.Position, cell);
+    /// <summary>
+    /// Case que l'unité peut frapper au contact : adjacente, libre, sans coupe d'angle par un mur (règle de la vue :
+    /// un obstacle bas sur un coin ne gêne pas).
+    /// </summary>
+    private bool IsInMeleeReach(Unit unit, Cell cell) =>
+        unit.Position.IsAdjacentTo(cell) && LineOfSight.IsClear(_grid, unit.Position, cell);
 
     private bool IsOccupiedByOther(Unit unit, Cell cell) =>
         _units.Any(u => u != unit && u.Status != UnitStatus.Removed && u.Position == cell);
@@ -874,13 +1030,14 @@ public sealed class CombatSimulation
 
     /// <summary>
     /// Vue de <paramref name="from"/> (case d'arrivée de l'attaquant) vers <paramref name="to"/>.
-    /// Au contact : pas de coupe d'angle, mais seul le décor compte (règle du corps à corps).
+    /// Au contact : pas de coupe d'angle par un mur, mais seul le décor compte (règle du corps à corps).
     /// Au-delà : ligne de vue, bloquée par les murs et les ennemis debout de l'attaquant.
+    /// Les obstacles bas ne gênent jamais la vue.
     /// </summary>
     private bool HasLineOfSight(Unit attacker, Cell from, Cell to)
     {
         if (from.IsAdjacentTo(to))
-            return _grid.CanStep(from, to);
+            return LineOfSight.IsClear(_grid, from, to);
         return LineOfSight.IsClear(_grid, from, to, cell => BlocksSightOf(attacker, cell));
     }
 

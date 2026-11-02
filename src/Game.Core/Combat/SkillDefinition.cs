@@ -7,6 +7,22 @@ public enum SkillWeight
     Heavy,
 }
 
+/// <summary>Mouvement spécial du lanceur pendant sa compétence (sans attaque d'opportunité).</summary>
+public enum SelfMoveType
+{
+    /// <summary>
+    /// Percée : vise une case alignée ; course en ligne droite sur <see cref="SkillDefinition.Range"/> cases à travers
+    /// les unités (pas les murs ni les obstacles bas), arrêt sur la dernière case libre, et frappe tout ce qui est traversé.
+    /// </summary>
+    Pierce,
+
+    /// <summary>Saut : vise une case libre à portée, par-dessus unités et obstacles bas (pas les murs) ; la zone frappe autour de l'atterrissage.</summary>
+    Leap,
+
+    /// <summary>Charge : vise un ennemi aligné à portée ; fonce et s'arrête contre la première unité de la ligne, qui prend le coup.</summary>
+    Rush,
+}
+
 /// <summary>Qui une compétence sans zone peut viser.</summary>
 public enum SkillTargeting
 {
@@ -86,6 +102,9 @@ public sealed record SkillDefinition
 
     public bool Heals => MaxHeal > 0;
 
+    /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge), ou <c>null</c>.</summary>
+    public SelfMoveType? SelfMove { get; init; }
+
     /// <summary>
     /// Invocation (ex. tourelle, balise) : la compétence vise une case libre à portée et en vue, et y pose une unité
     /// de ce type, de l'équipe du lanceur. Elle remplace celle du même type déjà posée par le même lanceur.
@@ -163,7 +182,8 @@ public sealed record SkillDefinition
 
         if (ExecuteAtOrBelowPercent is < 0 or > 99)
             throw new ArgumentException($"Skill '{Id}' needs an execution threshold between 0 and 99 %.");
-        if (ExecuteAtOrBelowPercent > 0 && (Target != SkillTargeting.Enemy || Zone is not null || !DealsDamage))
+        if (ExecuteAtOrBelowPercent > 0 && (Target != SkillTargeting.Enemy || Zone is not null || !DealsDamage
+                                            || SelfMove is SelfMoveType.Pierce or SelfMoveType.Leap))
             throw new ArgumentException($"Skill '{Id}': an execution is a damaging attack on one enemy.");
 
         if (CreatesDome && (Zone?.Shape != ZoneShape.Square || IsCharged || DealsDamage || Effects.Count > 0
@@ -198,6 +218,19 @@ public sealed record SkillDefinition
                 || Summon.OnDefeat != DefeatOutcome.Removed)
                 throw new ArgumentException(
                     $"Skill '{Id}': a summoned unit acts on its own, does not move, makes no opportunity attack and is removed when destroyed.");
+        }
+
+        // Mouvements spéciaux : offensifs, instantanés, sans autre mouvement ; seul le saut a une zone (carrée).
+        if (SelfMove is { } selfMove)
+        {
+            if (!Enum.IsDefined(selfMove))
+                throw new ArgumentException($"Skill '{Id}' has an unknown self move.");
+            if (Target != SkillTargeting.Enemy || IsCharged || ForcedMove is not null || Summon is not null || CreatesDome
+                || Heals || GaugeGainPercent > 0 || Range < 1)
+                throw new ArgumentException($"Skill '{Id}': a self move is an instant attack in range, without other moves or support.");
+            if ((selfMove == SelfMoveType.Leap) != (Zone?.Shape == ZoneShape.Square)
+                || (selfMove != SelfMoveType.Leap && Zone is not null))
+                throw new ArgumentException($"Skill '{Id}': a leap needs a square zone, a pierce or a rush none.");
         }
 
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome

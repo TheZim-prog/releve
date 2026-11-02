@@ -10,9 +10,9 @@ public static class LineOfSight
 {
     /// <summary>
     /// Vrai si rien ne bloque la vue entre <paramref name="from"/> et <paramref name="to"/> :
-    /// ni mur (case bloquée de la grille), ni case pour laquelle <paramref name="blocksSight"/> renvoie vrai
-    /// (les unités, par exemple). Faux si l'une des deux extrémités est hors de la grille ou bloquée ;
-    /// <paramref name="blocksSight"/> n'est pas appliqué aux extrémités (le tireur et sa cible).
+    /// ni mur (<see cref="Grid.BlocksSight"/> : on voit par-dessus un obstacle bas), ni case pour laquelle
+    /// <paramref name="blocksSight"/> renvoie vrai (les unités, par exemple). Faux si l'une des deux extrémités
+    /// n'est pas une case libre ; <paramref name="blocksSight"/> n'est pas appliqué aux extrémités (le tireur et sa cible).
     /// </summary>
     public static bool IsClear(Grid grid, Cell from, Cell to, Func<Cell, bool>? blocksSight = null)
     {
@@ -22,7 +22,7 @@ public static class LineOfSight
 
         foreach (var cell in CrossedCells(from, to))
         {
-            if (grid.IsBlocked(cell) || (blocksSight?.Invoke(cell) ?? false))
+            if (grid.BlocksSight(cell) || (blocksSight?.Invoke(cell) ?? false))
                 return false;
         }
         return true;

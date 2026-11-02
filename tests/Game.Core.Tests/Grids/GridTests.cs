@@ -35,6 +35,23 @@ public class GridTests
     }
 
     [Fact]
+    public void LowObstacle_BlocksMovementAndCorners_ButNotSight()
+    {
+        var grid = Grid.FromRows(
+            ".o.",
+            "...");
+
+        Assert.Equal(Terrain.LowObstacle, grid.TerrainAt(new Cell(1, 0)));
+        Assert.True(grid.IsBlocked(new Cell(1, 0)));
+        Assert.False(grid.BlocksSight(new Cell(1, 0)));
+        Assert.False(grid.CanStep(new Cell(0, 0), new Cell(1, 0)));
+        Assert.False(grid.CanStep(new Cell(0, 1), new Cell(1, 0)));  // sur l'obstacle
+        Assert.False(grid.CanStep(new Cell(0, 0), new Cell(1, 1)));  // diagonale qui frôle l'obstacle
+        Assert.True(LineOfSight.IsClear(grid, new Cell(0, 0), new Cell(2, 0)));
+        Assert.True(grid.BlocksSight(new Cell(-1, 0)));             // hors de la grille : comme un mur
+    }
+
+    [Fact]
     public void OutsideCells_AreBlocked()
     {
         var grid = new Grid(3, 3);

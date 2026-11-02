@@ -1,6 +1,6 @@
 // Héros jouables (kits du prologue, docs/design.md section 3).
 // Seules les compétences faisables avec le moteur actuel sont présentes ; les autres viendront
-// avec leurs mécaniques (confusion, domination, percée, saut, sauvetage…).
+// avec leurs mécaniques (confusion, domination, sauvetage…).
 // Durées en millisecondes de combat. L'initiative est en points de jauge par tick (voir combat-rules.json
 // pour la capacité de la jauge, les ticks par seconde et le point de reprise selon le poids de l'action).
 [
@@ -19,6 +19,12 @@
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false },
         "createsDome": true
+      },
+      {
+        "id": "leap", // Saut : atterrit sur une case libre et frappe tout le monde autour
+        "weight": "light", "range": 4, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
+        "selfMove": "leap",
+        "zone": { "shape": "square", "size": 1, "throughWalls": false }
       },
       {
         "id": "projection", // frappe et projette la cible ; dégâts de collision contre un mur ou une unité
@@ -50,6 +56,11 @@
         "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
         "zone": { "shape": "square", "size": 1, "throughWalls": false },
         "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+      },
+      {
+        "id": "breakthrough", // Percée : course en ligne droite qui frappe tout ce qu'elle traverse (alliés compris)
+        "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 12, "cooldownMs": 8000,
+        "selfMove": "pierce"
       },
       {
         "id": "hyperspeed", // Hypervitesse : sa jauge se remplit beaucoup plus vite pendant quelques secondes
