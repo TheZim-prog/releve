@@ -42,6 +42,12 @@ public sealed record CombatRules
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
+    /// <summary>PV d'un allié à terre relevé (action « interagir »), en % de ses PV max (au moins 1 PV).</summary>
+    public required int ReviveHpPercent { get; init; }
+
+    /// <summary>Poids de l'action « relever » (reprise de jauge du releveur, comme une compétence).</summary>
+    public required SkillWeight ReviveWeight { get; init; }
+
     public static CombatRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<CombatRules>(json);
@@ -67,6 +73,9 @@ public sealed record CombatRules
         ValidatePercent(HeavyActionRestartPercent, nameof(HeavyActionRestartPercent));
         ValidatePercent(OffBalanceFillPercent, nameof(OffBalanceFillPercent), max: 100);
         ValidatePercent(IntentionThresholdPercent, nameof(IntentionThresholdPercent), max: 100);
+        ValidatePercent(ReviveHpPercent, nameof(ReviveHpPercent), max: 100, min: 1);
+        if (!Enum.IsDefined(ReviveWeight))
+            throw new ArgumentException($"{nameof(ReviveWeight)} is unknown.");
         // Renforcements : au moins 100 % (sinon ce serait un affaiblissement), au plus x10 pour rester raisonnable.
         if (HastedFillPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(HastedFillPercent)} must be between 100 and 1000.");
@@ -82,9 +91,9 @@ public sealed record CombatRules
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau
     // prête aussitôt et pourrait agir plusieurs fois dans le même tick.
-    private static void ValidatePercent(int value, string name, int max = 99)
+    private static void ValidatePercent(int value, string name, int max = 99, int min = 0)
     {
-        if (value < 0 || value > max)
-            throw new ArgumentException($"{name} must be between 0 and {max}.");
+        if (value < min || value > max)
+            throw new ArgumentException($"{name} must be between {min} and {max}.");
     }
 }

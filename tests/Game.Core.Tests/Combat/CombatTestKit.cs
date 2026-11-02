@@ -26,6 +26,8 @@ internal static class CombatTestKit
         WeakPointExposedMs = 1000, // 20 ticks
         GripDurationPercent = 150,
         IntentionThresholdPercent = 50,
+        ReviveHpPercent = 25,
+        ReviveWeight = SkillWeight.Light,
     };
 
     /// <summary>Attaque légère, 10 dégâts fixes, sans recharge.</summary>

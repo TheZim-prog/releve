@@ -28,5 +28,10 @@
   "gripDurationPercent": 150,
 
   // Une unité IA fixe son intention (action + cible) quand sa jauge atteint ce pourcentage.
-  "intentionThresholdPercent": 50
+  "intentionThresholdPercent": 50,
+
+  // Relever un allié à terre (action « interagir ») : il revient avec ce % de ses PV max ;
+  // le releveur repart selon ce poids.
+  "reviveHpPercent": 25,
+  "reviveWeight": "light"
 }

@@ -326,7 +326,8 @@ public sealed class CombatSimulation
     }
 
     /// <summary>Activation validée, prête à être appliquée telle quelle.</summary>
-    internal sealed record ActivationPlan(Unit Unit, IReadOnlyList<Cell>? Path, PlannedAction? Action);
+    internal sealed record ActivationPlan(Unit Unit, IReadOnlyList<Cell>? Path, PlannedAction? Action,
+        PlannedInteraction? Interaction = null);
 
     /// <summary>
     /// Validation complète d'une activation, sans rien changer : la commande est atomique, rien n'est appliqué
@@ -345,8 +346,10 @@ public sealed class CombatSimulation
             return (null, RejectionReason.Charging);
         if (!unit.IsReady)
             return (null, RejectionReason.NotReady);
-        if (command.MoveTo is null && command.Skill is null)
+        if (command.MoveTo is null && command.Skill is null && command.Interaction is null)
             return (null, RejectionReason.Empty);
+        if (command.Skill is not null && command.Interaction is not null)
+            return (null, RejectionReason.TwoActions);
 
         var position = unit.Position;
         IReadOnlyList<Cell>? path = null;
@@ -374,7 +377,54 @@ public sealed class CombatSimulation
             action = planned;
         }
 
-        return (new ActivationPlan(unit, path, action), null);
+        PlannedInteraction? interaction = null;
+        if (command.Interaction is { } interact)
+        {
+            var (planned, rejection) = PlanInteraction(unit, position, interact);
+            if (rejection is not null)
+                return (null, rejection);
+            interaction = planned;
+        }
+
+        return (new ActivationPlan(unit, path, action, interaction), null);
+    }
+
+    /// <summary>Interaction validée : son type et l'unité au contact visée.</summary>
+    internal sealed record PlannedInteraction(InteractionKind Kind, Unit Target);
+
+    /// <summary>
+    /// Validation d'une interaction depuis <paramref name="position"/> (case d'arrivée). Relever : un allié à terre,
+    /// au contact (sans coupe d'angle par un mur, comme le corps à corps).
+    /// </summary>
+    private (PlannedInteraction? Interaction, RejectionReason? Reason) PlanInteraction(Unit unit, Cell position, InteractionUse use)
+    {
+        switch (use.Kind)
+        {
+            case InteractionKind.Revive:
+                if (FindUnit(use.Target) is not { Status: UnitStatus.Downed } target || target.Team != unit.Team)
+                    return (null, RejectionReason.InvalidTarget);
+                if (!IsInMeleeReach(position, target.Position))
+                    return (null, RejectionReason.OutOfRange);
+                return (new PlannedInteraction(use.Kind, target), null);
+            default: // valeur inconnue envoyée par un client : refusée, pas une erreur du serveur
+                return (null, RejectionReason.InvalidTarget);
+        }
+    }
+
+    /// <summary>
+    /// Relève un allié à terre : debout avec une part de ses PV max (au moins 1), jauge vide (sans reste de
+    /// remplissage d'avant sa chute). Ses attaques d'opportunité se rechargeront quand il rejouera. Sa chute est
+    /// terminée : la marque « sauvé » (qui vaut pour une chute) est effacée.
+    /// </summary>
+    private void Revive(Unit unit, Unit target)
+    {
+        target.Status = UnitStatus.Active;
+        target.Hp = Math.Max(1, (int)((long)target.MaxHp * Rules.ReviveHpPercent / 100));
+        target.WasRescued = false;
+        target.FillRemainder = 0;
+        target.FillRemainderScale = 1;
+        SetGauge(target, 0);
+        _events.Add(new UnitRevived(CurrentTick, target.Id, unit.Id, target.Hp));
     }
 
     private void ApplyActivation(ActivationPlan plan)
@@ -396,7 +446,7 @@ public sealed class CombatSimulation
 
     private void ApplyActivationCore(ActivationPlan plan)
     {
-        var (unit, path, action) = plan;
+        var (unit, path, action, interaction) = plan;
         unit.Intention = null; // l'unité agit : son intention éventuelle est consommée
         RemoveDome(unit); // et son dôme éventuel tombe (un nouveau peut être posé par cette action)
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
@@ -408,6 +458,27 @@ public sealed class CombatSimulation
         {
             if (unit.Status == UnitStatus.Active)
                 SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
+            return;
+        }
+
+        // Interagir (poids en données). Seul un joueur interagit : si l'unité ne lui obéit plus après son trajet
+        // (prise de contrôle en chemin), l'interaction est annulée, comme un déplacement seul.
+        if (interaction is not null)
+        {
+            if (ControllerOf(unit) is not null)
+            {
+                SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
+                return;
+            }
+            switch (interaction.Kind)
+            {
+                case InteractionKind.Revive:
+                    Revive(unit, interaction.Target);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown interaction {interaction.Kind}.");
+            }
+            SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(Rules.ReviveWeight)));
             return;
         }
 
@@ -961,8 +1032,10 @@ public sealed class CombatSimulation
         InterruptCharge(unit);
     }
 
-    private int RestartPercentAfter(SkillDefinition skill) =>
-        skill.Weight == SkillWeight.Heavy ? Rules.HeavyActionRestartPercent : Rules.LightActionRestartPercent;
+    private int RestartPercentAfter(SkillDefinition skill) => RestartPercentAfter(skill.Weight);
+
+    private int RestartPercentAfter(SkillWeight weight) =>
+        weight == SkillWeight.Heavy ? Rules.HeavyActionRestartPercent : Rules.LightActionRestartPercent;
 
     /// <summary>
     /// Déclenche les attaques chargées arrivées à échéance, dans l'ordre des unités. Une attaque ciblée ne touche
@@ -1075,8 +1148,10 @@ public sealed class CombatSimulation
     /// Case que l'unité peut frapper au contact : adjacente, libre, sans coupe d'angle par un mur (règle de la vue :
     /// un obstacle bas sur un coin ne gêne pas).
     /// </summary>
-    private bool IsInMeleeReach(Unit unit, Cell cell) =>
-        unit.Position.IsAdjacentTo(cell) && LineOfSight.IsClear(_grid, unit.Position, cell);
+    private bool IsInMeleeReach(Unit unit, Cell cell) => IsInMeleeReach(unit.Position, cell);
+
+    private bool IsInMeleeReach(Cell from, Cell cell) =>
+        from.IsAdjacentTo(cell) && LineOfSight.IsClear(_grid, from, cell);
 
     private bool IsOccupiedByOther(Unit unit, Cell cell) =>
         _units.Any(u => u != unit && u.Status != UnitStatus.Removed && u.Position == cell);

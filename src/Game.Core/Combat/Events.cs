@@ -104,6 +104,9 @@ public sealed record UnitSummoned(int Tick, UnitId Unit, string DefinitionId, Un
 /// </summary>
 public sealed record UnitRescued(int Tick, UnitId Unit, UnitId By) : CombatEvent(Tick);
 
+/// <summary><paramref name="By"/> relève l'allié à terre <paramref name="Unit"/> : il est debout avec <paramref name="Hp"/> PV, jauge vide.</summary>
+public sealed record UnitRevived(int Tick, UnitId Unit, UnitId By, int Hp) : CombatEvent(Tick);
+
 /// <summary>L'unité change de camp (dominée, ou fin de la domination) : elle est maintenant dans l'équipe <paramref name="Team"/>.</summary>
 public sealed record TeamChanged(int Tick, UnitId Unit, int Team) : CombatEvent(Tick);
 
@@ -185,6 +188,9 @@ public enum RejectionReason
     /// <summary>Ni déplacement ni action.</summary>
     Empty,
 
+    /// <summary>Une compétence et une interaction dans la même activation : une seule action à la fois.</summary>
+    TwoActions,
+
     /// <summary>
     /// Déplacement vers la case où l'unité se trouve déjà, ou case de télékinésie impossible (sa propre case,
     /// trop loin, occupée, mur, ou pas en vue depuis la cible).
@@ -202,7 +208,8 @@ public enum RejectionReason
 
     /// <summary>
     /// Cible inconnue, alliée, l'unité elle-même, à terre ou retirée ; ou cible du mauvais type (unité pour une
-    /// compétence à zone, case pour une attaque ciblée) ; ou case non alignée pour une zone en ligne.
+    /// compétence à zone, case pour une attaque ciblée) ; ou case non alignée pour une zone en ligne ; ou, pour
+    /// relever, autre chose qu'un allié à terre.
     /// </summary>
     InvalidTarget,
 
