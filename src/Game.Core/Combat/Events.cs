@@ -62,8 +62,14 @@ public enum RejectionReason
     /// <summary>Cible inconnue, alliée, l'unité elle-même, à terre ou retirée.</summary>
     InvalidTarget,
 
-    /// <summary>Cible hors de portée depuis la case d'arrivée (coupe d'angle comprise).</summary>
+    /// <summary>Cible trop loin depuis la case d'arrivée.</summary>
     OutOfRange,
+
+    /// <summary>
+    /// Cible à portée mais cachée depuis la case d'arrivée : par un mur ou un ennemi debout, ou, au contact
+    /// en diagonale, par un mur sur un coin.
+    /// </summary>
+    NoLineOfSight,
 }
 
 /// <summary>Commande telle qu'appliquée, avec son tick : de quoi rejouer le combat à l'identique.</summary>

@@ -96,7 +96,7 @@ public class ActionTests
         cornered.Submit(blocked);
 
         Assert.Contains(open.Tick(), e => e is UnitDamaged);
-        Assert.Equal(new CommandRejected(1, blocked, RejectionReason.OutOfRange), cornered.Tick().Single());
+        Assert.Equal(new CommandRejected(1, blocked, RejectionReason.NoLineOfSight), cornered.Tick().Single());
     }
 
     [Fact]

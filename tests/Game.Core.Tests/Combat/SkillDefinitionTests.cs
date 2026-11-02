@@ -20,6 +20,16 @@ public class SkillDefinitionTests
         Assert.Equal(8000, skills[1].CooldownMs);
     }
 
+    [Fact]
+    public void ListFromJson_AcceptsRangedSkills()
+    {
+        var skills = SkillDefinition.ListFromJson("""
+            [{ "id": "bolt", "weight": "light", "range": 6, "minDamage": 3, "maxDamage": 5, "cooldownMs": 0 }]
+            """);
+
+        Assert.Equal(6, skills.Single().Range);
+    }
+
     [Theory]
     [InlineData("""[{ "id": "x", "weight": "medium", "range": 1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
     [InlineData("""[{ "id": "x", "weight": 0, "range": 1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
@@ -32,7 +42,8 @@ public class SkillDefinitionTests
     [Theory]
     [InlineData("""[ null ]""")]
     [InlineData("""[{ "id": "", "weight": "light", "range": 1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
-    [InlineData("""[{ "id": "x", "weight": "light", "range": 2, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
+    [InlineData("""[{ "id": "x", "weight": "light", "range": 0, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
+    [InlineData("""[{ "id": "x", "weight": "light", "range": -1, "minDamage": 1, "maxDamage": 1, "cooldownMs": 0 }]""")]
     [InlineData("""[{ "id": "x", "weight": "light", "range": 1, "minDamage": 5, "maxDamage": 4, "cooldownMs": 0 }]""")]
     [InlineData("""[{ "id": "x", "weight": "light", "range": 1, "minDamage": 1, "maxDamage": 1, "cooldownMs": -1 }]""")]
     [InlineData("""

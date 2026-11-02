@@ -9,14 +9,14 @@ public enum SkillWeight
 
 /// <summary>
 /// Compétence (attaque de base comprise), décrite en données.
-/// Pour l'instant : une attaque ciblée sur une unité ennemie, au corps à corps.
+/// Pour l'instant : une attaque ciblée sur une unité ennemie, au contact ou à distance (ligne de vue).
 /// </summary>
 public sealed record SkillDefinition
 {
     public required string Id { get; init; }
     public required SkillWeight Weight { get; init; }
 
-    /// <summary>Portée en cases (diagonale = 1). Seule la portée 1 est gérée tant que la ligne de vue n'existe pas.</summary>
+    /// <summary>Portée en cases (diagonale = 1). Au-delà de 1, il faut une ligne de vue.</summary>
     public required int Range { get; init; }
 
     public required int MinDamage { get; init; }
@@ -53,8 +53,8 @@ public sealed record SkillDefinition
             throw new ArgumentException("Skill id is required.");
         if (!Enum.IsDefined(Weight))
             throw new ArgumentException($"Skill '{Id}' has an unknown weight.");
-        if (Range != 1)
-            throw new ArgumentException($"Skill '{Id}': only range 1 is supported until line of sight exists.");
+        if (Range < 1)
+            throw new ArgumentException($"Skill '{Id}' needs a range of at least 1.");
         if (MinDamage < 0 || MaxDamage < MinDamage)
             throw new ArgumentException($"Skill '{Id}' needs 0 <= minDamage <= maxDamage.");
         if (CooldownMs < 0)

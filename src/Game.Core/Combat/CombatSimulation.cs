@@ -195,9 +195,14 @@ public sealed class CombatSimulation
                 Reject(command, RejectionReason.InvalidTarget);
                 return;
             }
-            if (!IsInRange(position, target.Position, skill.Range))
+            if (!IsWithinRange(position, target.Position, skill.Range))
             {
                 Reject(command, RejectionReason.OutOfRange);
+                return;
+            }
+            if (!HasLineOfSight(unit, position, target.Position))
+            {
+                Reject(command, RejectionReason.NoLineOfSight);
                 return;
             }
             action = (skill, target);
@@ -227,18 +232,23 @@ public sealed class CombatSimulation
         SetGauge(unit, Rules.GaugeAt(restartPercent));
     }
 
-    /// <summary>
-    /// Portée en cases (diagonale = 1). Au contact, pas de coupe d'angle : même règle que le déplacement,
-    /// limitée au décor (les unités ne gênent pas une attaque au corps à corps).
-    /// </summary>
-    private bool IsInRange(Cell from, Cell to, int range)
+    /// <summary>Distance en cases (diagonale = 1), sans tenir compte des obstacles.</summary>
+    private static bool IsWithinRange(Cell from, Cell to, int range)
     {
         var distance = from.DistanceTo(to);
-        if (distance == 0 || distance > range)
-            return false;
-        if (distance == 1)
+        return distance > 0 && distance <= range;
+    }
+
+    /// <summary>
+    /// Vue de <paramref name="from"/> (case d'arrivée de l'attaquant) vers <paramref name="to"/>.
+    /// Au contact : pas de coupe d'angle, mais seul le décor compte (règle du corps à corps).
+    /// Au-delà : ligne de vue, bloquée par les murs et les ennemis debout de l'attaquant.
+    /// </summary>
+    private bool HasLineOfSight(Unit attacker, Cell from, Cell to)
+    {
+        if (from.IsAdjacentTo(to))
             return _grid.CanStep(from, to);
-        throw new NotSupportedException("Ranged skills need line of sight, not implemented yet.");
+        return LineOfSight.IsClear(_grid, from, to, cell => BlocksSightOf(attacker, cell));
     }
 
     private void Damage(Unit target, int amount)
@@ -270,6 +280,10 @@ public sealed class CombatSimulation
             _events.Add(new UnitReady(CurrentTick, unit.Id));
     }
 
+    // Qui fait obstacle à qui. Les deux règles diffèrent volontairement (docs/design.md, section 3) :
+    // un héros à terre occupe toujours sa case pour le déplacement, mais on tire par-dessus lui.
+
+    /// <summary>Pour le déplacement : toute unité présente (debout ou à terre), alliée ou ennemie.</summary>
     private Occupant OccupantFor(Unit mover, Cell cell)
     {
         var other = UnitAt(cell);
@@ -277,6 +291,10 @@ public sealed class CombatSimulation
             return Occupant.None;
         return other.Team == mover.Team ? Occupant.Ally : Occupant.Enemy;
     }
+
+    /// <summary>Pour la ligne de vue : seuls les ennemis debout bloquent.</summary>
+    private bool BlocksSightOf(Unit viewer, Cell cell) =>
+        UnitAt(cell) is { Status: UnitStatus.Active } other && other.Team != viewer.Team;
 
     private void Reject(CombatCommand command, RejectionReason reason) =>
         _events.Add(new CommandRejected(CurrentTick, command, reason));

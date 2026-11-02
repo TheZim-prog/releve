@@ -56,6 +56,7 @@
 - ✅ **Dégâts** : chaque compétence inflige des dégâts dans une **fourchette aléatoire** (min-max, en données), tirés par le générateur à graine. La **puissance** du héros s'y ajoutera avec la progression.
 - ✅ **À 0 PV** : un **héros** tombe **à terre** : il reste sur sa case (qu'il occupe toujours), sa jauge est gelée, il ne peut plus agir ; il pourra être relevé (cf. 1.4). Un **ennemi** vaincu est **retiré** de la grille.
 - ✅ **Corps à corps en diagonale** : soumis à la même règle que le déplacement, **pas de coupe d'angle** (un mur sur l'un des deux coins frôlés empêche l'attaque). Seul le **décor** compte ici : une unité (alliée ou ennemie) sur un coin ne bloque pas l'attaque.
+- ✅ **Ligne de vue** (attaques à distance) : tracée du **centre** de la case du tireur au **centre** de la case de la cible ; elle est bloquée par les **murs** et par les **ennemis debout** qu'elle traverse (s'il y a un ennemi devant un autre, le premier bloque le tir sur le second). Les **alliés** et les **héros à terre** ne bloquent pas. **Pas de coupe d'angle** : si la ligne passe exactement par un coin, il suffit que l'une des deux cases qui se touchent à ce coin bloque. À une case de distance, c'est la règle du corps à corps qui s'applique (seuls les murs comptent).
 - ✅ Chaque unité a une **jauge** qui se remplit selon sa vitesse ; elle agit quand la jauge est pleine.
 - ✅ **Déplacement instantané** sur la timeline : il ne fait que vider la jauge, pas de mouvement simultané.
 - ✅ **Le coût d'une action vide la jauge** plus ou moins (remplace les points d'action).
