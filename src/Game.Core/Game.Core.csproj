@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Bibliothèque pure : aucune dépendance (ni Godot, ni NuGet). -->
+
+</Project>
