@@ -15,7 +15,13 @@ dotnet test Releve.sln
 
 ## Lancer le prototype de combat
 
-Compiler, puis ouvrir le projet `src/Game.Client` dans Godot (bouton Lancer), ou en ligne de commande :
+Le plus simple, depuis la racine du dépôt :
+
+```
+.\run.ps1
+```
+
+Sinon, compiler puis ouvrir le projet `src/Game.Client` dans Godot (bouton Lancer), ou en ligne de commande :
 
 ```
 dotnet build src/Game.Client/Game.Client.csproj
