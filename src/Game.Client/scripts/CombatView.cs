@@ -144,9 +144,9 @@ public partial class CombatView : Node3D
         _board.Build(_sim.Grid);
 
         var center = new Vector3((_sim.Grid.Width - 1) / 2f, 0, (_sim.Grid.Height - 1) / 2f);
-        // Le plateau tient en largeur (16/9) avec une marge, et descend un peu pour laisser la place au HUD du haut.
-        _camera.Size = Math.Max(_sim.Grid.Width * 9f / 16f + 4.5f, _sim.Grid.Height + 6.5f);
-        var focus = center + new Vector3(0, 0, -0.8f);
+        // Le plateau tient en largeur (16/9), entre les cartes des héros (à gauche) et la rangée d'actions (en bas).
+        _camera.Size = Math.Max(_sim.Grid.Width * 9f / 16f + 3f, _sim.Grid.Height + 5f);
+        var focus = center + new Vector3(0, 0, 0.9f); // un peu plus haut à l'écran : la rangée d'actions occupe le bas
         _camera.LookAtFromPosition(focus + new Vector3(0, 30f, 14f), focus, Vector3.Up);
 
         _accumulator = 0;
@@ -290,6 +290,9 @@ public partial class CombatView : Node3D
                 break;
             case Key.I:
                 _showIntentions = !_showIntentions;
+                break;
+            case Key.H:
+                _hud.ShowHelp = !_hud.ShowHelp;
                 break;
             case Key.F9: // F1-F6 choisissent les héros
                 StartCombat();
@@ -560,7 +563,7 @@ public partial class CombatView : Node3D
         if (Selected is not { } unit)
         {
             var ready = _sim.Units.Count(u => u.IsReady && IsControllable(u));
-            _hud.SetSelection(ready > 0 ? $"{ready} héros prêt(s) : choisis-en un (barre du bas, F1-F6 ou Tab)" : "Aucun héros prêt",
+            _hud.SetSelection(ready > 0 ? $"{ready} héros prêt(s) : choisis-en un (cartes à gauche, F1-F6 ou Tab)" : "Aucun héros prêt",
                 Array.Empty<ActionButton>());
             return;
         }
@@ -577,12 +580,14 @@ public partial class CombatView : Node3D
             var cooldown = unit.CooldownEndTick(skill.Id) - _sim.CurrentTick;
             var damage = skill.DealsDamage ? $", {skill.MinDamage}-{skill.MaxDamage}" : "";
             var weight = skill.Weight == SkillWeight.Heavy ? "lourde" : "légère";
-            var state = cooldown > 0 ? $"   [recharge {cooldown / (double)_data.Rules.TicksPerSecond:0.0} s]" : "";
-            var key = i < 9 ? $"{i + 1}  " : "    ";
-            actions.Add(new ActionButton($"{key}{skill.DisplayName} ({weight}, portée {skill.Range}{damage}){state}",
+            var details = cooldown > 0
+                ? $"recharge {cooldown / (double)_data.Rules.TicksPerSecond:0.0} s"
+                : $"{weight}, portée {skill.Range}{damage}";
+            var key = i < 9 ? $"{i + 1}  " : "";
+            actions.Add(new ActionButton($"{key}{skill.DisplayName}\n{details}",
                 Enabled: cooldown <= 0, Armed: _aiming?.Skill == skill));
         }
-        actions.Add(new ActionButton("R  Relever un allié au contact", Enabled: true, Armed: _aiming?.Interaction is not null));
+        actions.Add(new ActionButton("R  Relever\nun allié au contact", Enabled: true, Armed: _aiming?.Interaction is not null));
         _hud.SetSelection(header, actions);
     }
 

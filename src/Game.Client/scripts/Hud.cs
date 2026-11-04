@@ -22,10 +22,10 @@ public partial class Hud : CanvasLayer
         "Clic : héros, case (fantôme), cible",
         "Re-clic sur le fantôme / Entrée : déplacement seul",
         "1-9 ou boutons : compétence   R : relever",
-        "F1-F6 ou barre du bas : choisir un héros   Tab : prêt suivant",
+        "F1-F6 ou cartes à gauche : choisir un héros   Tab : prêt suivant",
         "Clic droit / Échap : annuler",
         "Espace : pause   Vitesse : les 2 touches à droite du 0, ou pavé - / +",
-        "I : intentions   F9 : recommencer");
+        "I : intentions   F9 : recommencer   H : masquer l'aide");
 
     private readonly Queue<string> _log = new();
     private readonly List<Button> _actionButtons = new();
@@ -33,12 +33,12 @@ public partial class Hud : CanvasLayer
     private readonly List<UnitId> _cardIds = new();
 
     private Label _header = null!;
-    private VBoxContainer _actions = null!;
+    private HBoxContainer _actions = null!;
     private Label _help = null!;
     private Label _logLabel = null!;
     private Label _hint = null!;
     private Label _banner = null!;
-    private HBoxContainer _heroBar = null!;
+    private VBoxContainer _heroBar = null!;
 
     private readonly StyleBoxFlat _cardStyle = CardStyle(new Color(0, 0, 0, 0.6f), new Color(0.3f, 0.3f, 0.35f));
     private readonly StyleBoxFlat _cardReady = CardStyle(new Color(0.15f, 0.12f, 0, 0.7f), new Color(1f, 0.85f, 0.2f));
@@ -52,28 +52,28 @@ public partial class Hud : CanvasLayer
 
     public override void _Ready()
     {
-        // En haut à gauche : le héros choisi et ses actions.
+        // À gauche : les héros, en colonne. Bande transparente : seules les cartes captent la souris.
+        _heroBar = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        _heroBar.AddThemeConstantOverride("separation", 6);
+        AddChild(Panel(_heroBar, new Vector2(12, 12), Corner.TopLeft, transparent: true));
+
+        // En bas : le héros choisi et ses actions, en rangée.
         var selection = new VBoxContainer();
-        _header = new Label();
+        _header = new Label { HorizontalAlignment = HorizontalAlignment.Center };
         _header.AddThemeFontSizeOverride("font_size", 17);
-        _actions = new VBoxContainer();
+        _actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        _actions.AddThemeConstantOverride("separation", 6);
         selection.AddChild(_header);
         selection.AddChild(_actions);
-        AddChild(Panel(selection, new Vector2(12, 12), Corner.TopLeft));
+        AddChild(Panel(selection, new Vector2(0, -12), Corner.BottomCenter));
 
-        _help = TextLabel(14, 380);
+        _help = TextLabel(14, 0);
         AddChild(Panel(_help, new Vector2(-12, 12), Corner.TopRight));
-        _logLabel = TextLabel(13, 300);
-        AddChild(Panel(_logLabel, new Vector2(-12, -112), Corner.BottomRight)); // au-dessus de la barre des héros
-
-        // Bande transparente : seules les cartes captent la souris (le plateau reste cliquable entre elles).
-        _heroBar = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        _heroBar.AddThemeConstantOverride("separation", 8);
-        AddChild(Panel(_heroBar, new Vector2(0, -12), Corner.BottomCenter, transparent: true));
+        _logLabel = TextLabel(13, 260);
+        AddChild(Panel(_logLabel, new Vector2(-12, -125), Corner.BottomRight)); // au-dessus de la rangée d'actions
 
         _hint = TextLabel(17, 0);
-        var hintPanel = Panel(_hint, new Vector2(0, -128), Corner.BottomCenter);
-        AddChild(hintPanel);
+        AddChild(Panel(_hint, new Vector2(0, -122), Corner.BottomCenter));
 
         _banner = new Label
         {
@@ -97,8 +97,8 @@ public partial class Hud : CanvasLayer
         while (_actionButtons.Count < actions.Count)
         {
             var index = _actionButtons.Count;
-            var button = new Button { FocusMode = Control.FocusModeEnum.None, Alignment = HorizontalAlignment.Left };
-            button.AddThemeFontSizeOverride("font_size", 15);
+            var button = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(150, 50) };
+            button.AddThemeFontSizeOverride("font_size", 14);
             button.Pressed += () => ActionPressed?.Invoke(index);
             _actions.AddChild(button);
             _actionButtons.Add(button);
@@ -149,7 +149,7 @@ public partial class Hud : CanvasLayer
     private void AddCard()
     {
         var index = _cards.Count;
-        var button = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(165, 88) };
+        var button = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(165, 96) };
         button.Pressed += () =>
         {
             if (HeroAt(index) is { } id)
@@ -190,8 +190,12 @@ public partial class Hud : CanvasLayer
         _banner.AddThemeColorOverride("font_color", color);
     }
 
-    /// <summary>État du combat (pause, vitesse, temps, intentions révélées), sous l'aide des commandes.</summary>
-    public void SetStatus(string text) => _help.Text = text.Length > 0 ? HelpText + "\n\n" + text : HelpText;
+    /// <summary>Aide des commandes affichée ou repliée (touche H).</summary>
+    public bool ShowHelp { get; set; }
+
+    /// <summary>État du combat (pause, vitesse, temps, intentions révélées), sous l'aide des commandes si elle est affichée.</summary>
+    public void SetStatus(string text) =>
+        _help.Text = (ShowHelp ? HelpText : "H : afficher l'aide") + (text.Length > 0 ? "\n\n" + text : "");
 
     public void Log(string line)
     {
