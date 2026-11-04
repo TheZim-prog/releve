@@ -50,6 +50,11 @@ public partial class CombatView : Node3D
     // Unités déjà commandées depuis le dernier tick (leur ordre attend d'être appliqué, par exemple pendant la pause).
     private readonly HashSet<UnitId> _ordered = new();
 
+    // Vitesse d'écoulement du temps de combat, en % (affichage seulement : les règles ne changent pas). Plus lente par
+    // défaut en solo, où un seul joueur commande toute l'équipe.
+    private static readonly int[] Speeds = [50, 75, 100];
+    private int _speed = 1;
+
     private double _accumulator;
     private bool _paused;
     private bool _showIntentions;
@@ -95,6 +100,8 @@ public partial class CombatView : Node3D
         AddChild(_ghostView);
         _hud = new Hud();
         AddChild(_hud);
+        _hud.ActionPressed += ArmAction;
+        _hud.HeroPressed += SelectIfControllable;
         StartCombat();
         ApplyDevArguments();
     }
@@ -138,9 +145,9 @@ public partial class CombatView : Node3D
 
         var center = new Vector3((_sim.Grid.Width - 1) / 2f, 0, (_sim.Grid.Height - 1) / 2f);
         // Le plateau tient en largeur (16/9) avec une marge, et descend un peu pour laisser la place au HUD du haut.
-        _camera.Size = Math.Max(_sim.Grid.Width * 9f / 16f + 3f, _sim.Grid.Height + 5f);
+        _camera.Size = Math.Max(_sim.Grid.Width * 9f / 16f + 4.5f, _sim.Grid.Height + 6.5f);
         var focus = center + new Vector3(0, 0, -0.8f);
-        _camera.LookAtFromPosition(focus + new Vector3(0, 30f, 20f), focus, Vector3.Up);
+        _camera.LookAtFromPosition(focus + new Vector3(0, 30f, 14f), focus, Vector3.Up);
 
         _accumulator = 0;
         _paused = false;
@@ -157,9 +164,10 @@ public partial class CombatView : Node3D
     public override void _Process(double delta)
     {
         if (!_paused && _won is null)
-            RunTicks(delta);
+            RunTicks(delta * Speeds[_speed] / 100);
 
-        _hovered = _hoverOverride ?? HoveredCell();
+        // Souris sur l'interface : aucune case survolée (le clic irait à l'interface, pas au plateau).
+        _hovered = _hoverOverride ?? (GetViewport().GuiGetHoveredControl() is null ? HoveredCell() : null);
         foreach (var unit in _sim.Units)
         {
             if (!_views.TryGetValue(unit.Id, out var view))
@@ -236,7 +244,7 @@ public partial class CombatView : Node3D
         switch (@event)
         {
             case InputEventKey { Pressed: true, Echo: false } key:
-                HandleKey(key.Keycode);
+                HandleKey(key);
                 break;
             case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }:
                 Click();
@@ -247,9 +255,35 @@ public partial class CombatView : Node3D
         }
     }
 
-    private void HandleKey(Key key)
+    private void HandleKey(InputEventKey input)
     {
-        switch (key)
+        // Chiffres et touches F lus par position (sur un clavier AZERTY, la rangée du haut donne & é " ' …).
+        var physical = input.PhysicalKeycode;
+        if (physical is >= Key.Key1 and <= Key.Key9)
+        {
+            ArmAction((int)(physical - Key.Key1));
+            return;
+        }
+        if (physical is >= Key.F1 and <= Key.F6)
+        {
+            if (_hud.HeroAt((int)(physical - Key.F1)) is { } hero)
+                SelectIfControllable(hero);
+            return;
+        }
+
+        // Vitesse : les deux touches à droite du 0 (« ) = » en AZERTY, « - = » en QWERTY), ou le pavé numérique.
+        if (physical is Key.Equal || input.Keycode is Key.KpAdd)
+        {
+            _speed = Math.Min(_speed + 1, Speeds.Length - 1);
+            return;
+        }
+        if (physical is Key.Minus || input.Keycode is Key.KpSubtract)
+        {
+            _speed = Math.Max(_speed - 1, 0);
+            return;
+        }
+
+        switch (input.Keycode)
         {
             case Key.Space:
                 _paused = !_paused;
@@ -257,7 +291,7 @@ public partial class CombatView : Node3D
             case Key.I:
                 _showIntentions = !_showIntentions;
                 break;
-            case Key.F5:
+            case Key.F9: // F1-F6 choisissent les héros
                 StartCombat();
                 break;
             case Key.Escape:
@@ -271,15 +305,39 @@ public partial class CombatView : Node3D
                     TrySubmit(new ActivateCommand(unit.Id, ghost));
                 break;
             case Key.R:
-                if (Selected is not null)
-                    _aiming = new Aiming(null, InteractionKind.Revive);
-                break;
-            case >= Key.Key1 and <= Key.Key9:
-                var index = (int)(key - Key.Key1);
-                if (Selected is { } selected && index < selected.Skills.Count)
-                    _aiming = new Aiming(selected.Skills[index]);
+                if (Selected is { } reviver)
+                    ArmAction(reviver.Skills.Count);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Arme l'action n° <paramref name="index"/> du héros choisi : une compétence (sauf en recharge), ou relever (juste
+    /// après la dernière compétence, comme le dernier bouton).
+    /// </summary>
+    private void ArmAction(int index)
+    {
+        if (Selected is not { } unit)
+            return;
+        if (index == unit.Skills.Count)
+        {
+            _aiming = new Aiming(null, InteractionKind.Revive);
+            return;
+        }
+        if (index >= unit.Skills.Count)
+            return;
+        var skill = unit.Skills[index];
+        if (unit.CooldownEndTick(skill.Id) > _sim.CurrentTick)
+            _hud.Log($"{skill.DisplayName} : {Texts.Rejection(RejectionReason.OnCooldown)}");
+        else
+            _aiming = new Aiming(skill);
+    }
+
+    /// <summary>Choisit un héros depuis la barre ou F1-F6, seulement s'il obéit au joueur (pas dominé ni confus).</summary>
+    private void SelectIfControllable(UnitId id)
+    {
+        if (_sim.FindUnit(id) is { } unit && IsControllable(unit))
+            Select(id);
     }
 
     private void Click()
@@ -489,36 +547,56 @@ public partial class CombatView : Node3D
     private void UpdateHud()
     {
         var seconds = _sim.CurrentTick / (double)_data.Rules.TicksPerSecond;
-        _hud.SetStatus($"Temps : {seconds:0.0} s{(_paused ? "   — PAUSE —" : "")}{(_showIntentions ? "\nIntentions ennemies révélées" : "")}");
+        var status = $"Temps : {seconds:0.0} s   Vitesse : {Speeds[_speed]} %{(_paused ? "   — PAUSE —" : "")}";
+        _hud.SetStatus(status + (_showIntentions ? "\nIntentions ennemies révélées" : ""));
         if (_won is null)
             _hud.SetBanner(_paused ? "PAUSE" : "", Colors.White);
+
+        _hud.SetHeroes(_sim.Units
+            .Where(u => u.OriginalTeam == PlayerTeam && u.SummonedBy is null && !u.IsCivilian)
+            .Select(HeroCardOf)
+            .ToList());
 
         if (Selected is not { } unit)
         {
             var ready = _sim.Units.Count(u => u.IsReady && IsControllable(u));
-            _hud.SetSelection(ready > 0 ? $"{ready} héros prêt(s) : clique sur l'un d'eux (ou Tab)" : "Aucun héros prêt");
+            _hud.SetSelection(ready > 0 ? $"{ready} héros prêt(s) : choisis-en un (barre du bas, F1-F6 ou Tab)" : "Aucun héros prêt",
+                Array.Empty<ActionButton>());
             return;
         }
 
-        var lines = new List<string>
-        {
-            $"{unit.Definition.Name} — {unit.Hp}/{unit.MaxHp} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
-            + (_ordered.Contains(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : ""),
-        };
+        var header = $"{unit.Definition.Name} — {unit.Hp}/{unit.MaxHp} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
+                     + (_ordered.Contains(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : "");
         if (unit.StatusEndTicks.Count > 0)
-            lines.Add(string.Join(", ", unit.StatusEndTicks.Keys.Select(Texts.Status)));
-        for (var i = 0; i < unit.Skills.Count && i < 9; i++)
+            header += "\n" + string.Join(", ", unit.StatusEndTicks.Keys.Select(Texts.Status));
+
+        var actions = new List<ActionButton>();
+        for (var i = 0; i < unit.Skills.Count; i++)
         {
             var skill = unit.Skills[i];
             var cooldown = unit.CooldownEndTick(skill.Id) - _sim.CurrentTick;
             var damage = skill.DealsDamage ? $", {skill.MinDamage}-{skill.MaxDamage}" : "";
             var weight = skill.Weight == SkillWeight.Heavy ? "lourde" : "légère";
             var state = cooldown > 0 ? $"   [recharge {cooldown / (double)_data.Rules.TicksPerSecond:0.0} s]" : "";
-            var armed = _aiming?.Skill == skill ? "▶ " : "";
-            lines.Add($"{armed}{i + 1}  {skill.DisplayName} ({weight}, portée {skill.Range}{damage}){state}");
+            var key = i < 9 ? $"{i + 1}  " : "    ";
+            actions.Add(new ActionButton($"{key}{skill.DisplayName} ({weight}, portée {skill.Range}{damage}){state}",
+                Enabled: cooldown <= 0, Armed: _aiming?.Skill == skill));
         }
-        lines.Add($"{(_aiming?.Interaction is not null ? "▶ " : "")}R  Relever un allié au contact");
-        _hud.SetSelection(string.Join('\n', lines));
+        actions.Add(new ActionButton("R  Relever un allié au contact", Enabled: true, Armed: _aiming?.Interaction is not null));
+        _hud.SetSelection(header, actions);
+    }
+
+    private HeroCard HeroCardOf(Unit hero)
+    {
+        // Un héros dominé ou confus n'obéit plus : jamais « prêt » pour le joueur.
+        var ready = hero.IsReady && IsControllable(hero) && !_ordered.Contains(hero.Id);
+        var state = hero.Status == UnitStatus.Downed ? "À TERRE"
+            : _ordered.Contains(hero.Id) ? "ordre donné"
+            : ready ? "PRÊT"
+            : hero.Charge is not null ? "charge…"
+            : string.Join(", ", hero.StatusEndTicks.Keys.Select(Texts.Status));
+        return new HeroCard(hero.Id, hero.Definition.Name, (float)hero.Hp / hero.MaxHp, $"{hero.Hp}/{hero.MaxHp} PV",
+            Math.Min(1f, (float)hero.Gauge / _data.Rules.GaugeCapacity), Ready: ready, Selected: hero.Id == _selected, State: state);
     }
 
     private string? IntentionText(Unit unit)

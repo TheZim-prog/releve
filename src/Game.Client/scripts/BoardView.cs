@@ -34,10 +34,11 @@ public partial class BoardView : Node3D
                 switch (grid.TerrainAt(cell))
                 {
                     case Terrain.Wall:
-                        AddChild(Box(new Vector3(1f, 1.6f, 1f), ToWorld(cell, 0.8f), WallColor));
+                        // Assez bas pour ne pas cacher la rangée de derrière depuis la caméra.
+                        AddChild(Box(new Vector3(1f, 0.9f, 1f), ToWorld(cell, 0.45f), WallColor));
                         break;
                     case Terrain.LowObstacle:
-                        var obstacle = Box(new Vector3(0.9f, 0.5f, 0.9f), ToWorld(cell, 0.25f), ObstacleColor);
+                        var obstacle = Box(new Vector3(0.85f, 0.35f, 0.85f), ToWorld(cell, 0.175f), ObstacleColor);
                         AddChild(obstacle);
                         _obstacles[cell] = obstacle;
                         break;

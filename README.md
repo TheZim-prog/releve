@@ -34,11 +34,13 @@ bibliothèques à côté de l'exécutable.
 Le combat (scénario `data/scenarios/street.json`) oppose les six héros, tous commandés par le joueur, à une bande
 de rue, avec des civils au milieu :
 
-- **Clic gauche** : choisir un héros, puis une case (le fantôme montre où il ira) ; clic sur le fantôme ou
-  **Entrée** pour un déplacement seul.
-- **1-9** : armer une compétence, puis cliquer sa cible (unité ou case) ; **R** : relever un allié au contact.
-- **Clic droit / Échap** : annuler ; **Tab** : héros prêt suivant.
-- **Espace** : pause ; **I** : révéler les intentions ennemies ; **F5** : recommencer.
+- **Choisir un héros** : clic sur lui, sur sa carte dans la barre du bas, **F1-F6**, ou **Tab** (prêt suivant).
+- **Clic sur une case** : le fantôme montre où il ira ; re-clic sur le fantôme ou **Entrée** pour un déplacement seul.
+- **Compétence** : bouton en haut à gauche ou **1-9**, puis clic sur la cible (unité ou case) ; **R** : relever un
+  allié au contact.
+- **Clic droit / Échap** : annuler.
+- **Espace** : pause ; **vitesse** (50 / 75 / 100 %) : les deux touches à droite du 0, ou le pavé numérique - / + ;
+  **I** : révéler les intentions ennemies ; **F9** : recommencer.
 
 Options de développement (après `--`) : `--screenshot=fichier.png` (capture puis quitte, après `--at=<secondes>`),
 `--select=<id>`, `--skill=<n>`, `--hover=x,y`, `--intentions=on`.
