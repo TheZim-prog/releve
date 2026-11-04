@@ -68,10 +68,13 @@ public partial class CombatView : Node3D
     // Outils de développement (arguments après « -- ») : --screenshot=fichier.png capture l'écran après quelques
     // secondes (--at=<s>, 4 par défaut) puis quitte ; --select=<id>, --skill=<n>, --hover=x,y et --intentions=on
     // simulent une sélection, une compétence armée, le survol d'une case et les intentions révélées (pour vérifier
-    // l'affichage sur une capture).
+    // l'affichage sur une capture) ; --ai-heroes=on fait jouer les héros par l'IA.
     private string? _screenshotPath;
     private double _screenshotIn;
     private Cell? _hoverOverride;
+
+    // --ai-heroes=on : les héros sont confiés à l'IA de base (pour regarder un combat se jouer seul).
+    private bool _aiHeroes;
 
     public override void _Ready()
     {
@@ -102,13 +105,17 @@ public partial class CombatView : Node3D
         AddChild(_hud);
         _hud.ActionPressed += ArmAction;
         _hud.HeroPressed += SelectIfControllable;
+        _aiHeroes = DevArg("ai-heroes") == "on";
         StartCombat();
         ApplyDevArguments();
     }
 
+    private static string? DevArg(string name) =>
+        OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith($"--{name}="))?[(name.Length + 3)..];
+
     private void ApplyDevArguments()
     {
-        string? Arg(string name) => OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith($"--{name}="))?[(name.Length + 3)..];
+        var Arg = DevArg;
         _screenshotPath = Arg("screenshot");
         _screenshotIn = double.TryParse(Arg("at"), System.Globalization.CultureInfo.InvariantCulture, out var at) ? at : 4;
         if (Arg("intentions") == "on")
@@ -138,7 +145,10 @@ public partial class CombatView : Node3D
         _board?.QueueFree();
 
         var scenario = GameData.LoadScenario(ScenarioId);
-        _sim = new CombatSimulation(scenario.ToSetup(_data.Rules, _data.Units));
+        var units = _aiHeroes
+            ? _data.Units.ToDictionary(u => u.Key, u => u.Value.Behavior is null ? u.Value with { Behavior = Behaviors.Basic } : u.Value)
+            : _data.Units;
+        _sim = new CombatSimulation(scenario.ToSetup(_data.Rules, units));
         _board = new BoardView();
         AddChild(_board);
         _board.Build(_sim.Grid);
@@ -585,7 +595,7 @@ public partial class CombatView : Node3D
                 : $"{weight}, portée {skill.Range}{damage}";
             var key = i < 9 ? $"{i + 1}  " : "";
             actions.Add(new ActionButton($"{key}{skill.DisplayName}\n{details}",
-                Enabled: cooldown <= 0, Armed: _aiming?.Skill == skill));
+                Enabled: cooldown <= 0, Armed: _aiming?.Skill == skill, Cooldown: CooldownLeft(unit, skill)));
         }
         actions.Add(new ActionButton("R  Relever\nun allié au contact", Enabled: true, Armed: _aiming?.Interaction is not null));
         _hud.SetSelection(header, actions);
@@ -601,7 +611,16 @@ public partial class CombatView : Node3D
             : hero.Charge is not null ? "charge…"
             : string.Join(", ", hero.StatusEndTicks.Keys.Select(Texts.Status));
         return new HeroCard(hero.Id, hero.Definition.Name, (float)hero.Hp / hero.MaxHp, $"{hero.Hp}/{hero.MaxHp} PV",
-            Math.Min(1f, (float)hero.Gauge / _data.Rules.GaugeCapacity), Ready: ready, Selected: hero.Id == _selected, State: state);
+            Math.Min(1f, (float)hero.Gauge / _data.Rules.GaugeCapacity), Ready: ready, Selected: hero.Id == _selected, State: state,
+            SkillReadiness: hero.Skills.Select(s => 1f - CooldownLeft(hero, s)).ToList());
+    }
+
+    /// <summary>Part de la recharge de la compétence qu'il reste à attendre : 1 juste après usage, 0 quand elle est prête.</summary>
+    private float CooldownLeft(Unit unit, SkillDefinition skill)
+    {
+        var total = _data.Rules.MillisecondsToTicks(skill.CooldownMs);
+        var left = unit.CooldownEndTick(skill.Id) - _sim.CurrentTick;
+        return total <= 0 || left <= 0 ? 0f : Math.Min(1f, (float)left / total);
     }
 
     private string? IntentionText(Unit unit)

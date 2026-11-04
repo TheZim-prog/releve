@@ -3,11 +3,18 @@ using Godot;
 
 namespace Game.Client;
 
-/// <summary>Une carte de la barre des héros.</summary>
-public sealed record HeroCard(UnitId Id, string Name, float Hp, string HpText, float Gauge, bool Ready, bool Selected, string State);
+/// <summary>
+/// Une carte de la barre des héros. <paramref name="SkillReadiness"/> : pour chaque compétence, la part de sa recharge
+/// déjà écoulée (1 = prête).
+/// </summary>
+public sealed record HeroCard(UnitId Id, string Name, float Hp, string HpText, float Gauge, bool Ready, bool Selected, string State,
+    IReadOnlyList<float> SkillReadiness);
 
-/// <summary>Un bouton d'action du héros choisi (compétence ou relever).</summary>
-public sealed record ActionButton(string Text, bool Enabled, bool Armed);
+/// <summary>
+/// Un bouton d'action du héros choisi (compétence ou relever). <paramref name="Cooldown"/> : part de la recharge qu'il
+/// reste à attendre (0 = prête).
+/// </summary>
+public sealed record ActionButton(string Text, bool Enabled, bool Armed, float Cooldown = 0);
 
 /// <summary>
 /// Interface 2D par-dessus le combat, remplie par <see cref="CombatView"/> : le héros choisi et ses actions (boutons),
@@ -28,8 +35,8 @@ public partial class Hud : CanvasLayer
         "I : intentions   F9 : recommencer   H : masquer l'aide");
 
     private readonly Queue<string> _log = new();
-    private readonly List<Button> _actionButtons = new();
-    private readonly List<(Button Button, Label Name, ProgressBar Hp, Label HpText, ProgressBar Gauge, Label State)> _cards = new();
+    private readonly List<(Button Button, ColorRect Veil)> _actionButtons = new();
+    private readonly List<CardView> _cards = new();
     private readonly List<UnitId> _cardIds = new();
 
     private Label _header = null!;
@@ -100,18 +107,28 @@ public partial class Hud : CanvasLayer
             var button = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(150, 50) };
             button.AddThemeFontSizeOverride("font_size", 14);
             button.Pressed += () => ActionPressed?.Invoke(index);
+            // Voile de recharge : couvre la part de la recharge qui reste, et rétrécit jusqu'à disparaître.
+            var veil = new ColorRect
+            {
+                Color = new Color(0f, 0f, 0f, 0.6f),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                AnchorBottom = 1,
+            };
+            button.AddChild(veil);
             _actions.AddChild(button);
-            _actionButtons.Add(button);
+            _actionButtons.Add((button, veil));
         }
         for (var i = 0; i < _actionButtons.Count; i++)
         {
-            var button = _actionButtons[i];
+            var (button, veil) = _actionButtons[i];
             button.Visible = i < actions.Count;
             if (!button.Visible)
                 continue;
             button.Text = actions[i].Text;
             button.Disabled = !actions[i].Enabled;
             button.Modulate = actions[i].Armed ? new Color(1f, 0.85f, 0.4f) : Colors.White;
+            veil.AnchorRight = Math.Clamp(actions[i].Cooldown, 0f, 1f);
+            veil.Visible = actions[i].Cooldown > 0;
         }
     }
 
@@ -124,22 +141,45 @@ public partial class Hud : CanvasLayer
         _cardIds.Clear();
         for (var i = 0; i < _cards.Count; i++)
         {
-            var (button, name, hp, hpText, gauge, state) = _cards[i];
-            button.Visible = i < heroes.Count;
-            if (!button.Visible)
+            var card = _cards[i];
+            card.Button.Visible = i < heroes.Count;
+            if (!card.Button.Visible)
                 continue;
             var hero = heroes[i];
             _cardIds.Add(hero.Id);
-            name.Text = $"F{i + 1}  {hero.Name}";
-            hp.Value = hero.Hp;
-            hpText.Text = hero.HpText;
-            gauge.Value = hero.Gauge;
-            state.Text = hero.State;
+            card.Name.Text = $"F{i + 1}  {hero.Name}";
+            card.Hp.Value = hero.Hp;
+            card.HpText.Text = hero.HpText;
+            card.Gauge.Value = hero.Gauge;
+            card.State.Text = hero.State;
+            SetSkillBars(card, hero.SkillReadiness);
             // Le style ne change qu'avec l'état de la carte : le réappliquer à chaque image relancerait la mise en page.
             var style = hero.Selected ? _cardSelected : hero.Ready ? _cardReady : _cardStyle;
-            if (button.GetThemeStylebox("normal") != style)
+            if (card.Button.GetThemeStylebox("normal") != style)
                 foreach (var look in CardLooks)
-                    button.AddThemeStyleboxOverride(look, style);
+                    card.Button.AddThemeStyleboxOverride(look, style);
+        }
+    }
+
+    /// <summary>Une petite jauge par compétence : elle se remplit pendant la recharge et devient verte une fois prête.</summary>
+    private static void SetSkillBars(CardView card, IReadOnlyList<float> readiness)
+    {
+        while (card.SkillBars.Count < readiness.Count)
+        {
+            var bar = Bar(new Color(0.35f, 0.9f, 0.4f));
+            bar.CustomMinimumSize = new Vector2(22, 6);
+            bar.MouseFilter = Control.MouseFilterEnum.Ignore;
+            card.Skills.AddChild(bar);
+            card.SkillBars.Add(bar);
+        }
+        for (var i = 0; i < card.SkillBars.Count; i++)
+        {
+            var bar = card.SkillBars[i];
+            bar.Visible = i < readiness.Count;
+            if (!bar.Visible)
+                continue;
+            bar.Value = readiness[i];
+            bar.Modulate = readiness[i] >= 1f ? Colors.White : new Color(0.55f, 0.55f, 0.6f);
         }
     }
 
@@ -149,7 +189,7 @@ public partial class Hud : CanvasLayer
     private void AddCard()
     {
         var index = _cards.Count;
-        var button = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(165, 96) };
+        var button = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(165, 108) };
         button.Pressed += () =>
         {
             if (HeroAt(index) is { } id)
@@ -164,15 +204,23 @@ public partial class Hud : CanvasLayer
         var hp = Bar(new Color(0.85f, 0.25f, 0.25f));
         var hpText = TextLabel(12, 0);
         var gauge = Bar(new Color(0.3f, 0.7f, 1f));
+        var skills = new HBoxContainer();
+        skills.AddThemeConstantOverride("separation", 3);
         var state = TextLabel(12, 0);
-        foreach (var child in new Control[] { name, hp, hpText, gauge, state })
+        foreach (var child in new Control[] { name, hp, hpText, gauge, skills, state })
         {
             child.MouseFilter = Control.MouseFilterEnum.Ignore;
             box.AddChild(child);
         }
         button.AddChild(box);
         _heroBar.AddChild(button);
-        _cards.Add((button, name, hp, hpText, gauge, state));
+        _cards.Add(new CardView(button, name, hp, hpText, gauge, skills, state));
+    }
+
+    private sealed record CardView(Button Button, Label Name, ProgressBar Hp, Label HpText, ProgressBar Gauge,
+        HBoxContainer Skills, Label State)
+    {
+        public List<ProgressBar> SkillBars { get; } = new();
     }
 
     // --- Textes ---
