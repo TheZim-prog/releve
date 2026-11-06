@@ -49,6 +49,21 @@ public sealed class GameContent
         };
     }
 
+    /// <summary>
+    /// Le dossier <c>data/</c> le plus proche en remontant depuis <paramref name="startDirectory"/> (à côté d'un serveur
+    /// publié, ou celui du dépôt quand on lance depuis les sources), ou <c>null</c>.
+    /// </summary>
+    public static string? FindDataDirectory(string startDirectory)
+    {
+        for (var directory = new DirectoryInfo(startDirectory); directory is not null; directory = directory.Parent)
+        {
+            var candidate = Path.Combine(directory.FullName, "data");
+            if (File.Exists(Path.Combine(candidate, "combat-rules.json")))
+                return candidate;
+        }
+        return null;
+    }
+
     /// <summary>Fichiers JSON d'un sous-dossier, en chemins relatifs, dans un ordre stable.</summary>
     private static IEnumerable<string> JsonFiles(string dataDirectory, string folder) =>
         Directory.GetFiles(Path.Combine(dataDirectory, folder), "*.json")

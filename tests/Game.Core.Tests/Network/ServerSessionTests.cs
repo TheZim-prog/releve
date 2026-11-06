@@ -20,9 +20,10 @@ public class ServerSessionTests
         }
         """;
 
-    private static readonly UnitId HeroA = new(1), HeroB = new(2), HeroC = new(3), Thug = new(4);
+    internal static readonly UnitId HeroA = new(1), HeroB = new(2), HeroC = new(3), Thug = new(4);
 
-    private static readonly GameContent Content = new()
+    /// <summary>Contenu de test : trois héros (A, B, C) et un ennemi à l'IA de base.</summary>
+    internal static readonly GameContent Content = new()
     {
         Rules = Rules,
         Units = new Dictionary<string, UnitDefinition>
@@ -157,7 +158,7 @@ public class ServerSessionTests
             AssertSameState(session.Simulation!, mirror.Simulation);
         }
         Assert.Equal(new Cell(2, 0), session.Simulation!.Get(1).Position);
-        Assert.Equal(new Cell(2, 2), session.Simulation.Get(2).Position);
+        Assert.Equal(new Cell(2, 2), session.Simulation!.Get(2).Position);
     }
 
     [Fact]

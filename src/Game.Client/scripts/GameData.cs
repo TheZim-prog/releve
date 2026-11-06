@@ -9,17 +9,7 @@ namespace Game.Client;
 /// </summary>
 public static class GameData
 {
-    public static GameContent Load() => GameContent.Load(FindDataDirectory());
-
-    private static string FindDataDirectory()
-    {
-        var directory = new DirectoryInfo(ProjectSettings.GlobalizePath("res://"));
-        for (; directory is not null; directory = directory.Parent)
-        {
-            var candidate = Path.Combine(directory.FullName, "data");
-            if (File.Exists(Path.Combine(candidate, "combat-rules.json")))
-                return candidate;
-        }
-        throw new DirectoryNotFoundException("The data/ folder was not found above the Godot project.");
-    }
+    public static GameContent Load() =>
+        GameContent.Load(GameContent.FindDataDirectory(ProjectSettings.GlobalizePath("res://"))
+            ?? throw new DirectoryNotFoundException("The data/ folder was not found above the Godot project."));
 }

@@ -101,19 +101,35 @@ public sealed class ServerSession
             return;
         var commands = _queue.ToList();
         _queue.Clear();
-        foreach (var (_, command) in commands)
-            simulation.Submit(command);
-        simulation.Tick();
+        try
+        {
+            foreach (var (_, command) in commands)
+                simulation.Submit(command);
+            simulation.Tick();
+        }
+        catch
+        {
+            // Bug de la simulation : son état est à moitié changé, plus rien ne serait fiable. Le combat est abandonné.
+            EndCombat(new CombatAborted());
+            throw;
+        }
         Broadcast(new TickPlayed(simulation.CurrentTick, commands.Select(c => c.Command).ToList(), simulation.Checksum()));
 
         if (CombatLaunch.Outcome(simulation) is { } victory)
-        {
-            Broadcast(new CombatOver(victory));
-            Simulation = null;
-            _launch = null;
-            _players.RemoveAll(p => p.Peer is null);
-            BroadcastLobby();
-        }
+            EndCombat(new CombatOver(victory));
+    }
+
+    /// <summary>Fin du combat : tout le monde revient au salon, les absents en sont retirés.</summary>
+    private void EndCombat(ServerMessage end)
+    {
+        Broadcast(end);
+        Simulation = null;
+        _launch = null;
+        _queue.Clear();
+        _paused = false;
+        _pausedBy = null;
+        _players.RemoveAll(p => p.Peer is null);
+        BroadcastLobby();
     }
 
     private void Join(IPeer peer, JoinRequest join)

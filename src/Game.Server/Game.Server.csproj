@@ -8,4 +8,12 @@
     <ProjectReference Include="..\Game.Core\Game.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    Le contenu (data/) voyage avec le serveur publié : une publication pour le Raspberry Pi est autonome. Pas de copie à
+    la compilation : lancé depuis les sources, le serveur lit le data/ du dépôt (jamais une copie périmée).
+  -->
+  <ItemGroup>
+    <None Include="..\..\data\**\*.json" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

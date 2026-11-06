@@ -4,6 +4,7 @@ obj/
 .idea/
 *.user
 TestResults/
+publish/
 
 # Godot
 .godot/

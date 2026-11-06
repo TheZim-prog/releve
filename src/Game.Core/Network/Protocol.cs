@@ -62,6 +62,7 @@ public sealed record SetPause(bool Paused) : ClientMessage;
 [JsonDerivedType(typeof(TickPlayed), "tick")]
 [JsonDerivedType(typeof(PauseChanged), "pauseChanged")]
 [JsonDerivedType(typeof(CombatOver), "combatOver")]
+[JsonDerivedType(typeof(CombatAborted), "combatAborted")]
 [JsonDerivedType(typeof(RequestRefused), "refused")]
 public abstract record ServerMessage;
 
@@ -110,6 +111,9 @@ public sealed record PauseChanged(bool Paused, int? ByPlayer) : ServerMessage;
 
 /// <summary>Combat terminé ; retour au salon (les choix de héros sont gardés).</summary>
 public sealed record CombatOver(bool Victory) : ServerMessage;
+
+/// <summary>Combat abandonné sur une erreur du serveur ; retour au salon.</summary>
+public sealed record CombatAborted : ServerMessage;
 
 public enum RequestRefusal
 {
