@@ -7,8 +7,9 @@ namespace Game.Core.Combat;
 /// <para>
 /// Déroulement d'un tick : les états arrivés à échéance prennent fin ; les attaques chargées arrivées à
 /// échéance se déclenchent ; les commandes des joueurs soumises depuis le tick précédent sont appliquées
-/// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les unités IA prêtes
-/// agissent ; les jauges se remplissent ; les unités IA qui passent le seuil fixent leur intention.
+/// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les ordres à l'avance dont
+/// l'unité peut agir partent, dans l'ordre où ils ont été donnés ; les unités IA prêtes agissent ; les jauges
+/// se remplissent ; les unités IA qui passent le seuil fixent leur intention.
 /// </para>
 /// <para>
 /// L'IA fait partie de la simulation : ses décisions sont déterministes et se rejouent d'elles-mêmes,
@@ -23,6 +24,9 @@ public sealed class CombatSimulation
 {
     private readonly List<Unit> _units = new();
     private readonly Queue<CombatCommand> _pending = new();
+
+    // Ordres à l'avance enregistrés, dans l'ordre où ils ont été donnés (un remplacement passe en dernier).
+    private readonly List<ActivateCommand> _orders = new();
     private readonly List<CombatEvent> _events = new();
     private readonly List<LoggedCommand> _commandLog = new();
     private readonly DeterministicRandom _random;
@@ -82,9 +86,27 @@ public sealed class CombatSimulation
     public void Submit(CombatCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (command is not ActivateCommand)
+        if (command is not (ActivateCommand or OrderCommand or CancelOrderCommand))
             throw new ArgumentException($"Unknown command type {command.GetType().Name}.", nameof(command));
         _pending.Enqueue(command);
+    }
+
+    /// <summary>
+    /// Ordres à l'avance tels que le joueur les a demandés : ceux enregistrés, plus les ordres et annulations soumis
+    /// mais pas encore appliqués (pendant la pause, par exemple). Pour l'affichage ; rien n'est changé.
+    /// </summary>
+    public IReadOnlyList<ActivateCommand> PlannedOrders()
+    {
+        var orders = new List<ActivateCommand>(_orders);
+        foreach (var command in _pending)
+        {
+            if (command is not (OrderCommand or CancelOrderCommand))
+                continue;
+            orders.RemoveAll(o => o.Unit == command.Unit);
+            if (command is OrderCommand order)
+                orders.Add(order.Activation);
+        }
+        return orders;
     }
 
     /// <summary>Joue un tick et renvoie les événements qu'il a produits.</summary>
@@ -101,6 +123,8 @@ public sealed class CombatSimulation
             _commandLog.Add(new LoggedCommand(CurrentTick, command));
             Apply(command);
         }
+
+        ExecuteOrders();
 
         // Par index : une action pourrait ajouter une unité (invocation) à la liste pendant la boucle.
         for (var i = 0; i < _units.Count; i++)
@@ -310,6 +334,13 @@ public sealed class CombatSimulation
             case ActivateCommand activate:
                 ApplyActivate(activate);
                 break;
+            case OrderCommand order:
+                GiveOrder(order);
+                break;
+            case CancelOrderCommand cancel:
+                if (_orders.RemoveAll(o => o.Unit == cancel.Unit) > 0)
+                    _events.Add(new OrderCancelled(CurrentTick, cancel.Unit));
+                break;
             default:
                 throw new ArgumentException($"Unknown command type {command.GetType().Name}.", nameof(command));
         }
@@ -324,11 +355,48 @@ public sealed class CombatSimulation
             ApplyActivation(plan);
     }
 
+    /// <summary>Enregistre un ordre à l'avance, sauf s'il est impossible pour une autre raison que le temps.</summary>
+    private void GiveOrder(OrderCommand order)
+    {
+        if (ValidatePlayerCommand(order.Activation, ignoreTiming: true).Reason is { } reason)
+        {
+            Reject(order, reason);
+            return;
+        }
+        _orders.RemoveAll(o => o.Unit == order.Unit);
+        _orders.Add(order.Activation);
+        _events.Add(new OrderGiven(CurrentTick, order.Unit, order.Activation));
+    }
+
+    /// <summary>
+    /// Les ordres à l'avance dont l'unité peut agir partent, dans l'ordre où ils ont été donnés (le premier validé
+    /// l'emporte). Ceux qui n'attendent que du temps restent ; ceux devenus impossibles sont retirés et refusés.
+    /// </summary>
+    private void ExecuteOrders()
+    {
+        if (_orders.Count == 0)
+            return;
+        foreach (var order in _orders.ToList())
+        {
+            var (plan, reason) = ValidatePlayerCommand(order);
+            if (reason is { } waiting && waiting.OnlyNeedsTime())
+                continue;
+            _orders.Remove(order);
+            if (plan is null)
+            {
+                Reject(order, reason!.Value);
+                continue;
+            }
+            _events.Add(new OrderExecuted(CurrentTick, order.Unit));
+            ApplyActivation(plan);
+        }
+    }
+
     /// <summary>Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation.</summary>
-    private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command) =>
+    private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command, bool ignoreTiming = false) =>
         FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null
             ? (null, RejectionReason.NotControllable)
-            : ValidateActivation(command);
+            : ValidateActivation(command, ignoreTiming);
 
     /// <summary>L'unité obéit-elle aux joueurs (ni IA, ni confuse, ni dominée par l'IA, ni civil) ?</summary>
     public bool IsPlayerControlled(UnitId unit) => FindUnit(unit) is { } found && ControllerOf(found) is null;
@@ -338,10 +406,14 @@ public sealed class CombatSimulation
     /// raison du refus. Rien n'est changé. (Le prochain tick peut encore changer la donne : fin d'un état ou d'une
     /// recharge, commande d'un autre joueur validée avant.)
     /// </summary>
-    public RejectionReason? Check(ActivateCommand command)
+    /// <param name="ignoreTiming">
+    /// Pour un ordre donné à l'avance : ne pas refuser parce que l'unité ne peut pas agir <em>maintenant</em> (raisons
+    /// où il suffit d'attendre, cf. <see cref="RejectionReasons.OnlyNeedsTime"/>) ; tout le reste est vérifié.
+    /// </param>
+    public RejectionReason? Check(ActivateCommand command, bool ignoreTiming = false)
     {
         ArgumentNullException.ThrowIfNull(command);
-        return ValidatePlayerCommand(command).Reason;
+        return ValidatePlayerCommand(command, ignoreTiming).Reason;
     }
 
     /// <summary>Cases où l'unité peut aller par un déplacement (sa case comprise), avec leur distance à pied.</summary>
@@ -392,18 +464,18 @@ public sealed class CombatSimulation
     /// Validation complète d'une activation, sans rien changer : la commande est atomique, rien n'est appliqué
     /// si une partie échoue. Sert aux commandes des joueurs comme à l'IA.
     /// </summary>
-    internal (ActivationPlan? Plan, RejectionReason? Reason) ValidateActivation(ActivateCommand command)
+    internal (ActivationPlan? Plan, RejectionReason? Reason) ValidateActivation(ActivateCommand command, bool ignoreTiming = false)
     {
         var unit = FindUnit(command.Unit);
         if (unit is null)
             return (null, RejectionReason.UnknownUnit);
         if (unit.Status != UnitStatus.Active)
             return (null, RejectionReason.Incapacitated);
-        if (unit.HasStatus(StatusKind.Stunned))
+        if (!ignoreTiming && unit.HasStatus(StatusKind.Stunned))
             return (null, RejectionReason.Stunned);
-        if (unit.Charge is not null)
+        if (!ignoreTiming && unit.Charge is not null)
             return (null, RejectionReason.Charging);
-        if (!unit.IsReady)
+        if (!ignoreTiming && !unit.IsReady)
             return (null, RejectionReason.NotReady);
         if (command.MoveTo is null && command.Skill is null && command.Interaction is null)
             return (null, RejectionReason.Empty);
@@ -428,7 +500,7 @@ public sealed class CombatSimulation
             var skill = unit.FindSkill(use.SkillId);
             if (skill is null)
                 return (null, RejectionReason.UnknownSkill);
-            if (CurrentTick < unit.CooldownEndTick(skill.Id))
+            if (!ignoreTiming && CurrentTick < unit.CooldownEndTick(skill.Id))
                 return (null, RejectionReason.OnCooldown);
             var (planned, rejection) = PlanAction(unit, position, skill, use);
             if (rejection is not null)

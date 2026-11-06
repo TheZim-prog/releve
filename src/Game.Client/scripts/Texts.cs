@@ -70,7 +70,8 @@ public static class Texts
             UnitSummoned s => $"{N(s.Owner)} pose : {N(s.Unit)}",
             TeamChanged t => $"{N(t.Unit)} change de camp",
             UnitCollided c => c.With is { } with ? $"{N(c.Unit)} percute {N(with)}" : $"{N(c.Unit)} percute le décor",
-            CommandRejected r => $"Refusé : {Rejection(r.Reason)}",
+            CommandRejected r => $"{N(r.Command.Unit)} : refusé ({Rejection(r.Reason)})",
+            OrderCancelled o => $"{N(o.Unit)} : ordre annulé",
             _ => null,
         };
     }

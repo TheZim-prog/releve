@@ -42,3 +42,14 @@ public sealed record InteractionUse(InteractionKind Kind, UnitId Target);
 /// <param name="Interaction">Action « interagir », ou <c>null</c> ; une seule action par activation.</param>
 public sealed record ActivateCommand(UnitId Unit, Cell? MoveTo, SkillUse? Skill = null, InteractionUse? Interaction = null)
     : CombatCommand(Unit);
+
+/// <summary>
+/// Ordre donné à l'avance : l'activation part d'elle-même dès que l'unité peut agir (jauge pleine, ni étourdie, ni en
+/// charge, compétence rechargée), au plus tôt au tick où la commande est appliquée. Remplace l'ordre en attente de
+/// l'unité. Refusé d'emblée s'il est impossible pour une autre raison que le temps ; annulé au moment de partir s'il
+/// l'est devenu (la jauge reste alors pleine).
+/// </summary>
+public sealed record OrderCommand(ActivateCommand Activation) : CombatCommand(Activation.Unit);
+
+/// <summary>Annule l'ordre en attente de l'unité, s'il y en a un.</summary>
+public sealed record CancelOrderCommand(UnitId Unit) : CombatCommand(Unit);

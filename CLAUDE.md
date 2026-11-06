@@ -44,6 +44,7 @@ tests/
 - **Temps réel** à ticks fixes (ex. 20 ticks/s, à confirmer). Chaque unité a une **jauge** qui se remplit selon son **initiative**.
 - **Jauge pleine** → l'unité peut faire **un déplacement et/ou une action**, envoyés en **une seule commande atomique**. La jauge **reste pleine** tant qu'elle n'agit pas.
 - Après l'action, la jauge redémarre selon le **poids** : déplacement seul ~50 %, action légère ~40 %, action lourde 0 % (valeurs à paramétrer).
+- **Ordre à l'avance** (à l'essai) : un ordre peut être donné avant jauge pleine ; il part seul dès que l'unité peut agir, modifiable d'ici là, annulé s'il est devenu impossible.
 - **Tout le monde agit en parallèle.** Conflit : la première commande validée gagne ; une commande devenue impossible est annulée et la jauge reste pleine.
 - **Logique instantanée**, animations purement visuelles. Exception : **attaques chargées** (zone affichée, déclenchement différé, esquivables).
 - **Temps de recharge** des compétences en temps de combat ; **pas de mana**.

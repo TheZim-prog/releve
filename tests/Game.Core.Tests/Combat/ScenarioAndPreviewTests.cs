@@ -68,6 +68,21 @@ public class ScenarioAndPreviewTests
     }
 
     [Fact]
+    public void Check_CanIgnoreTiming_ForAnOrderGivenInAdvance()
+    {
+        var sim = Simulation(new Grid(6, 3), Unit(1, team: 0, 0, 1, gauge: 0), Unit(2, team: 1, 4, 1));
+        var strike = new ActivateCommand(new UnitId(1), new Cell(3, 1), new SkillUse("strike", new UnitId(2)));
+
+        Assert.Equal(RejectionReason.NotReady, sim.Check(strike));
+        Assert.True(RejectionReason.NotReady.OnlyNeedsTime());
+        Assert.Null(sim.Check(strike, ignoreTiming: true));
+        // Le reste est toujours vérifié.
+        Assert.Equal(RejectionReason.OutOfRange,
+            sim.Check(new ActivateCommand(new UnitId(1), null, new SkillUse("strike", new UnitId(2))), ignoreTiming: true));
+        Assert.False(RejectionReason.OutOfRange.OnlyNeedsTime());
+    }
+
+    [Fact]
     public void MovePreviews_MatchWhatAMoveWouldDo()
     {
         var sim = Simulation(new Grid(5, 1), Unit(1, team: 0, 0, 0, mobility: 2), Unit(2, team: 0, 1, 0));

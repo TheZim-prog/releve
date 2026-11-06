@@ -176,6 +176,18 @@ public sealed record UnitEscaped(int Tick, UnitId Unit) : CombatEvent(Tick);
 /// <summary>Commande refusée : rien n'a changé, la jauge de l'unité reste pleine.</summary>
 public sealed record CommandRejected(int Tick, CombatCommand Command, RejectionReason Reason) : CombatEvent(Tick);
 
+/// <summary>Ordre à l'avance enregistré (il remplace le précédent de l'unité) ; il partira dès que l'unité pourra agir.</summary>
+public sealed record OrderGiven(int Tick, UnitId Unit, ActivateCommand Activation) : CombatEvent(Tick);
+
+/// <summary>Ordre à l'avance annulé par le joueur.</summary>
+public sealed record OrderCancelled(int Tick, UnitId Unit) : CombatEvent(Tick);
+
+/// <summary>
+/// Ordre à l'avance parti : l'activation est appliquée juste après (ses propres événements suivent). S'il était devenu
+/// impossible, c'est un <see cref="CommandRejected"/> à la place, et l'ordre est retiré.
+/// </summary>
+public sealed record OrderExecuted(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 public enum RejectionReason
 {
     UnknownUnit,
@@ -233,6 +245,16 @@ public enum RejectionReason
     /// en diagonale, par un mur sur un coin.
     /// </summary>
     NoLineOfSight,
+}
+
+public static class RejectionReasons
+{
+    /// <summary>
+    /// L'unité ne peut pas agir maintenant, mais il suffit d'attendre (jauge pas pleine, étourdie, en charge, compétence
+    /// en recharge) : un ordre donné à l'avance reste en attente au lieu d'être annulé.
+    /// </summary>
+    public static bool OnlyNeedsTime(this RejectionReason reason) =>
+        reason is RejectionReason.NotReady or RejectionReason.Stunned or RejectionReason.Charging or RejectionReason.OnCooldown;
 }
 
 /// <summary>Commande telle qu'appliquée, avec son tick : de quoi rejouer le combat à l'identique.</summary>

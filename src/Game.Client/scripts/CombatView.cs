@@ -37,6 +37,15 @@ public partial class CombatView : Node3D
     private static readonly Color HeroGadget = new(0.6f, 0.95f, 1f);
     private static readonly Color EnemyDefault = new(0.8f, 0.25f, 0.25f);
 
+    // Fantôme et chemin : à peine visibles au simple survol, francs une fois la case choisie (déplacement prévu).
+    private static readonly StandardMaterial3D GhostHovered = BoardView.Translucent(new Color(1, 1, 1, 0.18f));
+    private static readonly StandardMaterial3D GhostPlaced = BoardView.Translucent(new Color(0.55f, 0.85f, 1f, 0.7f));
+    private static readonly Color PathHovered = new(1f, 1f, 0.4f, 0.18f);
+    private static readonly Color PathPlaced = new(1f, 1f, 0.4f, 0.55f);
+    private static readonly Color AimColor = new(1f, 0.55f, 0.1f, 0.5f);
+    private static readonly Color TargetColor = new(1f, 0.2f, 0.6f, 0.55f);
+    private static readonly Color OrderHint = new(0.55f, 0.85f, 1f);
+
     private readonly Dictionary<UnitId, UnitView> _views = new();
     private readonly Dictionary<UnitId, IReadOnlyList<Cell>> _domes = new();
 
@@ -47,8 +56,9 @@ public partial class CombatView : Node3D
     private Camera3D _camera = null!;
     private MeshInstance3D _ghostView = null!;
 
-    // Unités déjà commandées depuis le dernier tick (leur ordre attend d'être appliqué, par exemple pendant la pause).
-    private readonly HashSet<UnitId> _ordered = new();
+    // Fantômes des ordres en attente (les ordres eux-mêmes vivent dans la simulation : PlannedOrders).
+    private readonly List<MeshInstance3D> _orderGhosts = new();
+    private (int Tick, IReadOnlyList<ActivateCommand> Orders)? _shownOrders;
 
     // Vitesse d'écoulement du temps de combat, en % (affichage seulement : les règles ne changent pas). Plus lente par
     // défaut en solo, où un seul joueur commande toute l'équipe.
@@ -97,13 +107,13 @@ public partial class CombatView : Node3D
         _ghostView = new MeshInstance3D
         {
             Mesh = new CapsuleMesh { Radius = 0.3f, Height = 1.3f },
-            MaterialOverride = BoardView.Translucent(new Color(1, 1, 1, 0.35f)),
+            MaterialOverride = GhostHovered,
             Visible = false,
         };
         AddChild(_ghostView);
         _hud = new Hud();
         AddChild(_hud);
-        _hud.ActionPressed += ArmAction;
+        _hud.ActionPressed += OnActionPressed;
         _hud.HeroPressed += SelectIfControllable;
         _aiHeroes = DevArg("ai-heroes") == "on";
         StartCombat();
@@ -162,7 +172,7 @@ public partial class CombatView : Node3D
         _accumulator = 0;
         _paused = false;
         _won = null;
-        _ordered.Clear();
+        _shownOrders = null;
         _selected = null;
         _ghost = null;
         _aiming = null;
@@ -206,7 +216,6 @@ public partial class CombatView : Node3D
             _accumulator -= tickDuration;
             foreach (var e in _sim.Tick())
                 Handle(e);
-            _ordered.Clear();
 
             // Combat libre : il se termine quand il ne reste qu'un camp (règle du cœur).
             var teams = _sim.TeamsStillFighting();
@@ -226,6 +235,11 @@ public partial class CombatView : Node3D
             _hud.Log(line);
         switch (e)
         {
+            // Ordre parti : il ne peut plus être changé, le héros est lâché (sauf si on lui prépare déjà la suite).
+            // Refusé au départ, il reste choisi : sa jauge est pleine, le joueur rejoue.
+            case OrderExecuted x when x.Unit == _selected && _ghost is null && _aiming is null:
+                _selected = null;
+                break;
             case UnitDamaged d:
                 Float(d.Unit, $"-{d.Amount}", new Color(1f, 0.35f, 0.3f));
                 break;
@@ -314,8 +328,7 @@ public partial class CombatView : Node3D
                 SelectNextReady();
                 break;
             case Key.Enter or Key.KpEnter:
-                if (Selected is { } unit && _ghost is { } ghost)
-                    TrySubmit(new ActivateCommand(unit.Id, ghost));
+                MoveOnly();
                 break;
             case Key.R:
                 if (Selected is { } reviver)
@@ -324,9 +337,28 @@ public partial class CombatView : Node3D
         }
     }
 
+    /// <summary>Bouton d'action n° i : compétence i, puis relever, puis déplacement seul (le dernier).</summary>
+    private void OnActionPressed(int index)
+    {
+        if (Selected is { } unit && index == unit.Skills.Count + 1)
+            MoveOnly();
+        else
+            ArmAction(index);
+    }
+
     /// <summary>
-    /// Arme l'action n° <paramref name="index"/> du héros choisi : une compétence (sauf en recharge), ou relever (juste
-    /// après la dernière compétence, comme le dernier bouton).
+    /// Déplacement sans action, vers le fantôme. Toujours explicite (Entrée ou bouton) : un second clic sur la case ne
+    /// suffit pas, pour qu'un double-clic ne fasse jamais perdre l'attaque prévue.
+    /// </summary>
+    private void MoveOnly()
+    {
+        if (Selected is { } unit && _ghost is { } ghost)
+            TrySubmit(new ActivateCommand(unit.Id, ghost));
+    }
+
+    /// <summary>
+    /// Arme l'action n° <paramref name="index"/> du héros choisi : une compétence (même en recharge : l'ordre attendra
+    /// qu'elle soit prête), ou relever (juste après la dernière compétence, comme le dernier bouton).
     /// </summary>
     private void ArmAction(int index)
     {
@@ -339,11 +371,7 @@ public partial class CombatView : Node3D
         }
         if (index >= unit.Skills.Count)
             return;
-        var skill = unit.Skills[index];
-        if (unit.CooldownEndTick(skill.Id) > _sim.CurrentTick)
-            _hud.Log($"{skill.DisplayName} : {Texts.Rejection(RejectionReason.OnCooldown)}");
-        else
-            _aiming = new Aiming(skill);
+        _aiming = new Aiming(unit.Skills[index]);
     }
 
     /// <summary>Choisit un héros depuis la barre ou F1-F6, seulement s'il obéit au joueur (pas dominé ni confus).</summary>
@@ -379,9 +407,7 @@ public partial class CombatView : Node3D
         }
         if (Selected is not { } selectedUnit)
             return;
-        if (_ghost == cell)
-            TrySubmit(new ActivateCommand(selectedUnit.Id, cell));
-        else if (cell == selectedUnit.Position)
+        if (cell == selectedUnit.Position)
             _ghost = null;
         else if (Reachable(selectedUnit).ContainsKey(cell))
             _ghost = cell;
@@ -395,6 +421,8 @@ public partial class CombatView : Node3D
             _aiming = null;
         else if (_ghost is not null)
             _ghost = null;
+        else if (_selected is { } id && HasOrder(id))
+            _sim.Submit(new CancelOrderCommand(id));
         else
             _selected = null;
     }
@@ -407,30 +435,31 @@ public partial class CombatView : Node3D
 
     private void SelectNextReady()
     {
-        var heroes = _sim.Units.Where(u => u.IsReady && IsControllable(u) && !_ordered.Contains(u.Id)).ToList();
+        var heroes = _sim.Units.Where(u => u.IsReady && IsControllable(u) && !HasOrder(u.Id)).ToList();
         if (heroes.Count == 0)
             return;
         var current = heroes.FindIndex(u => u.Id == _selected);
         Select(heroes[(current + 1) % heroes.Count].Id);
     }
 
-    /// <summary>Soumet la commande si la simulation l'accepterait ; sinon, dit pourquoi.</summary>
+    /// <summary>
+    /// Donne l'ordre (à la simulation, qui le fera partir dès que le héros pourra agir : tout de suite s'il est prêt) si
+    /// rien d'autre que le temps ne l'en empêche ; sinon, dit pourquoi. Il remplace l'ordre du héros pas encore parti.
+    /// </summary>
     private void TrySubmit(ActivateCommand command)
     {
-        if (_ordered.Contains(command.Unit))
-        {
-            _hud.Log("Ordre déjà donné : il sera appliqué au prochain tick");
-            return;
-        }
-        if (_sim.Check(command) is { } reason)
+        if (_sim.Check(command, ignoreTiming: true) is { } reason)
         {
             _hud.Log($"Impossible : {Texts.Rejection(reason)}");
             return;
         }
-        _sim.Submit(command);
-        _ordered.Add(command.Unit);
+        _sim.Submit(new OrderCommand(command));
+        // Le héros reste choisi tant que son ordre n'est pas parti (clic droit pour l'annuler après une erreur de clic) ;
+        // l'ordre s'affiche figé et plus rien ne suit la souris.
         ClearPlan(keepSelection: true);
     }
+
+    private bool HasOrder(UnitId unit) => _sim.PlannedOrders().Any(o => o.Unit == unit);
 
     private void ClearPlan(bool keepSelection)
     {
@@ -473,7 +502,16 @@ public partial class CombatView : Node3D
         var hint = "";
         var hintColor = Colors.White;
 
-        if (unit is not null && _aiming is null)
+        if (unit is not null && _aiming is null && _ghost is null && OrderOf(unit.Id) is { } order)
+        {
+            // Ordre donné, pas encore parti : seul l'ordre figé s'affiche, rien ne suit la souris. S'il est devenu
+            // impossible entre-temps, on le dit (il sera annulé au départ s'il l'est encore).
+            (hint, hintColor) = _sim.Check(order, ignoreTiming: true) is { } broken
+                ? ($"Ordre donné, mais impossible pour l'instant ({Texts.Rejection(broken)}) : clic droit / Échap pour l'annuler",
+                    new Color(1f, 0.5f, 0.45f))
+                : ("Ordre donné : clic droit / Échap pour l'annuler, ou prépare-en un autre pour le remplacer", OrderHint);
+        }
+        else if (unit is not null && _aiming is null)
         {
             var cells = Reachable(unit);
             reachable = cells.Keys.Where(c => c != unit.Position);
@@ -483,8 +521,11 @@ public partial class CombatView : Node3D
                 path = _sim.PathFor(unit.Id, d) ?? [];
                 ghostCell = d;
             }
-            hint = unit.IsReady ? "Choisis une case (fantôme), puis une compétence (1-9) ou confirme le déplacement"
-                : "Jauge pas pleine : tu peux préparer, mais pas encore agir";
+            hint = !unit.IsReady ? "Jauge pas pleine : prépare ton ordre, il partira dès qu'elle sera pleine"
+                : _ghost is null ? "Clique une case pour prévoir un déplacement, ou choisis directement une compétence (1-9)"
+                : "Déplacement prévu : choisis une compétence (1-9), ou Entrée pour te déplacer seulement";
+            if (_ghost is not null)
+                hintColor = OrderHint;
         }
         else if (unit is not null && _aiming is { } aiming && from is { } origin)
         {
@@ -502,21 +543,86 @@ public partial class CombatView : Node3D
 
         _board.SetLayer("reachable", reachable, new Color(0.3f, 0.6f, 1f, 0.25f), 0.02f);
         _board.SetLayer("range", range, new Color(1f, 1f, 1f, 0.15f), 0.02f);
-        _board.SetLayer("path", path, new Color(1f, 1f, 0.4f, 0.45f), 0.025f);
-        _board.SetLayer("aim", aim, new Color(1f, 0.55f, 0.1f, 0.5f), 0.03f);
-        _board.SetLayer("target", target, new Color(1f, 0.2f, 0.6f, 0.55f), 0.035f);
+        _board.SetLayer("path", path, _ghost is null ? PathHovered : PathPlaced, 0.025f);
+        _board.SetLayer("aim", aim, AimColor, 0.03f);
+        _board.SetLayer("target", target, TargetColor, 0.035f);
         _ghostView.Visible = ghostCell is not null;
+        _ghostView.MaterialOverride = _ghost is null ? GhostHovered : GhostPlaced;
         if (ghostCell is { } g)
             _ghostView.Position = BoardView.ToWorld(g, 0.65f);
+        var orders = _sim.PlannedOrders();
+        ShowOrders(orders);
+        if (hint.Length == 0 && orders.Count > 0 && _paused)
+            (hint, hintColor) = ("Ordre donné : il partira dès que le héros pourra agir (Espace : reprendre)", OrderHint);
         _hud.SetHint(hint, hintColor);
+    }
+
+    private ActivateCommand? OrderOf(UnitId unit) => _sim.PlannedOrders().FirstOrDefault(o => o.Unit == unit);
+
+    /// <summary>
+    /// Ordres donnés, pas encore partis (jauge à remplir, ou pause) : fantôme, chemin et zone visée, figés, quel que soit
+    /// le héros choisi. L'ordre d'un héros auquel on en prépare un autre reste affiché : c'est lui qui partira tant que
+    /// le nouveau n'est pas donné. Recalculé seulement quand les ordres ou le tick changent.
+    /// </summary>
+    private void ShowOrders(IReadOnlyList<ActivateCommand> orders)
+    {
+        if (_shownOrders is { } shown && shown.Tick == _sim.CurrentTick && shown.Orders.SequenceEqual(orders))
+            return;
+        _shownOrders = (_sim.CurrentTick, orders);
+
+        var ghosts = new List<Cell>();
+        var path = new List<Cell>();
+        var aim = new List<Cell>();
+        var target = new List<Cell>();
+        foreach (var command in orders)
+        {
+            var id = command.Unit;
+            if (_sim.FindUnit(id) is not { } unit)
+                continue;
+            if (command.MoveTo is { } moveTo)
+            {
+                ghosts.Add(moveTo);
+                path.AddRange(_sim.PathFor(id, moveTo) ?? []);
+            }
+            if (command.Skill is { } use)
+            {
+                var preview = _sim.PreviewAction(id, command.MoveTo ?? unit.Position, use);
+                aim.AddRange(preview.Cells ?? []);
+                if (preview.Destination is { } destination)
+                    aim.Add(destination);
+                if (preview.Target is { } t && _sim.FindUnit(t) is { } struck)
+                    target.Add(struck.Position);
+            }
+            else if (command.Interaction is { } interaction && _sim.FindUnit(interaction.Target) is { } other)
+            {
+                target.Add(other.Position);
+            }
+        }
+
+        _board.SetLayer("order-path", path, PathPlaced, 0.026f);
+        _board.SetLayer("order-aim", aim, AimColor, 0.031f);
+        _board.SetLayer("order-target", target, TargetColor, 0.036f);
+        while (_orderGhosts.Count < ghosts.Count)
+        {
+            var ghost = new MeshInstance3D { Mesh = _ghostView.Mesh, MaterialOverride = GhostPlaced };
+            AddChild(ghost);
+            _orderGhosts.Add(ghost);
+        }
+        for (var i = 0; i < _orderGhosts.Count; i++)
+        {
+            _orderGhosts[i].Visible = i < ghosts.Count;
+            if (i < ghosts.Count)
+                _orderGhosts[i].Position = BoardView.ToWorld(ghosts[i], 0.65f);
+        }
     }
 
     /// <summary>Ce que donnerait l'action armée sur la case survolée : cases touchées, cible, et un message.</summary>
     private (IEnumerable<Cell> Aim, IEnumerable<Cell> Target, string Hint, Color Color) AimPreview(Unit unit, Aiming aiming, Cell origin)
     {
         var none = Array.Empty<Cell>();
-        var prefix = aiming.Kind == AimKind.UnitThenCell && aiming.FirstTarget is null ? $"{aiming.Name} : choisis l'unité"
-            : aiming.Kind == AimKind.UnitThenCell ? $"{aiming.Name} : choisis la case" : aiming.Name;
+        var name = _ghost is null ? aiming.Name : $"Déplacement + {aiming.Name}";
+        var prefix = aiming.Kind == AimKind.UnitThenCell && aiming.FirstTarget is null ? $"{name} : choisis l'unité"
+            : aiming.Kind == AimKind.UnitThenCell ? $"{name} : choisis la case" : name;
         if (_hovered is not { } cell)
             return (none, none, prefix, Colors.White);
 
@@ -525,7 +631,10 @@ public partial class CombatView : Node3D
         if (aiming.CommandFor(unit.Id, _ghost, cell, _sim.UnitAt(cell)?.Id) is not { } command)
             return (none, firstCells, prefix, Colors.White);
 
-        var reason = _sim.Check(command);
+        // Une seule validation complète si le héros peut agir ; sinon, une seconde sans le temps pour trouver le vrai obstacle.
+        var now = _sim.Check(command);
+        var waiting = now is { } n && n.OnlyNeedsTime();
+        var reason = waiting ? _sim.Check(command, ignoreTiming: true) : now;
         IEnumerable<Cell> aim = none, target = firstCells;
         if (command.Skill is { } use)
         {
@@ -544,7 +653,8 @@ public partial class CombatView : Node3D
         if (reason is { } r)
             return (aim, target, $"{prefix} : {Texts.Rejection(r)}", new Color(1f, 0.5f, 0.45f));
         var damage = aiming.Skill is { DealsDamage: true } s ? $" ({s.MinDamage}-{s.MaxDamage} dégâts)" : "";
-        return (aim, target, $"{prefix}{damage} : clic pour lancer", new Color(0.6f, 1f, 0.6f));
+        var when = waiting ? "clic : partira dès que possible" : "clic pour lancer";
+        return (aim, target, $"{prefix}{damage} : {when}", new Color(0.6f, 1f, 0.6f));
     }
 
     private IEnumerable<Cell> Cells(Func<Cell, bool> predicate)
@@ -579,7 +689,8 @@ public partial class CombatView : Node3D
         }
 
         var header = $"{unit.Definition.Name} — {unit.Hp}/{unit.MaxHp} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
-                     + (_ordered.Contains(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : "");
+                     + (HasOrder(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : "")
+                     + (_ghost is not null ? " — déplacement prévu" : "");
         if (unit.StatusEndTicks.Count > 0)
             header += "\n" + string.Join(", ", unit.StatusEndTicks.Keys.Select(Texts.Status));
 
@@ -595,18 +706,20 @@ public partial class CombatView : Node3D
                 : $"{weight}, portée {skill.Range}{damage}";
             var key = i < 9 ? $"{i + 1}  " : "";
             actions.Add(new ActionButton($"{key}{skill.DisplayName}\n{details}",
-                Enabled: cooldown <= 0, Armed: _aiming?.Skill == skill, Cooldown: CooldownLeft(unit, skill)));
+                Enabled: true, Armed: _aiming?.Skill == skill, Cooldown: CooldownLeft(unit, skill)));
         }
         actions.Add(new ActionButton("R  Relever\nun allié au contact", Enabled: true, Armed: _aiming?.Interaction is not null));
+        actions.Add(new ActionButton($"Entrée  Déplacement seul\n{(_ghost is null ? "choisis d'abord une case" : "vers le fantôme")}",
+            Enabled: _ghost is not null, Armed: false));
         _hud.SetSelection(header, actions);
     }
 
     private HeroCard HeroCardOf(Unit hero)
     {
         // Un héros dominé ou confus n'obéit plus : jamais « prêt » pour le joueur.
-        var ready = hero.IsReady && IsControllable(hero) && !_ordered.Contains(hero.Id);
+        var ready = hero.IsReady && IsControllable(hero) && !HasOrder(hero.Id);
         var state = hero.Status == UnitStatus.Downed ? "À TERRE"
-            : _ordered.Contains(hero.Id) ? "ordre donné"
+            : HasOrder(hero.Id) ? (hero.IsReady ? "ordre donné" : "ordre en attente")
             : ready ? "PRÊT"
             : hero.Charge is not null ? "charge…"
             : string.Join(", ", hero.StatusEndTicks.Keys.Select(Texts.Status));
