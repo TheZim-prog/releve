@@ -11,6 +11,9 @@ public sealed class DeterministicRandom
 
     public DeterministicRandom(ulong seed) => _state = seed;
 
+    /// <summary>État interne (pour comparer deux simulations, pas pour le modifier).</summary>
+    public ulong State => _state;
+
     public ulong NextUInt64()
     {
         var z = _state += 0x9E3779B97F4A7C15UL;

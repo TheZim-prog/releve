@@ -1,8 +1,13 @@
+using System.Text.Json.Serialization;
 using Game.Core.Grids;
 
 namespace Game.Core.Combat;
 
 /// <summary>Ordre envoyé par un joueur ou par l'IA. La simulation le valide avant de l'appliquer.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ActivateCommand), "activate")]
+[JsonDerivedType(typeof(OrderCommand), "order")]
+[JsonDerivedType(typeof(CancelOrderCommand), "cancelOrder")]
 public abstract record CombatCommand(UnitId Unit);
 
 /// <summary>

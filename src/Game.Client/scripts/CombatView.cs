@@ -1,5 +1,7 @@
+using Game.Core;
 using Game.Core.Combat;
 using Game.Core.Grids;
+using Game.Core.Network;
 using Godot;
 
 namespace Game.Client;
@@ -16,7 +18,7 @@ namespace Game.Client;
 public partial class CombatView : Node3D
 {
     private const string ScenarioId = "street";
-    private const int PlayerTeam = 0;
+    private const int PlayerTeam = CombatLaunch.PlayerTeam;
     private const int MaxTicksPerFrame = 5;
 
     private static readonly Dictionary<string, Color> UnitColors = new()
@@ -49,7 +51,7 @@ public partial class CombatView : Node3D
     private readonly Dictionary<UnitId, UnitView> _views = new();
     private readonly Dictionary<UnitId, IReadOnlyList<Cell>> _domes = new();
 
-    private GameData _data = null!;
+    private GameContent _data = null!;
     private CombatSimulation _sim = null!;
     private BoardView _board = null!;
     private Hud _hud = null!;
@@ -154,11 +156,12 @@ public partial class CombatView : Node3D
         _domes.Clear();
         _board?.QueueFree();
 
-        var scenario = GameData.LoadScenario(ScenarioId);
-        var units = _aiHeroes
-            ? _data.Units.ToDictionary(u => u.Key, u => u.Value.Behavior is null ? u.Value with { Behavior = Behaviors.Basic } : u.Value)
-            : _data.Units;
-        _sim = new CombatSimulation(scenario.ToSetup(_data.Rules, units));
+        // Solo : le joueur commande tous les héros (ou aucun, confiés à l'IA, avec --ai-heroes=on).
+        var scenario = _data.Scenarios[ScenarioId];
+        var heroes = _aiHeroes
+            ? new List<HeroAssignment>()
+            : CombatLaunch.PlayableHeroes(_data, ScenarioId).Select(u => new HeroAssignment(u.Id, Player: 1)).ToList();
+        _sim = new CombatSimulation(new CombatLaunch(ScenarioId, heroes).BuildSetup(_data));
         _board = new BoardView();
         AddChild(_board);
         _board.Build(_sim.Grid);
@@ -217,12 +220,7 @@ public partial class CombatView : Node3D
             foreach (var e in _sim.Tick())
                 Handle(e);
 
-            // Combat libre : il se termine quand il ne reste qu'un camp (règle du cœur).
-            var teams = _sim.TeamsStillFighting();
-            if (!teams.Contains(PlayerTeam))
-                _won = false;
-            else if (teams.Count == 1)
-                _won = true;
+            _won = CombatLaunch.Outcome(_sim);
         }
         if (_won is { } won)
             _hud.SetBanner(won ? "Victoire !" : "Défaite…", won ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.4f, 0.4f));
@@ -319,6 +317,7 @@ public partial class CombatView : Node3D
                 _hud.ShowHelp = !_hud.ShowHelp;
                 break;
             case Key.F9: // F1-F6 choisissent les héros
+                _data = GameData.Load(); // relu : un réglage dans data/ se voit sans relancer le jeu
                 StartCombat();
                 break;
             case Key.Escape:

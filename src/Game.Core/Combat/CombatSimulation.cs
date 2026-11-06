@@ -92,6 +92,36 @@ public sealed class CombatSimulation
     }
 
     /// <summary>
+    /// Empreinte de l'état (tick, unités, générateur aléatoire, nombre d'événements et d'ordres) : deux simulations qui
+    /// devraient être identiques (serveur et client) le sont si leurs empreintes concordent à chaque tick.
+    /// </summary>
+    public ulong Checksum()
+    {
+        var hash = 14695981039346656037UL; // FNV-1a, stable d'une machine et d'une exécution à l'autre
+        void Add(long value)
+        {
+            hash ^= (ulong)value;
+            hash *= 1099511628211UL;
+        }
+
+        Add(CurrentTick);
+        Add((long)_random.State);
+        Add(_events.Count);
+        Add(_orders.Count);
+        foreach (var unit in _units)
+        {
+            Add(unit.Id.Value);
+            Add(unit.Position.X);
+            Add(unit.Position.Y);
+            Add(unit.Gauge);
+            Add(unit.Hp);
+            Add((int)unit.Status);
+            Add(unit.Team);
+        }
+        return hash;
+    }
+
+    /// <summary>
     /// Ordres à l'avance tels que le joueur les a demandés : ceux enregistrés, plus les ordres et annulations soumis
     /// mais pas encore appliqués (pendant la pause, par exemple). Pour l'affichage ; rien n'est changé.
     /// </summary>

@@ -32,7 +32,7 @@ tests/
 
 1. **Game.Core n'a aucune dépendance à Godot.** Toute la logique de jeu y vit. Godot ne fait qu'afficher l'état et capter les entrées.
 2. **Simulation déterministe** : jauges, PV, temps en **entiers** (pas de `float` dans la logique), aléatoire via un générateur à **graine contrôlée**. Même entrée = même résultat, toujours.
-3. **Commandes et événements** : les joueurs (et l'IA) envoient des **commandes** ; la simulation les valide, les applique et produit des **événements**. Le client ne fait que rejouer les événements.
+3. **Commandes et événements** : les joueurs (et l'IA) envoient des **commandes** ; la simulation les valide, les applique et produit des **événements**. Le client ne fait que les afficher. En réseau, le serveur diffuse le **journal de commandes** tick par tick et chaque client fait tourner la même simulation (déterminisme) ; il ne décide de rien.
 4. **Serveur autoritaire** : seule la simulation côté serveur fait foi. En solo, le serveur tourne dans le processus du client (même code).
 5. **Journal d'événements** : tout combat doit pouvoir être rejoué à l'identique depuis sa graine et sa liste de commandes (reconnexion, replays, débogage).
 6. **Contenu en données** : héros, compétences, ennemis décrits dans `data/`, pas codés en dur.

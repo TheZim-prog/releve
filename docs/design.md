@@ -264,5 +264,9 @@
 - **Commandes / événements** + **journal d'événements** (reconnexion, replays, débogage).
 - **Contenu en données** (JSON/YAML).
 - Hébergement : un joueur héberge depuis le jeu, ou serveur dédié sur **Raspberry Pi 5** ; connexion via **Tailscale** (aucun port ouvert).
+- **Synchronisation en combat : journal de commandes.** Le serveur fait foi : il reçoit les commandes, fixe leur ordre et les diffuse tick par tick (« tick N : commandes […] ») ; chaque client fait tourner la même simulation déterministe et arrive au même état. Reconnexion = rejeu du journal. Chaque client connaît tout l'état (intentions cachées comprises) : acceptable entre amis. Les clients doivent avoir le même contenu (`data/`), vérifié à la connexion.
+- **Salon** : chaque joueur choisit un héros ; n'importe quel joueur lance le combat quand tous ont choisi. Au prologue, les **héros non choisis sont joués par l'IA**. Un joueur ne commande que son héros (et les unités qu'il domine).
+- **Pause partagée** : n'importe quel joueur met en pause et **n'importe quel joueur relance**.
+- **Déconnexion en combat : pause automatique** jusqu'au retour du joueur (le combat reprend seul s'il était en pause pour ça), ou jusqu'à ce qu'un joueur relance.
 - Ordre de travail : cœur du combat en C# pur + tests → affichage Godot en solo → réseau → carte du monde.
 - **Besoin identifié** : un **système de scripts de mission** (actions imposées, événements déclenchés, alliés aux coups prédéfinis), indispensable pour la première mission du prologue et les moments scénarisés.
