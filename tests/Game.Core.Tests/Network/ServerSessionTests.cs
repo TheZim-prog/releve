@@ -309,6 +309,28 @@ public class ServerSessionTests
     }
 
     [Fact]
+    public void AMirror_ShowsSentOrders_BeforeTheServerPlaysThem()
+    {
+        var (session, alice, _) = TwoPlayersInCombat();
+        var mirror = new CombatMirror(Content, alice.Last<CombatState>());
+        var order = new OrderCommand(new ActivateCommand(HeroA, new Cell(1, 0)));
+
+        alice.Say(new SendCommand(order));
+        mirror.Sent(order);
+        Assert.Equal(new[] { order.Activation }, mirror.PlannedOrders());
+
+        session.Tick();
+        mirror.Apply(alice.Last<TickPlayed>());
+        Assert.Equal(new[] { order.Activation }, mirror.PlannedOrders()); // désormais dans la simulation
+
+        mirror.Sent(new CancelOrderCommand(HeroA));
+        Assert.Empty(mirror.PlannedOrders());
+        mirror.ForgetSent(); // refusée par le serveur : l'ordre réel réapparaît
+        Assert.Equal(new[] { order.Activation }, mirror.PlannedOrders());
+        Assert.Equal(HeroA, mirror.HeroOf(1));
+    }
+
+    [Fact]
     public void AMirrorThatDrifts_DetectsTheDesync()
     {
         var (session, alice, _) = TwoPlayersInCombat();

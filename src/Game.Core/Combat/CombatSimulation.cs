@@ -125,10 +125,17 @@ public sealed class CombatSimulation
     /// Ordres à l'avance tels que le joueur les a demandés : ceux enregistrés, plus les ordres et annulations soumis
     /// mais pas encore appliqués (pendant la pause, par exemple). Pour l'affichage ; rien n'est changé.
     /// </summary>
-    public IReadOnlyList<ActivateCommand> PlannedOrders()
+    public IReadOnlyList<ActivateCommand> PlannedOrders() => PlannedOrders(Array.Empty<CombatCommand>());
+
+    /// <summary>
+    /// Comme <see cref="PlannedOrders()"/>, en comptant aussi des commandes qui ne sont pas encore arrivées ici (celles
+    /// qu'un client a envoyées au serveur), après les commandes en attente.
+    /// </summary>
+    public IReadOnlyList<ActivateCommand> PlannedOrders(IEnumerable<CombatCommand> notYetSubmitted)
     {
+        ArgumentNullException.ThrowIfNull(notYetSubmitted);
         var orders = new List<ActivateCommand>(_orders);
-        foreach (var command in _pending)
+        foreach (var command in _pending.Concat(notYetSubmitted))
         {
             if (command is not (OrderCommand or CancelOrderCommand))
                 continue;

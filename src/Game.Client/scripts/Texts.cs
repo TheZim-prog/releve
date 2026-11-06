@@ -1,10 +1,31 @@
 using Game.Core.Combat;
+using Game.Core.Network;
 
 namespace Game.Client;
 
 /// <summary>Textes affichés : états, raisons de refus, et une ligne de journal par événement.</summary>
 public static class Texts
 {
+    public static string JoinRefusal(JoinRefusal reason) => reason switch
+    {
+        Game.Core.Network.JoinRefusal.ProtocolMismatch => "Version du jeu différente de celle de l'hôte : mettez-vous à jour.",
+        Game.Core.Network.JoinRefusal.ContentMismatch => "Données du jeu (data/) différentes de celles de l'hôte : mettez-vous à jour.",
+        Game.Core.Network.JoinRefusal.InvalidName => $"Nom invalide (1 à {Protocol.MaxNameLength} caractères).",
+        Game.Core.Network.JoinRefusal.NameTaken => "Ce nom est déjà pris par un joueur connecté.",
+        Game.Core.Network.JoinRefusal.CombatInProgress => "Un combat est en cours sans toi : attends la fin pour rejoindre.",
+        _ => reason.ToString(),
+    };
+
+    public static string RequestRefusal(RequestRefusal reason) => reason switch
+    {
+        Game.Core.Network.RequestRefusal.HeroTaken => "Ce héros est déjà pris par un autre joueur.",
+        Game.Core.Network.RequestRefusal.HeroesMissing => "Chaque joueur doit d'abord choisir un héros.",
+        Game.Core.Network.RequestRefusal.NotAHero => "Ce n'est pas un héros jouable.",
+        Game.Core.Network.RequestRefusal.NotYourUnit => "Ordre refusé : cette unité n'est pas à toi.",
+        Game.Core.Network.RequestRefusal.TooManyCommands => "Ordre refusé : trop d'ordres en attente.",
+        _ => $"Refusé ({reason}).",
+    };
+
     public static string Status(StatusKind status) => status switch
     {
         StatusKind.Stunned => "étourdi",

@@ -31,8 +31,9 @@ public partial class Hud : CanvasLayer
         "1-9 ou boutons : compétence   R : relever",
         "F1-F6 ou cartes à gauche : choisir un héros   Tab : prêt suivant",
         "Clic droit / Échap : annuler",
-        "Espace : pause   Vitesse : les 2 touches à droite du 0, ou pavé - / +",
-        "I : intentions   F9 : recommencer   H : masquer l'aide");
+        "Espace : pause (pour tout le monde en réseau)",
+        "Solo : vitesse avec les 2 touches à droite du 0, ou pavé - / +   F9 : recommencer",
+        "I : intentions   F10 : quitter   H : masquer l'aide");
 
     private readonly Queue<string> _log = new();
     private readonly List<(Button Button, ColorRect Veil)> _actionButtons = new();

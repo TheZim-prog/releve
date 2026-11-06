@@ -7,19 +7,14 @@ using Godot;
 namespace Game.Client;
 
 /// <summary>
-/// Combat libre en solo. La simulation (Game.Core) tourne dans ce processus, à ses ticks fixes ; cette scène ne fait
-/// qu'afficher son état et ses événements, et lui soumettre les commandes du joueur, validées par elle (prévisualisation
-/// comprise). Le joueur commande tous les héros.
-/// <para>
-/// Prototype solo : l'état continu (positions, jauges, PV) est lu directement dans la simulation, comme un instantané ;
-/// les événements servent au journal, aux effets et au décor. En réseau, ces instantanés viendront du serveur.
-/// </para>
+/// Affichage et commandes d'un combat, solo ou en réseau (<see cref="ICombatSession"/>). Cette scène ne fait
+/// qu'afficher l'état de la simulation et ses événements, et envoyer les ordres du joueur, prévérifiés par elle
+/// (prévisualisation comprise). L'état continu (positions, jauges, PV) est lu dans la simulation, comme un instantané ;
+/// les événements servent au journal, aux effets et au décor.
 /// </summary>
 public partial class CombatView : Node3D
 {
-    private const string ScenarioId = "street";
     private const int PlayerTeam = CombatLaunch.PlayerTeam;
-    private const int MaxTicksPerFrame = 5;
 
     private static readonly Dictionary<string, Color> UnitColors = new()
     {
@@ -51,6 +46,7 @@ public partial class CombatView : Node3D
     private readonly Dictionary<UnitId, UnitView> _views = new();
     private readonly Dictionary<UnitId, IReadOnlyList<Cell>> _domes = new();
 
+    private ICombatSession _session = null!;
     private GameContent _data = null!;
     private CombatSimulation _sim = null!;
     private BoardView _board = null!;
@@ -58,7 +54,8 @@ public partial class CombatView : Node3D
     private Camera3D _camera = null!;
     private MeshInstance3D _ghostView = null!;
 
-    // Fantômes des ordres en attente (les ordres eux-mêmes vivent dans la simulation : PlannedOrders).
+    // Ordres en attente des unités que le joueur commande (pas ceux des coéquipiers), relus une fois par image.
+    private IReadOnlyList<ActivateCommand> _orders = Array.Empty<ActivateCommand>();
     private readonly List<MeshInstance3D> _orderGhosts = new();
     private (int Tick, IReadOnlyList<ActivateCommand> Orders)? _shownOrders;
 
@@ -67,30 +64,41 @@ public partial class CombatView : Node3D
     private static readonly int[] Speeds = [50, 75, 100];
     private int _speed = 1;
 
-    private double _accumulator;
-    private bool _paused;
     private bool _showIntentions;
     private bool? _won;
+    private bool _frozen;
 
     private UnitId? _selected;
     private Cell? _ghost;
     private Aiming? _aiming;
     private Cell? _hovered;
 
-    // Outils de développement (arguments après « -- ») : --screenshot=fichier.png capture l'écran après quelques
-    // secondes (--at=<s>, 4 par défaut) puis quitte ; --select=<id>, --skill=<n>, --hover=x,y et --intentions=on
-    // simulent une sélection, une compétence armée, le survol d'une case et les intentions révélées (pour vérifier
-    // l'affichage sur une capture) ; --ai-heroes=on fait jouer les héros par l'IA.
-    private string? _screenshotPath;
-    private double _screenshotIn;
+    // Outils de développement (arguments après « -- », cf. Main) : --select=<id>, --skill=<n>, --hover=x,y et
+    // --intentions=on simulent une sélection, une compétence armée, le survol d'une case et les intentions révélées
+    // (pour vérifier l'affichage sur une capture).
     private Cell? _hoverOverride;
 
-    // --ai-heroes=on : les héros sont confiés à l'IA de base (pour regarder un combat se jouer seul).
-    private bool _aiHeroes;
+    /// <summary>Le joueur veut quitter le combat (F10).</summary>
+    public event Action? LeaveRequested;
+
+    /// <summary>La simulation ne suit plus celle du serveur (réseau) : il faut se reconnecter.</summary>
+    public event Action<string>? Desynced;
+
+    /// <summary>À appeler avant d'ajouter la vue à l'arbre.</summary>
+    public void Setup(ICombatSession session) => _session = session;
+
+    /// <summary>
+    /// Fige la vue (plus de ticks ni d'ordres) avec un message, en attendant que <see cref="Main"/> la remplace :
+    /// simulation désynchronisée ou connexion perdue, reconnexion en cours.
+    /// </summary>
+    public void Freeze(string message)
+    {
+        _frozen = true;
+        _hud.SetBanner(message, Colors.White);
+    }
 
     public override void _Ready()
     {
-        _data = GameData.Load();
         AddChild(new WorldEnvironment
         {
             Environment = new Godot.Environment
@@ -117,19 +125,13 @@ public partial class CombatView : Node3D
         AddChild(_hud);
         _hud.ActionPressed += OnActionPressed;
         _hud.HeroPressed += SelectIfControllable;
-        _aiHeroes = DevArg("ai-heroes") == "on";
         StartCombat();
         ApplyDevArguments();
     }
 
-    private static string? DevArg(string name) =>
-        OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith($"--{name}="))?[(name.Length + 3)..];
-
     private void ApplyDevArguments()
     {
-        var Arg = DevArg;
-        _screenshotPath = Arg("screenshot");
-        _screenshotIn = double.TryParse(Arg("at"), System.Globalization.CultureInfo.InvariantCulture, out var at) ? at : 4;
+        var Arg = Main.DevArg;
         if (Arg("intentions") == "on")
             _showIntentions = true;
         if (Arg("select") is { } select && int.TryParse(select, out var id))
@@ -140,14 +142,6 @@ public partial class CombatView : Node3D
             _hoverOverride = new Cell(hx, hy);
     }
 
-    private void TakeScreenshotWhenDue(double delta)
-    {
-        if (_screenshotPath is null || (_screenshotIn -= delta) > 0)
-            return;
-        GetViewport().GetTexture().GetImage().SavePng(_screenshotPath);
-        GetTree().Quit();
-    }
-
     private void StartCombat()
     {
         foreach (var view in _views.Values)
@@ -156,12 +150,11 @@ public partial class CombatView : Node3D
         _domes.Clear();
         _board?.QueueFree();
 
-        // Solo : le joueur commande tous les héros (ou aucun, confiés à l'IA, avec --ai-heroes=on).
-        var scenario = _data.Scenarios[ScenarioId];
-        var heroes = _aiHeroes
-            ? new List<HeroAssignment>()
-            : CombatLaunch.PlayableHeroes(_data, ScenarioId).Select(u => new HeroAssignment(u.Id, Player: 1)).ToList();
-        _sim = new CombatSimulation(new CombatLaunch(ScenarioId, heroes).BuildSetup(_data));
+        _data = _session.Content;
+        _sim = _session.Simulation;
+        // Combat rejoint en cours (reconnexion) : les dômes encore levés. Le décor détruit est déjà dans la grille.
+        foreach (var e in _sim.EventLog)
+            TrackDome(e);
         _board = new BoardView();
         AddChild(_board);
         _board.Build(_sim.Grid);
@@ -172,22 +165,41 @@ public partial class CombatView : Node3D
         var focus = center + new Vector3(0, 0, 0.9f); // un peu plus haut à l'écran : la rangée d'actions occupe le bas
         _camera.LookAtFromPosition(focus + new Vector3(0, 30f, 14f), focus, Vector3.Up);
 
-        _accumulator = 0;
-        _paused = false;
         _won = null;
         _shownOrders = null;
-        _selected = null;
+        // En réseau, le joueur n'a qu'un héros : il est choisi d'emblée.
+        _selected = _session is NetworkCombat { MyHero: { } mine } ? mine : null;
         _ghost = null;
         _aiming = null;
         _hud.ClearLog();
         _hud.SetBanner("", Colors.White);
-        _hud.Log(scenario.Name);
+        if (_data.Scenarios.TryGetValue(_session.ScenarioId, out var scenario))
+            _hud.Log(scenario.Name);
     }
 
     public override void _Process(double delta)
     {
-        if (!_paused && _won is null)
-            RunTicks(delta * Speeds[_speed] / 100);
+        if (_frozen)
+            return;
+        IReadOnlyList<CombatEvent> events;
+        try
+        {
+            events = _session.Advance(_session.IsNetwork ? delta : delta * Speeds[_speed] / 100);
+        }
+        catch (DesyncException e)
+        {
+            Freeze("Resynchronisation…");
+            Desynced?.Invoke(e.Message);
+            return;
+        }
+        foreach (var e in events)
+            Handle(e);
+        foreach (var notice in _session.TakeNotices())
+            _hud.Log(notice);
+        _won = _session.Outcome;
+        _orders = _session.PlannedOrders().Where(o => _sim.FindUnit(o.Unit) is { } unit && IsControllable(unit)).ToList();
+        if (_won is { } won)
+            _hud.SetBanner(won ? "Victoire !" : "Défaite…", won ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.4f, 0.4f));
 
         // Souris sur l'interface : aucune case survolée (le clic irait à l'interface, pas au plateau).
         _hovered = _hoverOverride ?? (GetViewport().GuiGetHoveredControl() is null ? HoveredCell() : null);
@@ -207,23 +219,6 @@ public partial class CombatView : Node3D
             ClearPlan(keepSelection: Selected is not null);
         UpdateOverlays();
         UpdateHud();
-        TakeScreenshotWhenDue(delta);
-    }
-
-    private void RunTicks(double delta)
-    {
-        var tickDuration = 1.0 / _data.Rules.TicksPerSecond;
-        _accumulator = Math.Min(_accumulator + delta, tickDuration * MaxTicksPerFrame);
-        while (_accumulator >= tickDuration && _won is null)
-        {
-            _accumulator -= tickDuration;
-            foreach (var e in _sim.Tick())
-                Handle(e);
-
-            _won = CombatLaunch.Outcome(_sim);
-        }
-        if (_won is { } won)
-            _hud.SetBanner(won ? "Victoire !" : "Défaite…", won ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.4f, 0.4f));
     }
 
     /// <summary>Réaction de l'affichage à un événement : journal, chiffres flottants, décor, dômes.</summary>
@@ -247,11 +242,8 @@ public partial class CombatView : Node3D
             case HitBlocked b:
                 Float(b.Unit, "bloqué", new Color(0.5f, 0.75f, 1f));
                 break;
-            case DomeRaised d:
-                _domes[d.Owner] = d.Cells;
-                break;
-            case DomeEnded d:
-                _domes.Remove(d.Owner);
+            case DomeRaised or DomeEnded:
+                TrackDome(e);
                 break;
             case CoverDestroyed c:
                 _board.RemoveObstacle(c.Cell);
@@ -259,10 +251,21 @@ public partial class CombatView : Node3D
         }
     }
 
+    /// <summary>Dômes levés : suivis par leurs événements, en direct comme en relisant le journal (reconnexion).</summary>
+    private void TrackDome(CombatEvent e)
+    {
+        if (e is DomeRaised raised)
+            _domes[raised.Owner] = raised.Cells;
+        else if (e is DomeEnded ended)
+            _domes.Remove(ended.Owner);
+    }
+
     // --- Entrées ---
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (_frozen && @event is not InputEventKey { Keycode: Key.F10 })
+            return; // figée : seul « quitter » reste possible
         switch (@event)
         {
             case InputEventKey { Pressed: true, Echo: false } key:
@@ -293,13 +296,13 @@ public partial class CombatView : Node3D
             return;
         }
 
-        // Vitesse : les deux touches à droite du 0 (« ) = » en AZERTY, « - = » en QWERTY), ou le pavé numérique.
-        if (physical is Key.Equal || input.Keycode is Key.KpAdd)
+        // Vitesse (solo seulement) : les deux touches à droite du 0 (« ) = » en AZERTY, « - = » en QWERTY), ou le pavé.
+        if (!_session.IsNetwork && (physical is Key.Equal || input.Keycode is Key.KpAdd))
         {
             _speed = Math.Min(_speed + 1, Speeds.Length - 1);
             return;
         }
-        if (physical is Key.Minus || input.Keycode is Key.KpSubtract)
+        if (!_session.IsNetwork && (physical is Key.Minus || input.Keycode is Key.KpSubtract))
         {
             _speed = Math.Max(_speed - 1, 0);
             return;
@@ -308,7 +311,10 @@ public partial class CombatView : Node3D
         switch (input.Keycode)
         {
             case Key.Space:
-                _paused = !_paused;
+                _session.TogglePause(); // en réseau : pour tout le monde
+                break;
+            case Key.F10:
+                LeaveRequested?.Invoke();
                 break;
             case Key.I:
                 _showIntentions = !_showIntentions;
@@ -316,9 +322,12 @@ public partial class CombatView : Node3D
             case Key.H:
                 _hud.ShowHelp = !_hud.ShowHelp;
                 break;
-            case Key.F9: // F1-F6 choisissent les héros
-                _data = GameData.Load(); // relu : un réglage dans data/ se voit sans relancer le jeu
-                StartCombat();
+            case Key.F9: // F1-F6 choisissent les héros. Solo seulement : données relues, un réglage se voit aussitôt.
+                if (_session.Restart() is { } restarted)
+                {
+                    _session = restarted;
+                    StartCombat();
+                }
                 break;
             case Key.Escape:
                 Cancel();
@@ -421,7 +430,7 @@ public partial class CombatView : Node3D
         else if (_ghost is not null)
             _ghost = null;
         else if (_selected is { } id && HasOrder(id))
-            _sim.Submit(new CancelOrderCommand(id));
+            _session.Submit(new CancelOrderCommand(id));
         else
             _selected = null;
     }
@@ -452,13 +461,13 @@ public partial class CombatView : Node3D
             _hud.Log($"Impossible : {Texts.Rejection(reason)}");
             return;
         }
-        _sim.Submit(new OrderCommand(command));
+        _session.Submit(new OrderCommand(command));
         // Le héros reste choisi tant que son ordre n'est pas parti (clic droit pour l'annuler après une erreur de clic) ;
         // l'ordre s'affiche figé et plus rien ne suit la souris.
         ClearPlan(keepSelection: true);
     }
 
-    private bool HasOrder(UnitId unit) => _sim.PlannedOrders().Any(o => o.Unit == unit);
+    private bool HasOrder(UnitId unit) => _orders.Any(o => o.Unit == unit);
 
     private void ClearPlan(bool keepSelection)
     {
@@ -468,7 +477,7 @@ public partial class CombatView : Node3D
         _aiming = null;
     }
 
-    private bool IsControllable(Unit unit) => _sim.IsPlayerControlled(unit.Id);
+    private bool IsControllable(Unit unit) => _session.CanCommand(unit);
 
     private Unit? Selected => _selected is { } id ? _sim.FindUnit(id) : null;
 
@@ -549,14 +558,13 @@ public partial class CombatView : Node3D
         _ghostView.MaterialOverride = _ghost is null ? GhostHovered : GhostPlaced;
         if (ghostCell is { } g)
             _ghostView.Position = BoardView.ToWorld(g, 0.65f);
-        var orders = _sim.PlannedOrders();
-        ShowOrders(orders);
-        if (hint.Length == 0 && orders.Count > 0 && _paused)
+        ShowOrders(_orders);
+        if (hint.Length == 0 && _orders.Count > 0 && _session.IsPaused)
             (hint, hintColor) = ("Ordre donné : il partira dès que le héros pourra agir (Espace : reprendre)", OrderHint);
         _hud.SetHint(hint, hintColor);
     }
 
-    private ActivateCommand? OrderOf(UnitId unit) => _sim.PlannedOrders().FirstOrDefault(o => o.Unit == unit);
+    private ActivateCommand? OrderOf(UnitId unit) => _orders.FirstOrDefault(o => o.Unit == unit);
 
     /// <summary>
     /// Ordres donnés, pas encore partis (jauge à remplir, ou pause) : fantôme, chemin et zone visée, figés, quel que soit
@@ -669,10 +677,11 @@ public partial class CombatView : Node3D
     private void UpdateHud()
     {
         var seconds = _sim.CurrentTick / (double)_data.Rules.TicksPerSecond;
-        var status = $"Temps : {seconds:0.0} s   Vitesse : {Speeds[_speed]} %{(_paused ? "   — PAUSE —" : "")}";
+        var speed = _session.IsNetwork ? "" : $"   Vitesse : {Speeds[_speed]} %";
+        var status = $"Temps : {seconds:0.0} s{speed}{(_session.IsPaused ? "   — PAUSE —" : "")}";
         _hud.SetStatus(status + (_showIntentions ? "\nIntentions ennemies révélées" : ""));
         if (_won is null)
-            _hud.SetBanner(_paused ? "PAUSE" : "", Colors.White);
+            _hud.SetBanner(_session.IsPaused ? _session.PauseText : "", Colors.White);
 
         _hud.SetHeroes(_sim.Units
             .Where(u => u.OriginalTeam == PlayerTeam && u.SummonedBy is null && !u.IsCivilian)
@@ -722,7 +731,8 @@ public partial class CombatView : Node3D
             : ready ? "PRÊT"
             : hero.Charge is not null ? "charge…"
             : string.Join(", ", hero.StatusEndTicks.Keys.Select(Texts.Status));
-        return new HeroCard(hero.Id, hero.Definition.Name, (float)hero.Hp / hero.MaxHp, $"{hero.Hp}/{hero.MaxHp} PV",
+        var name = _session.ControllerName(hero.Id) is { } controller ? $"{hero.Definition.Name} ({controller})" : hero.Definition.Name;
+        return new HeroCard(hero.Id, name, (float)hero.Hp / hero.MaxHp, $"{hero.Hp}/{hero.MaxHp} PV",
             Math.Min(1f, (float)hero.Gauge / _data.Rules.GaugeCapacity), Ready: ready, Selected: hero.Id == _selected, State: state,
             SkillReadiness: hero.Skills.Select(s => 1f - CooldownLeft(hero, s)).ToList());
     }

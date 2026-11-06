@@ -240,7 +240,7 @@ public sealed class ServerSession
         }
         // Son héros, ou une unité qu'il domine (une domination finie ou un héros à terre : la simulation tranchera).
         var unit = simulation.FindUnit(valid.Unit);
-        if (player.Hero is not { } hero || unit is null || (unit.Id != hero && unit.DominatedBy != hero))
+        if (player.Hero is not { } hero || unit is null || !CombatLaunch.IsCommandedBy(unit, hero))
         {
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotYourUnit));
             return;

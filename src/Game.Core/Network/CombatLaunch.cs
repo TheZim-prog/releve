@@ -34,6 +34,16 @@ public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignmen
         return Scenario(content, scenarioId).ToSetup(content.Rules, content.Units).Units.Where(IsPlayableHero).ToList();
     }
 
+    /// <summary>
+    /// Le joueur du héros <paramref name="hero"/> peut-il donner des ordres à <paramref name="unit"/> : son héros, ou une
+    /// unité qu'il domine (s'il est confus, ou une domination finie : la simulation refusera).
+    /// </summary>
+    public static bool IsCommandedBy(Unit unit, UnitId hero)
+    {
+        ArgumentNullException.ThrowIfNull(unit);
+        return unit.Id == hero || unit.DominatedBy == hero;
+    }
+
     /// <summary>Issue du combat libre : victoire quand il ne reste que le camp des joueurs, défaite quand il n'y est plus.</summary>
     public static bool? Outcome(CombatSimulation simulation)
     {
