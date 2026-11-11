@@ -47,7 +47,7 @@
 
 ### Arbres de compétences
 
-**Structure d'une branche** (la même pour tous les archétypes) : **palier 1** = 2 compétences actives, accessibles dès la création ; **palier 2** = 1 active et 1 passif, après 2 points dans la branche ; **palier 3** = 1 active lourde et 1 passif, après 4 points dans la branche. Finir une branche coûte 6 points. Une recrue n'a donc pas de passif à la création (au plus tôt au niveau 2). Chaque branche a **au moins une compétence de dégâts dès le palier 1**, pour se suffire à elle-même dès la création. Chaque branche a **deux variantes** (le même nombre dans tous les arbres), dont certaines servent à s'adapter aux ennemis annoncés (ex. robots). **Peu d'états nouveaux** : les arbres réutilisent d'abord les états existants ; seuls **immobilisé** et **désarmé** s'ajoutent pour l'instant (pas de saignement). **Compétences partagées** : une même compétence peut figurer dans les arbres de plusieurs archétypes quand elle colle à leur style (décrite une seule fois en données ; ses dégâts suivent la puissance du héros qui l'utilise) ; seulement des compétences utilitaires des **paliers 1 et 2**, jamais les lourdes de palier 3 ni les compétences signature (dôme, Hypervitesse, Domination, tourelle, Exécution…). Les chiffres des compétences (dégâts, durées, portées) sont en données et se règlent en jouant.
+**Structure d'une branche** (la même pour tous les archétypes) : **palier 1** = 2 compétences actives, accessibles dès la création ; **palier 2** = 1 active et 1 passif, après 2 points dans la branche ; **palier 3** = 1 active lourde et 1 passif, après 4 points dans la branche. Finir une branche coûte 6 points. Une recrue n'a donc pas de passif à la création (au plus tôt au niveau 2). Chaque branche a **au moins une compétence de dégâts dès le palier 1**, pour se suffire à elle-même dès la création. Chaque branche a **deux variantes** (le même nombre dans tous les arbres), toujours sur des compétences des **paliers 1 et 2**, jamais sur la lourde de palier 3, dont certaines servent à s'adapter aux ennemis annoncés (ex. robots). **Peu d'états nouveaux** : les arbres réutilisent d'abord les états existants ; seuls **immobilisé** et **désarmé** s'ajoutent pour l'instant (pas de saignement). **Compétences partagées** : une même compétence peut figurer dans les arbres de plusieurs archétypes quand elle colle à leur style (décrite une seule fois en données ; ses dégâts suivent la puissance du héros qui l'utilise) ; seulement des compétences utilitaires des **paliers 1 et 2**, jamais les lourdes de palier 3 ni les compétences signature (dôme, Hypervitesse, Domination, tourelle, Exécution…). Les chiffres des compétences (dégâts, durées, portées) sont en données et se règlent en jouant.
 
 **Colosse** : trois branches. **Rempart** (protéger les alliés, encaisser à leur place) ✅ · **Cogneur** (dégâts au milieu de la mêlée) ✅ · **Lutteur** (déplacer les ennemis, tenir une ligne) ✅.
 
@@ -61,10 +61,10 @@
 
 *Cogneur*
 - **Palier 1 : Saut** (légère ; cf. section 3). **Variante : Écrasement**, il atterrit au contact d'un ennemi et ne frappe que lui, plus fort (pas de tir ami).
-- **Palier 1 : Coup de marteau** (légère) : gros coup au contact sur une seule cible, qui la déséquilibre.
+- **Palier 1 : Coup de marteau** (légère) : gros coup au contact sur une seule cible, qui la déséquilibre. **Variante : Séisme**, il frappe le sol au lieu d'une cible : zone autour de lui, moins de dégâts, court étourdissement au lieu du déséquilibre.
 - **Palier 2 : Lancer de décor** (légère) : il arrache un **obstacle bas à son contact** (voiture, muret) et le lance : dégâts de zone à distance. L'obstacle est détruit (la couverture disparaît, et c'est un dégât collatéral). Impossible sans obstacle sous la main.
 - **Palier 2, passif : Rage** : plus ses PV sont bas, plus il frappe fort.
-- **Palier 3 : Onde de choc** (lourde ; cf. section 3). **Variante : Séisme**, une zone autour de lui au lieu d'une ligne, plus courte, qui étourdit brièvement au lieu de déséquilibrer.
+- **Palier 3 : Onde de choc** (lourde ; cf. section 3).
 - **Palier 3, passif : Sur sa lancée** : quand il met un ennemi hors de combat, sa jauge se remplit en partie.
 
 *Lutteur*
@@ -80,9 +80,9 @@
 *Exécuteur*
 - **Palier 1 : Frappe précise** (légère ; cf. section 3). **Variante : Prise en tenaille**, n'ignore plus les protections, mais frappe plus fort si un allié est aussi au contact de la cible.
 - **Palier 1 : Ruée** (légère) : il fonce sur un ennemi à quelques cases, sans attaque d'opportunité, et le frappe.
-- **Palier 2 : Acharnement** (légère) : gros coup au contact, dont la recharge est annulée si la cible tombe.
+- **Palier 2 : Acharnement** (légère) : gros coup au contact, dont la recharge est annulée si la cible tombe. **Variante : Coup de grâce**, plus de recharge annulée, mais des dégâts qui montent avec les PV manquants de la cible, boss compris.
 - **Palier 2, passif : Point faible** (cf. section 3).
-- **Palier 3 : Exécution** (lourde ; cf. section 3). **Variante : Coup de grâce**, pas de mise à mort, mais des dégâts qui montent avec les PV manquants de la cible, boss compris.
+- **Palier 3 : Exécution** (lourde ; cf. section 3).
 - **Palier 3, passif : Opportuniste** : plus de dégâts contre une cible étourdie, déséquilibrée ou immobilisée.
 
 *Duelliste*
@@ -105,10 +105,10 @@
 
 *Éclair*
 - **Palier 1 : Percée** (légère ; cf. section 3). **Variante : Slalom**, ne touche que les ennemis, avec moins de dégâts.
-- **Palier 1 : Aller-retour** (légère) : il court frapper un ennemi à portée et revient à sa case de départ, sans attaque d'opportunité.
+- **Palier 1 : Aller-retour** (légère) : il court frapper un ennemi à portée et revient à sa case de départ, sans attaque d'opportunité. **Variante : Coup d'élan**, il ne revient pas, mais ses dégâts montent avec la distance parcourue.
 - **Palier 2 : Frappe en chaîne** (légère) : le joueur choisit un premier ennemi à portée de course ; le speedster le frappe, puis rebondit de lui-même vers l'ennemi le plus proche pas encore touché, s'il y en a un à quelques cases du précédent, et ainsi de suite (nombre de cibles limité, en données ; chaque ennemi une seule fois ; dégâts légers à chacun). **Ennemis seulement**. Il se déplace vraiment d'une cible à l'autre, sans attaque d'opportunité, et **finit au contact de la dernière**. La chaîne complète s'affiche avant de valider.
 - **Palier 2, passif : Insaisissable** : il ignore les attaques d'opportunité.
-- **Palier 3 : Hypervitesse** (lourde ; cf. section 3). **Variante : Surrégime**, plus rapide et plus longtemps, mais il finit étourdi.
+- **Palier 3 : Hypervitesse** (lourde ; cf. section 3).
 - **Palier 3, passif : Réflexes** : il esquive la première attaque ciblée qui le vise à chaque cycle (pas les zones).
 
 *Sauveteur*
@@ -121,11 +121,37 @@
 
 *Perturbateur*
 - **Palier 1 : Tourbillon** (légère ; cf. section 3). **Variante : Mur de vent**, au lieu de déséquilibrer, la zone bloque les tirs qui la traversent pendant quelques secondes.
-- **Palier 1 : Harcèlement** (légère) : rafale de coups sur une cible : dégâts, et elle est déséquilibrée.
+- **Palier 1 : Harcèlement** (légère) : rafale de coups sur une cible : dégâts, et elle est déséquilibrée. **Variante : Vol à la tire**, désarme la cible au lieu de la déséquilibrer.
 - **Palier 2 : Image rémanente** (légère) : il laisse un leurre à sa place et se déplace ; le leurre attire les ennemis et disparaît au premier coup.
 - **Palier 2, passif : Diversion** : les ennemis à son contact ne font plus d'attaques d'opportunité contre ses alliés.
-- **Palier 3 : Vortex** (lourde) : il court autour d'une grande zone ; les ennemis sont ramenés vers le centre, déséquilibrés, et prennent des dégâts. **Variante : Souffle**, il les repousse vers l'extérieur au lieu de les regrouper.
+- **Palier 3 : Vortex** (lourde) : il court autour d'une grande zone ; les ennemis sont ramenés vers le centre, déséquilibrés, et prennent des dégâts.
 - **Palier 3, passif : Voleur de temps** : ses coups retirent un peu de jauge à la cible.
+
+**Énergétique** : trois branches. **Feu** (dégâts à distance) ✅ · **Brasier** (corps à corps) ✅ · **Glace** (contrôle, peu de dégâts) ✅. Il peut poser des états, mais seulement ceux qui existent déjà (pas de brûlure, d'électrocution, etc.) : le froid **ralentit** (déséquilibré), **fige sur place** (immobilisé) ou **congèle** (étourdi) ; l'**électricité** n'existe que dans des variantes, moins puissantes que le feu mais avec un court étourdissement.
+
+*Feu*
+- **Palier 1 : Rayon** (légère ; cf. section 3). **Variante : Arc électrique**, moins de dégâts, étourdit brièvement les ennemis traversés.
+- **Palier 1 : Déflagration** (lourde, chargée ; cf. section 3).
+- **Palier 2 : Lance de feu** (légère) : très gros dégâts sur une seule cible à distance, longue recharge. **Variante : Chaîne d'éclairs**, rebondit sur les ennemis proches (même règle de rebond que la Frappe en chaîne du speedster), avec moins de dégâts par cible et un court étourdissement.
+- **Palier 2, passif : Perforant** : ses attaques ignorent la couverture.
+- **Palier 3 : Astre** (lourde) : il pose une sphère d'énergie qui explose trois fois de suite autour d'elle, puis disparaît (même mécanisme que la balise du tech).
+- **Palier 3, passif : Réaction en chaîne** : un ennemi qu'il met hors de combat explose et blesse les ennemis voisins.
+
+*Brasier*
+- **Palier 1 : Nova** (légère ; cf. section 3). **Variante : Onde de recul**, moins de dégâts, mais repousse les ennemis d'une case.
+- **Palier 1 : Propulsion** (légère) : il se propulse à quelques cases en laissant une explosion sur sa case de départ.
+- **Palier 2 : Point de fusion** (légère) : énormes dégâts sur une cible au contact. **Variante : Décharge** (électrique), moins de dégâts, étourdit brièvement la cible.
+- **Palier 2, passif : Démesure** (cf. section 3).
+- **Palier 3 : Forme d'énergie pure** (lourde ; cf. section 3).
+- **Palier 3, passif : Fournaise** : à chacune de ses actions, les ennemis à son contact prennent de petits dégâts.
+
+*Glace*
+- **Palier 1 : Éclat de glace** (légère) : trait à distance, petits dégâts, la cible est ralentie. **Variante : Gel**, immobilise la cible au lieu de la ralentir, avec moins de dégâts.
+- **Palier 1 : Mur de glace** (légère) : il crée une ligne de trois **blocs de glace** sur des cases libres à distance. Ce sont des **obstacles bas** (ils bloquent le passage, donnent une couverture, laissent passer les tirs, ont des PV) : on s'abrite derrière, on ferme une rue, le colosse peut en arracher un pour son Lancer de décor. Ils sont fragiles, **fondent au bout d'un moment**, et leur destruction ne compte pas comme dégât collatéral. **Variante : Pilier de glace**, un seul bloc, plus solide, qui bloque aussi la vue.
+- **Palier 2 : Verglas** (légère) : il gèle une zone au sol quelques secondes ; qui y entre ou y reste est ralenti.
+- **Palier 2, passif : Givre** : son attaque de base ralentit brièvement la cible.
+- **Palier 3 : Zéro absolu** (lourde, chargée) : grande zone ; tout ce qui s'y trouve au déclenchement est congelé quelques secondes et prend de petits dégâts.
+- **Palier 3, passif : Carapace de givre** : un ennemi qui le frappe au corps à corps est ralenti.
 
 ---
 
@@ -191,7 +217,7 @@
 - **Exécution** (lourde) : achève instantanément une cible sous un seuil de vie (~30 %), sinon très gros dégâts. ✅ **Pas sur les boss** (marqués dans les données) : gros dégâts seulement.
 - **Passif équipé : Point faible** : chaque cible qu'il frappe subit davantage de dégâts de la part des alliés pendant quelques secondes. ✅ Tout coup du combattant qui fait des dégâts (attaques d'opportunité comprises) rend la cible **vulnérable** : elle prend plus de dégâts de **toutes les sources**, combattant compris (bonus et durée en données).
 
-**Énergétique** (une seule énergie, visuel feu / électricité, **purs dégâts, sans états**) :
+**Énergétique** (kit du prologue : feu, purs dégâts ; l'arbre complet ajoute le corps à corps et la glace, cf. section 2, arbres de compétences) :
 - **Attaque de base** : trait d'énergie à distance.
 - **Rayon** : ligne qui **traverse** les ennemis et le décor sur toute sa longueur.
 - **Déflagration** : **attaque chargée** sur une zone à distance (zone affichée au sol, esquivable).
