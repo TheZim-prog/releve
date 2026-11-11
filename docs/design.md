@@ -47,13 +47,13 @@
 
 ### Arbres de compétences
 
-**Structure d'une branche** (la même pour tous les archétypes) : **palier 1** = 2 compétences actives, accessibles dès la création ; **palier 2** = 1 active et 1 passif, après 2 points dans la branche ; **palier 3** = 1 active lourde et 1 passif, après 4 points dans la branche. Finir une branche coûte 6 points. Une recrue n'a donc pas de passif à la création (au plus tôt au niveau 2). Chaque branche a **deux variantes** (le même nombre dans tous les arbres), dont certaines servent à s'adapter aux ennemis annoncés (ex. robots). **Peu d'états nouveaux** : les arbres réutilisent d'abord les états existants ; seuls **immobilisé** et **désarmé** s'ajoutent pour l'instant (pas de saignement). **Compétences partagées** : une même compétence peut figurer dans les arbres de plusieurs archétypes quand elle colle à leur style (décrite une seule fois en données ; ses dégâts suivent la puissance du héros qui l'utilise) ; seulement des compétences utilitaires des **paliers 1 et 2**, jamais les lourdes de palier 3 ni les compétences signature (dôme, Hypervitesse, Domination, tourelle, Exécution…). Les chiffres des compétences (dégâts, durées, portées) sont en données et se règlent en jouant.
+**Structure d'une branche** (la même pour tous les archétypes) : **palier 1** = 2 compétences actives, accessibles dès la création ; **palier 2** = 1 active et 1 passif, après 2 points dans la branche ; **palier 3** = 1 active lourde et 1 passif, après 4 points dans la branche. Finir une branche coûte 6 points. Une recrue n'a donc pas de passif à la création (au plus tôt au niveau 2). Chaque branche a **au moins une compétence de dégâts dès le palier 1**, pour se suffire à elle-même dès la création. Chaque branche a **deux variantes** (le même nombre dans tous les arbres), dont certaines servent à s'adapter aux ennemis annoncés (ex. robots). **Peu d'états nouveaux** : les arbres réutilisent d'abord les états existants ; seuls **immobilisé** et **désarmé** s'ajoutent pour l'instant (pas de saignement). **Compétences partagées** : une même compétence peut figurer dans les arbres de plusieurs archétypes quand elle colle à leur style (décrite une seule fois en données ; ses dégâts suivent la puissance du héros qui l'utilise) ; seulement des compétences utilitaires des **paliers 1 et 2**, jamais les lourdes de palier 3 ni les compétences signature (dôme, Hypervitesse, Domination, tourelle, Exécution…). Les chiffres des compétences (dégâts, durées, portées) sont en données et se règlent en jouant.
 
 **Colosse** : trois branches. **Rempart** (protéger les alliés, encaisser à leur place) ✅ · **Cogneur** (dégâts au milieu de la mêlée) ✅ · **Lutteur** (déplacer les ennemis, tenir une ligne) ✅.
 
 *Rempart*
 - **Palier 1 : Bouclier de zone** (légère ; cf. section 3, kits du prologue). **Variante : Bouclier personnel**, posé sur un seul allié, qu'il suit dans ses déplacements (même règle : une attaque bloquée, tombe à la prochaine action du colosse).
-- **Palier 1 : Provocation** (légère) : les ennemis autour du colosse abandonnent leur intention et le visent pour leur prochaine action ; s'ils ne peuvent pas l'atteindre, ils s'en rapprochent. **Marche sur les boss** (elle ne les empêche pas d'agir). **Variante : Défi**, un seul ennemi, à distance, pour ses deux prochaines actions.
+- **Palier 1 : Provocation** (légère) : un coup au sol, qui fait de petits dégâts aux ennemis autour du colosse (ennemis seulement) ; ils abandonnent leur intention et le visent pour leur prochaine action ; s'ils ne peuvent pas l'atteindre, ils s'en rapprochent. **Marche sur les boss** (elle ne les empêche pas d'agir). **Variante : Défi**, un seul ennemi, à distance, pour ses deux prochaines actions.
 - **Palier 2 : Peau d'acier** (légère, sur lui) : il gagne des **PV temporaires**, qui encaissent les dégâts avant ses vrais PV. Montant : **la moitié de ses PV actuels** au moment du lancement (part en données) ; elle protège donc surtout un colosse encore en forme, ce n'est pas un bouton de panique. Ils disparaissent au bout de quelques secondes (moins que la recharge) ; pas de cumul (relancer remet à neuf) ; les soins ne les remplissent pas ; la Frappe précise du combattant passe à travers.
 - **Palier 2, passif : Garde du corps** : il prend à sa place une attaque visant un allié adjacent, une fois par cycle.
 - **Palier 3 : Forteresse** (lourde) : grand dôme autour de lui, qui bloque **toutes** les attaques contre les alliés dessous tant qu'il le tient (durée maximale en données). Pendant ce temps il est immobile et sa jauge reste à 0, comme pour une attaque chargée ; le dôme tombe s'il est étourdi, mis à terre ou déplacé de force. Le dôme **ne protège pas le colosse lui-même**.
@@ -100,6 +100,32 @@
 - **Palier 2, passif : Premier sang** : son premier coup sur un ennemi encore intact fait beaucoup plus de dégâts.
 - **Palier 3 : Lancer mortel** (lourde, chargée) : très gros dégâts sur une cible à longue portée ; raté si elle sort de sa vue pendant la charge.
 - **Palier 3, passif : Embusqué** : collé à un mur ou à un obstacle, ses attaques à distance frappent plus fort.
+
+**Speedster** : trois branches. **Éclair** (frapper et repartir) ✅ · **Sauveteur** (aider l'équipe) ✅ · **Perturbateur** (gêner les ennemis) ✅. Son passif du prologue (Insaisissable) devient un choix parmi six : sans lui, il subit les attaques d'opportunité.
+
+*Éclair*
+- **Palier 1 : Percée** (légère ; cf. section 3). **Variante : Slalom**, ne touche que les ennemis, avec moins de dégâts.
+- **Palier 1 : Aller-retour** (légère) : il court frapper un ennemi à portée et revient à sa case de départ, sans attaque d'opportunité.
+- **Palier 2 : Frappe en chaîne** (légère) : le joueur choisit un premier ennemi à portée de course ; le speedster le frappe, puis rebondit de lui-même vers l'ennemi le plus proche pas encore touché, s'il y en a un à quelques cases du précédent, et ainsi de suite (nombre de cibles limité, en données ; chaque ennemi une seule fois ; dégâts légers à chacun). **Ennemis seulement**. Il se déplace vraiment d'une cible à l'autre, sans attaque d'opportunité, et **finit au contact de la dernière**. La chaîne complète s'affiche avant de valider.
+- **Palier 2, passif : Insaisissable** : il ignore les attaques d'opportunité.
+- **Palier 3 : Hypervitesse** (lourde ; cf. section 3). **Variante : Surrégime**, plus rapide et plus longtemps, mais il finit étourdi.
+- **Palier 3, passif : Réflexes** : il esquive la première attaque ciblée qui le vise à chaque cycle (pas les zones).
+
+*Sauveteur*
+- **Palier 1 : Sauvetage éclair** (légère ; cf. section 3). **Variante : Réanimation express**, il court relever un allié à terre à distance, sans le déplacer.
+- **Palier 1 : Dégagement** (légère) : il fonce sur un ennemi à portée, le frappe et le repousse de deux cases (pour libérer un allié menacé).
+- **Palier 2 : Transport** (légère) : il emmène un allié adjacent avec lui ; ils arrivent côte à côte, sans attaque d'opportunité. **Variante : Permutation**, il échange sa place avec un allié à portée.
+- **Palier 2, passif : Sillage** : quand il finit son action au contact d'alliés, leur jauge avance un peu.
+- **Palier 3 : Élan collectif** (lourde) : les alliés autour de lui sont accélérés brièvement.
+- **Palier 3, passif : Départ canon** : il commence chaque combat avec la jauge pleine.
+
+*Perturbateur*
+- **Palier 1 : Tourbillon** (légère ; cf. section 3). **Variante : Mur de vent**, au lieu de déséquilibrer, la zone bloque les tirs qui la traversent pendant quelques secondes.
+- **Palier 1 : Harcèlement** (légère) : rafale de coups sur une cible : dégâts, et elle est déséquilibrée.
+- **Palier 2 : Image rémanente** (légère) : il laisse un leurre à sa place et se déplace ; le leurre attire les ennemis et disparaît au premier coup.
+- **Palier 2, passif : Diversion** : les ennemis à son contact ne font plus d'attaques d'opportunité contre ses alliés.
+- **Palier 3 : Vortex** (lourde) : il court autour d'une grande zone ; les ennemis sont ramenés vers le centre, déséquilibrés, et prennent des dégâts. **Variante : Souffle**, il les repousse vers l'extérieur au lieu de les regrouper.
+- **Palier 3, passif : Voleur de temps** : ses coups retirent un peu de jauge à la cible.
 
 ---
 
