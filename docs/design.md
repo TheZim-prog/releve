@@ -153,6 +153,32 @@
 - **Palier 3 : Zéro absolu** (lourde, chargée) : grande zone ; tout ce qui s'y trouve au déclenchement est congelé quelques secondes et prend de petits dégâts.
 - **Palier 3, passif : Carapace de givre** : un ennemi qui le frappe au corps à corps est ralenti.
 
+**Télépathe** : trois branches. **Mentaliste** (contrôler les esprits) ✅ · **Kinésiste** (déplacer la matière) ✅ · **Empathe** (soutenir les alliés) ✅. Il fait moins de dégâts que les autres, c'est dans l'esprit de l'archétype (à surveiller en jeu). La règle des robots découpe l'arbre : tout le Mentaliste et le Siphon sont des pouvoirs **mentaux**, sans effet sur les robots ; le Kinésiste marche sur tout.
+
+*Mentaliste*
+- **Palier 1 : Paralysie** (légère ; cf. section 3). **Variante : Torpeur**, ralentit tous les ennemis d'une petite zone au lieu d'en étourdir un.
+- **Palier 1 : Frappe télépathique** (légère) : dégâts sur une cible à portée, **sans ligne de vue** (il sent les esprits à travers les murs). **Variante : Cri psychique**, touche aussi les ennemis autour de la cible, avec moins de dégâts.
+- **Palier 2 : Confusion** (légère ; cf. section 3).
+- **Palier 2, passif : Emprise** (cf. section 3).
+- **Palier 3 : Domination** (lourde ; cf. section 3). **Sur un boss**, elle n'est plus refusée : elle échoue mais le secoue, il prend de gros dégâts mentaux et il est ralenti quelques secondes (la compétence sert donc dans tous les combats).
+- **Palier 3, passif : Contagion** : quand un ennemi paralysé ou confus par lui tombe, l'état saute sur l'ennemi le plus proche.
+
+*Kinésiste*
+- **Palier 1 : Télékinésie** (légère ; cf. section 3).
+- **Palier 1 : Projectile** (légère) : il lance un débris sur une cible à distance : dégâts. **Variante : Lancer de décor**, il soulève un obstacle bas à portée et le lance : dégâts de zone, obstacle détruit (comme le colosse, mais à distance).
+- **Palier 2 : Étau** (légère) : dégâts légers, et immobilise une cible à distance. **Variante : Arrachement**, dégâts légers, et désarme la cible au lieu de l'immobiliser.
+- **Palier 2, passif : Écran cinétique** : il subit moins de dégâts des attaques à distance.
+- **Palier 3 : Onde de force** (lourde) : repousse toutes les unités d'une zone loin de lui, avec dégâts de collision.
+- **Palier 3, passif : Impact** : tout ennemi qu'il déplace de force prend des dégâts à l'arrivée.
+
+*Empathe*
+- **Palier 1 : Siphon** (légère, mental) : dégâts sur un ennemi ; l'allié le plus blessé à portée récupère autant de PV. **Variante : Transfusion**, pas de dégâts : il donne ses propres PV à un allié.
+- **Palier 1 : Stimulation** (légère) : un allié est accéléré brièvement. **Variante : Concentration**, l'allié devient surpuissant (dégâts augmentés) au lieu d'être accéléré.
+- **Palier 2 : Clarté** (légère) : retire les états néfastes d'un allié (le seul retrait d'états du jeu).
+- **Palier 2, passif : Présence** : à chacune de ses actions, les alliés proches récupèrent un peu de PV.
+- **Palier 3 : Éveil** (lourde) : grande zone ; soigne les alliés debout et relève ceux qui sont à terre.
+- **Palier 3, passif : Ange gardien** : une fois par combat, un allié proche qui devrait tomber reste à 1 PV.
+
 ---
 
 ## 3. Combat
