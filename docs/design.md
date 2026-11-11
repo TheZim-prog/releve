@@ -47,7 +47,7 @@
 
 ### Arbres de compétences
 
-**Structure d'une branche** (la même pour tous les archétypes) : **palier 1** = 2 compétences actives, accessibles dès la création ; **palier 2** = 1 active et 1 passif, après 2 points dans la branche ; **palier 3** = 1 active lourde et 1 passif, après 4 points dans la branche. Finir une branche coûte 6 points. Une recrue n'a donc pas de passif à la création (au plus tôt au niveau 2). Chaque branche a **deux variantes** (le même nombre dans tous les arbres), dont certaines servent à s'adapter aux ennemis annoncés (ex. robots). Les chiffres des compétences (dégâts, durées, portées) sont en données et se règlent en jouant.
+**Structure d'une branche** (la même pour tous les archétypes) : **palier 1** = 2 compétences actives, accessibles dès la création ; **palier 2** = 1 active et 1 passif, après 2 points dans la branche ; **palier 3** = 1 active lourde et 1 passif, après 4 points dans la branche. Finir une branche coûte 6 points. Une recrue n'a donc pas de passif à la création (au plus tôt au niveau 2). Chaque branche a **deux variantes** (le même nombre dans tous les arbres), dont certaines servent à s'adapter aux ennemis annoncés (ex. robots). **Peu d'états nouveaux** : les arbres réutilisent d'abord les états existants ; seuls **immobilisé** et **désarmé** s'ajoutent pour l'instant (pas de saignement). **Compétences partagées** : une même compétence peut figurer dans les arbres de plusieurs archétypes quand elle colle à leur style (décrite une seule fois en données ; ses dégâts suivent la puissance du héros qui l'utilise) ; seulement des compétences utilitaires des **paliers 1 et 2**, jamais les lourdes de palier 3 ni les compétences signature (dôme, Hypervitesse, Domination, tourelle, Exécution…). Les chiffres des compétences (dégâts, durées, portées) sont en données et se règlent en jouant.
 
 **Colosse** : trois branches. **Rempart** (protéger les alliés, encaisser à leur place) ✅ · **Cogneur** (dégâts au milieu de la mêlée) ✅ · **Lutteur** (déplacer les ennemis, tenir une ligne) ✅.
 
@@ -74,6 +74,32 @@
 - **Palier 2, passif : Vigilance** : une attaque d'opportunité de plus par cycle (le passif du colosse du prologue).
 - **Palier 3 : Tourniquet** (lourde) : il attrape un ennemi au contact, frappe avec lui **tout ce qui l'entoure** (alliés compris, règle par défaut des zones), puis le projette dans la direction choisie (règles de la Projection).
 - **Palier 3, passif : Coup d'arrêt** : ses attaques d'opportunité arrêtent net le déplacement de la cible.
+
+**Combattant** : trois branches. **Exécuteur** (éliminer une cible précise) ✅ · **Duelliste** (tenir en mêlée : parer, riposter, contrôler) ✅ · **Franc-tireur** (distance et accessoires) ✅.
+
+*Exécuteur*
+- **Palier 1 : Frappe précise** (légère ; cf. section 3). **Variante : Prise en tenaille**, n'ignore plus les protections, mais frappe plus fort si un allié est aussi au contact de la cible.
+- **Palier 1 : Ruée** (légère) : il fonce sur un ennemi à quelques cases, sans attaque d'opportunité, et le frappe.
+- **Palier 2 : Acharnement** (légère) : gros coup au contact, dont la recharge est annulée si la cible tombe.
+- **Palier 2, passif : Point faible** (cf. section 3).
+- **Palier 3 : Exécution** (lourde ; cf. section 3). **Variante : Coup de grâce**, pas de mise à mort, mais des dégâts qui montent avec les PV manquants de la cible, boss compris.
+- **Palier 3, passif : Opportuniste** : plus de dégâts contre une cible étourdie, déséquilibrée ou immobilisée.
+
+*Duelliste*
+- **Palier 1 : Coup étourdissant** (légère ; cf. section 3). **Variante : Balayage**, déséquilibre tous les ennemis à son contact au lieu d'en étourdir un.
+- **Palier 1 : Parade** (légère, sur lui) : bloque la prochaine attaque au corps à corps qui le vise. **Variante : Déviation**, bloque à la place la prochaine attaque à distance qui le vise.
+- **Palier 2 : Désarmement** (légère) : la cible est **désarmée** quelques secondes (nouvel état : attaque de base seulement) et sa charge en cours est interrompue. Marche sur les **boss**, avec une durée réduite.
+- **Palier 2, passif : Riposte** : contre-attaque quand il est attaqué au corps à corps, une fois par cycle.
+- **Palier 3 : Maître d'armes** (lourde, sur lui) : il **provoque les ennemis à son contact** (comme la Provocation du colosse : ils le visent pour leur prochaine action), puis, pendant quelques secondes, pare toutes les attaques au corps à corps et riposte à chacune. Les tirs et les zones passent.
+- **Palier 3, passif : Seul contre tous** : il subit moins de dégâts quand plusieurs ennemis sont à son contact.
+
+*Franc-tireur*
+- **Palier 1 : Lames de jet** (légère ; cf. section 3). **Variante : Volée**, une courte ligne qui traverse les ennemis, avec moins de dégâts par cible.
+- **Palier 1 : Fumigène** (légère) : écran de fumée sur une zone, qui bloque la vue quelques secondes, pas le passage (le Tourbillon du speedster le dissipe).
+- **Palier 2 : Piège** (légère) : posé sur une case ; le premier ennemi qui y entre prend des dégâts et est immobilisé. **Variante : Piège explosif**, au lieu d'immobiliser, il explose et touche tout le monde autour.
+- **Palier 2, passif : Premier sang** : son premier coup sur un ennemi encore intact fait beaucoup plus de dégâts.
+- **Palier 3 : Lancer mortel** (lourde, chargée) : très gros dégâts sur une cible à longue portée ; raté si elle sort de sa vue pendant la charge.
+- **Palier 3, passif : Embusqué** : collé à un mur ou à un obstacle, ses attaques à distance frappent plus fort.
 
 ---
 
