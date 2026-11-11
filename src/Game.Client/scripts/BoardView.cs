@@ -73,8 +73,6 @@ public partial class BoardView : Node3D
         _layers[layer] = (node, set, color);
     }
 
-    public void ClearLayer(string layer) => SetLayer(layer, Array.Empty<Cell>(), Colors.White);
-
     public static StandardMaterial3D Translucent(Color color) => new()
     {
         AlbedoColor = color,
