@@ -43,7 +43,7 @@
 | 2.4 | Quelles **conséquences** en cas de défaite (blessures, séquelles, indisponibilité) ? | ✅ Couvert par 1.4 (chutes, récupération lente, mort différée). |
 | 2.5 | Comment fonctionnent les **combos** entre héros de joueurs différents ? | ⏸ Reporté : à voir plus tard si c'est pertinent. |
 | 2.6 | Quelles **stats**, et comment montent-elles avec le niveau ? | ✅ **Quatre stats** : **PV**, **puissance**, **initiative**, **mobilité**. Pas d'armure comme stat de héros ; de l'**armure donnée par des compétences** (tech, colosse, combattant…) reste possible, *à voir avec les arbres*. **20 niveaux** (environ un par session). **Chaque niveau donne un point de stat**, à mettre dans **PV, puissance ou initiative** : c'est ce qui différencie deux héros du même archétype (un combattant solide, un autre rapide). **Pas de hausse automatique** : toute la progression de stats vient de ces choix. La **mobilité** n'est pas achetable (archétype, traits et compétences seulement : une case de plus change tout). Chaque point vaut un **pourcentage de la stat de base de l'archétype** (en données ; valeurs indicatives : +3 % de PV, +3 % de puissance, +2 % d'initiative, soit au plus +57 % dans une stat avec les 19 points d'un héros de niveau 20 : la progression reste plate, une recrue reste utile à côté d'un vétéran), ce qui garde l'identité des archétypes (un colosse tout en initiative reste plus lent qu'un speedster). **Pas de plafond par stat** pour commencer : les joueurs se spécialisent comme ils veulent (*à surveiller en jeu, notamment le « tout initiative »*). **Points définitifs**, pas de redistribution : un héros garde ses défauts (*au besoin, imaginer un renvoi du héros pour recommencer avec un autre*). Technique : jauge à 10 000 (au lieu de 1 000), pour que l'initiative se règle finement. **Puissance** : un pourcentage (100 % au niveau 1) qui multiplie les **dégâts et les soins** de toutes les compétences du héros ; elle ne touche pas aux **durées d'états**. **Héros établis du prologue** : mêmes règles que les autres, ce sont des héros de **haut niveau** dont les points suivent leur cliché (speedster en initiative, colosse en PV…) ; les **recrues** partent de la base de l'archétype, plus basse, d'où le contraste entre le prologue et le chapitre 1. 🟡 *À fixer : les stats de base de chaque archétype (déduites des chiffres actuels du prologue).* |
-| 2.7 | Quelle **forme** ont les arbres de compétences ? | ✅ **Trois branches par archétype**, chacune une façon de le jouer (exemple à définir, pour le colosse : protecteur, cogneur, lutteur), avec **4 compétences actives et 1 ou 2 passifs** par branche. On avance dans une branche **par paliers** (il faut y avoir dépensé N points pour atteindre le palier suivant), sans toile de prérequis. **Impossible de tout débloquer** : l'arbre a **18 cases** (12 actives, 6 passifs) et un héros de niveau 20 a **13 points de compétence** (3 à la création, pour remplir ses emplacements de départ, puis 1 à chaque niveau pair) : de quoi finir deux branches et prendre une case dans la troisième, ou piocher partout. **Compétences définitives**, comme les points de stats (2.6) : pas de redistribution. La souplesse reste dans l'**équipement** avant chaque mission et dans les **variantes**, qui ne coûtent pas de point (choisies librement au QG une fois la compétence achetée). **Emplacements** : 3 actifs et 1 passif au départ, un 4e actif au niveau 10, rien de plus (cf. 2.3). 🟡 *En cours : contenu des branches de chaque archétype (ci-dessous).* |
+| 2.7 | Quelle **forme** ont les arbres de compétences ? | ✅ **Trois branches par archétype**, chacune une façon de le jouer (exemple à définir, pour le colosse : protecteur, cogneur, lutteur), avec **4 compétences actives et 1 ou 2 passifs** par branche. On avance dans une branche **par paliers** (il faut y avoir dépensé N points pour atteindre le palier suivant), sans toile de prérequis. **Impossible de tout débloquer** : l'arbre a **18 cases** (12 actives, 6 passifs) et un héros de niveau 20 a **13 points de compétence** (3 à la création, pour remplir ses emplacements de départ, puis 1 à chaque niveau pair) : de quoi finir deux branches et prendre une case dans la troisième, ou piocher partout. **Compétences définitives**, comme les points de stats (2.6) : pas de redistribution. La souplesse reste dans l'**équipement** avant chaque mission et dans les **variantes**, qui ne coûtent pas de point (choisies librement au QG une fois la compétence achetée). **Emplacements** : 3 actifs et 1 passif au départ, un 4e actif au niveau 10, rien de plus (cf. 2.3). Contenu des branches des six archétypes : ci-dessous. |
 
 ### Arbres de compétences
 
@@ -96,7 +96,7 @@
 *Franc-tireur*
 - **Palier 1 : Lames de jet** (légère ; cf. section 3). **Variante : Volée**, une courte ligne qui traverse les ennemis, avec moins de dégâts par cible.
 - **Palier 1 : Fumigène** (légère) : écran de fumée sur une zone, qui bloque la vue quelques secondes, pas le passage (le Tourbillon du speedster le dissipe).
-- **Palier 2 : Piège** (légère) : posé sur une case ; le premier ennemi qui y entre prend des dégâts et est immobilisé. **Variante : Piège explosif**, au lieu d'immobiliser, il explose et touche tout le monde autour.
+- **Palier 2 : Piège** (légère) : posé sur une case ; le premier ennemi qui y entre prend des dégâts et est immobilisé. **Les ennemis ne le voient pas** : l'IA choisit son chemin comme si la case était vide (au joueur de lire les trajets : une porte, une ruelle, devant un allié qui sert d'appât) ; tout ennemi qui entre sur la case le déclenche, de lui-même ou **de force** (Projection, Télékinésie, Dégagement…). Les alliés le voient tous et ne le déclenchent pas. **Un seul piège actif par héros** (en poser un autre remplace l'ancien). *(Plus tard, certains ennemis pourront détecter les pièges.)* **Variante : Piège explosif**, au lieu d'immobiliser, il explose et touche tout le monde autour.
 - **Palier 2, passif : Premier sang** : son premier coup sur un ennemi encore intact fait beaucoup plus de dégâts.
 - **Palier 3 : Lancer mortel** (lourde, chargée) : très gros dégâts sur une cible à longue portée ; raté si elle sort de sa vue pendant la charge.
 - **Palier 3, passif : Embusqué** : collé à un mur ou à un obstacle, ses attaques à distance frappent plus fort.
@@ -178,6 +178,32 @@
 - **Palier 2, passif : Présence** : à chacune de ses actions, les alliés proches récupèrent un peu de PV.
 - **Palier 3 : Éveil** (lourde) : grande zone ; soigne les alliés debout et relève ceux qui sont à terre.
 - **Palier 3, passif : Ange gardien** : une fois par combat, un allié proche qui devrait tomber reste à 1 PV.
+
+**Tech** : trois branches. **Ingénieur** (drones et gadgets) ✅ · **Tacticien** (coordonner l'équipe) ✅ · **Saboteur** (neutraliser l'adversaire) ✅. Les **gadgets** sont les unités qu'il pose (tourelle, balise, drone de combat) : seule la branche Ingénieur en a.
+
+*Ingénieur*
+- **Palier 1 : Tourelle** (légère ; cf. section 3). **Variante : Tourelle de suppression**, moins de dégâts, mais ses tirs ralentissent.
+- **Palier 1 : Nano-soin** (légère ; cf. section 3). **Variante : Balise bouclier**, donne des PV temporaires au lieu de soigner.
+- **Palier 2 : Piège** (légère ; partagé avec le combattant, branche Franc-tireur).
+- **Palier 2, passif : Surcadençage** : ses gadgets agissent plus vite.
+- **Palier 3 : Drone de combat** (lourde) : il déploie un drone mobile, qui se déplace et attaque tout seul.
+- **Palier 3, passif : Double déploiement** : il peut avoir deux tourelles ou deux balises actives à la fois.
+
+*Tacticien*
+- **Palier 1 : Tir de désignation** (légère) : dégâts à distance, et la cible devient vulnérable aux dégâts de tous. **Variante : Tir de suppression**, ralentit la cible au lieu de la rendre vulnérable.
+- **Palier 1 : Tir de couverture** (légère) : il surveille une zone ; le premier ennemi qui y bouge ou y agit prend un tir (la « réaction préparée » de la section 3).
+- **Palier 2 : Ordre tactique** (légère ; cf. section 3 ; au palier 2 parce qu'elle est forte). **Variante : Rechargement**, annule les recharges en cours de l'allié au lieu de remplir sa jauge.
+- **Palier 2, passif : Analyse tactique** (cf. section 3).
+- **Palier 3 : Frappe coordonnée** (lourde) : il désigne une cible ; chaque allié qui l'a à portée lui porte aussitôt son attaque de base, gratuitement.
+- **Palier 3, passif : Commandement** : les alliés proches de lui remplissent leur jauge un peu plus vite.
+
+*Saboteur*
+- **Palier 1 : Électrochoc** (légère) : dégâts à courte portée et court étourdissement, plus long et plus fort contre un robot. **Variante : Filet**, immobilise la cible au lieu de l'étourdir, sans bonus contre les robots.
+- **Palier 1 : Brouillage** (légère) : la cible perd une partie de sa jauge, davantage si c'est un robot. **Variante : Interférences**, une petite zone, avec moins de jauge perdue par cible.
+- **Palier 2 : Piratage** (légère) : il prend le contrôle d'un **robot** ennemi quelques secondes ; sur un autre ennemi, celui-ci est désarmé.
+- **Palier 2, passif : Champ de brouillage** : les ennemis proches de lui remplissent leur jauge un peu plus lentement (le miroir de Commandement).
+- **Palier 3 : Impulsion électromagnétique** (lourde ; cf. section 3).
+- **Palier 3, passif : Récupération d'énergie** : il gagne un peu de jauge pour chaque ennemi qu'il étourdit.
 
 ---
 
