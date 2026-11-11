@@ -54,7 +54,28 @@ En combat :
 - Solo seulement : **vitesse** (50 / 75 / 100 %) avec les deux touches à droite du 0, ou le pavé numérique - / + ;
   **F9** : recommencer (relit `data/`).
 
-Options de développement (après `--`) :
+## Exporter le jeu pour les amis
+
+```
+.\export.ps1
+```
+
+Le script produit `publish/Releve/` (le jeu, autonome : ni .NET ni Godot à installer) et
+`publish/Releve-windows.zip`, à envoyer tel quel. Les amis **suppriment l'ancien dossier `Releve`** s'ils en ont un
+(sinon de vieux fichiers de `data/` y resteraient), dézippent, puis lancent `Releve\Releve.exe` ; Windows affiche un
+avertissement au premier lancement (exécutable non signé) : « Informations complémentaires », puis « Exécuter quand
+même ».
+
+- Prérequis, une seule fois : les modèles d'export de Godot 4.7.2 .NET (dans l'éditeur Godot : Éditeur > Gérer les
+  modèles d'export).
+- Le dossier `data/` est copié à côté de l'exécutable : c'est celui-là que lit le jeu exporté.
+- **Tout le monde doit avoir la même version** : après un changement de code ou de `data/`, refaire l'export et
+  renvoyer le zip à chacun (et republier le serveur dédié s'il y en a un). Sinon le serveur refuse le joueur (contenu
+  différent) ou le combat se désynchronise (code différent).
+
+## Options de développement
+
+Après `--` :
 
 - `--solo` : combat solo direct ; `--ai-heroes=on` : solo où l'IA joue aussi les héros.
 - `--host` ou `--join=<adresse>`, avec `--name=`, `--port=`, `--pick=<n° du héros>`, `--start=<nb de joueurs>` :

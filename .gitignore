@@ -11,3 +11,5 @@ publish/
 .mono/
 *.translation
 *.csproj.old
+# Solution que Godot exige pour exporter : créée et retirée par export.ps1 (le dépôt n'a que Releve.sln).
+src/Game.Client/Game.Client.sln

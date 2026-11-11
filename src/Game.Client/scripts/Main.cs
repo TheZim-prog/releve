@@ -63,7 +63,20 @@ public partial class Main : Node
 
     public override void _Ready()
     {
-        _content = GameData.Load();
+        try
+        {
+            _content = GameData.Load();
+        }
+        catch (Exception e)
+        {
+            // Le jeu exporté n'a pas de console : sans ce message, le joueur ne verrait qu'une fenêtre vide.
+            GD.PushError(e.ToString());
+            OS.Alert("Le contenu du jeu (dossier data) est absent ou abîmé.\n" +
+                "Supprime ce dossier du jeu, puis dézippe à nouveau le jeu complet.\n\n" + e.Message, "Relève");
+            SetProcess(false);
+            GetTree().Quit(1);
+            return;
+        }
         _screenshotPath = DevArg("screenshot");
         _screenshotIn = double.TryParse(DevArg("at"), System.Globalization.CultureInfo.InvariantCulture, out var at) ? at : 4;
         if (int.TryParse(DevArg("pick"), out var pick))
