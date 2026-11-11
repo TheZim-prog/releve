@@ -62,6 +62,9 @@ public partial class MenuScreen : Control
     public string Address { get; set; } = "127.0.0.1";
     public int Port { get; set; } = Protocol.DefaultPort;
 
+    /// <summary>Version du jeu (code et contenu), affichée en bas : deux joueurs doivent avoir la même pour jouer ensemble.</summary>
+    public string GameVersion { get; set; } = "";
+
     public override void _Ready()
     {
         var column = Ui.CenteredColumn(this, 420);
@@ -91,6 +94,9 @@ public partial class MenuScreen : Control
         column.AddChild(_buttons[^1]);
         _status = Ui.Text("", 15, HorizontalAlignment.Center);
         column.AddChild(_status);
+        var version = Ui.Text($"Version {GameVersion}", 13, HorizontalAlignment.Center);
+        version.Modulate = new Color(1, 1, 1, 0.5f);
+        column.AddChild(version);
     }
 
     public void SetStatus(string text, bool error = false)

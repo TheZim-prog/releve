@@ -130,7 +130,7 @@ public sealed class GameServer : IDisposable
             return;
         }
         if (message is JoinRequest join)
-            Log($"{peer.Connection.RemoteAddress} joins as '{join.Name}'.");
+            Log($"{peer.Connection.RemoteAddress} joins as '{join.Name}' (code {join.CodeVersion}, content {join.ContentVersion}).");
         _session.Receive(peer, message);
     }
 

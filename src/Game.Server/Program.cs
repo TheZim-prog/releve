@@ -45,7 +45,7 @@ if (!content.Scenarios.ContainsKey(scenario))
     return 1;
 }
 void Log(string line) => Console.WriteLine($"{DateTime.Now:HH:mm:ss} {line}");
-Log($"Content {content.Version} from {Path.GetFullPath(data)}, scenario '{scenario}'.");
+Log($"Code {Protocol.CodeVersion}, content {content.Version} from {Path.GetFullPath(data)}, scenario '{scenario}'.");
 
 using var server = new GameServer(content, scenario, port, Log);
 server.Start();

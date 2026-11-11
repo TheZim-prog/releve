@@ -141,6 +141,11 @@ public sealed class ServerSession
             peer.Send(new JoinRefused(JoinRefusal.ProtocolMismatch));
             return;
         }
+        if (join.CodeVersion != Protocol.CodeVersion)
+        {
+            peer.Send(new JoinRefused(JoinRefusal.CodeMismatch));
+            return;
+        }
         if (join.ContentVersion != _content.Version)
         {
             peer.Send(new JoinRefused(JoinRefusal.ContentMismatch));

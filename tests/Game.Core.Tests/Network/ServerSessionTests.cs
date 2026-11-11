@@ -48,8 +48,8 @@ public class ServerSessionTests
 
         public T Last<T>() where T : ServerMessage => Received.OfType<T>().Last();
 
-        public void Join(string name, string content = "v1", int protocol = Protocol.Version) =>
-            Say(new JoinRequest(name, protocol, content));
+        public void Join(string name, string content = "v1", int protocol = Protocol.Version, string? code = null) =>
+            Say(new JoinRequest(name, protocol, code ?? Protocol.CodeVersion, content));
     }
 
     private static (ServerSession Session, FakeClient Alice, FakeClient Bob) TwoPlayersInCombat()
@@ -82,14 +82,15 @@ public class ServerSessionTests
         var alice = new FakeClient(session);
         alice.Join("Alice");
 
-        void Refused(JoinRefusal reason, string name, string content = "v1", int protocol = Protocol.Version)
+        void Refused(JoinRefusal reason, string name, string content = "v1", int protocol = Protocol.Version, string? code = null)
         {
             var client = new FakeClient(session);
-            client.Join(name, content, protocol);
+            client.Join(name, content, protocol, code);
             Assert.Equal(new JoinRefused(reason), Assert.Single(client.Received));
         }
 
         Refused(JoinRefusal.ProtocolMismatch, "Bob", protocol: Protocol.Version + 1);
+        Refused(JoinRefusal.CodeMismatch, "Bob", code: "0000000000000000");
         Refused(JoinRefusal.ContentMismatch, "Bob", content: "v2");
         Refused(JoinRefusal.InvalidName, "  ");
         Refused(JoinRefusal.InvalidName, new string('x', Protocol.MaxNameLength + 1));

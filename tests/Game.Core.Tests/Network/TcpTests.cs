@@ -64,7 +64,7 @@ public class TcpTests(ITestOutputHelper output)
     private static async Task<Inbox> Join(GameServer server, string name)
     {
         var inbox = new Inbox(await GameClient.ConnectAsync("127.0.0.1", server.Port));
-        inbox.Client.Send(new JoinRequest(name, Protocol.Version, Content.Version));
+        inbox.Client.Send(new JoinRequest(name, Protocol.Version, Protocol.CodeVersion, Content.Version));
         await inbox.WaitFor<Welcome>();
         return inbox;
     }
@@ -113,7 +113,7 @@ public class TcpTests(ITestOutputHelper output)
         using var server = StartServer(Content);
         var stranger = new Inbox(await GameClient.ConnectAsync("127.0.0.1", server.Port));
 
-        stranger.Client.Send(new JoinRequest("Eve", Protocol.Version, "other"));
+        stranger.Client.Send(new JoinRequest("Eve", Protocol.Version, Protocol.CodeVersion, "other"));
 
         Assert.Equal(JoinRefusal.ContentMismatch, (await stranger.WaitFor<JoinRefused>()).Reason);
     }

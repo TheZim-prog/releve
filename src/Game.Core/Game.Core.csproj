@@ -6,4 +6,76 @@
     <InternalsVisibleTo Include="Game.Core.Tests" />
   </ItemGroup>
 
+  <!--
+    Version du code (Protocol.CodeVersion) : l'empreinte des sources de Game.Core (et des fichiers de projet qui
+    règlent sa compilation), embarquée dans l'assembly comme ressource « CodeVersion ». Le serveur refuse à la
+    connexion un joueur dont le code diffère : sa simulation divergerait.
+
+    Elle ne dépend que du texte des fichiers (fins de ligne normalisées, comme pour data/) : la même en Debug, en
+    Release, dans le jeu exporté et dans le serveur publié, sur toute machine. Elle n'est recalculée que si un fichier
+    a changé, ou si la liste des fichiers a changé (ajout, suppression, renommage). C'est une ressource et non un
+    attribut : un changement interne à Game.Core ne force pas la recompilation des projets qui en dépendent.
+  -->
+  <ItemGroup>
+    <CodeVersionSource Include="**/*.cs" Exclude="bin/**;obj/**" />
+    <CodeVersionSource Include="$(MSBuildProjectFullPath);$(MSBuildProjectDirectory)/../../Directory.Build.props" />
+  </ItemGroup>
+
+  <UsingTask TaskName="HashSources" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Hash ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Security.Cryptography" />
+      <Using Namespace="System.Text" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        // Chaque fichier compte par son nom relatif (« Network/Protocol.cs ») et son texte, dans un ordre stable.
+        var sources = Files
+            .Select(f => new
+            {
+                Path = f.GetMetadata("FullPath"),
+                Name = (f.GetMetadata("RecursiveDir") + f.GetMetadata("Filename") + f.GetMetadata("Extension")).Replace('\\', '/'),
+            })
+            .OrderBy(s => s.Name, StringComparer.Ordinal);
+        using (var sha = SHA256.Create())
+        using (var all = new MemoryStream())
+        {
+            foreach (var source in sources)
+            {
+                var bytes = Encoding.UTF8.GetBytes(source.Name + "\n" + File.ReadAllText(source.Path).Replace("\r\n", "\n") + "\n");
+                all.Write(bytes, 0, bytes.Length);
+            }
+            Hash = BitConverter.ToString(sha.ComputeHash(all.ToArray())).Replace("-", "").Substring(0, 16);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="ListCodeVersionSources">
+    <PropertyGroup>
+      <CodeVersionFile>$(IntermediateOutputPath)CodeVersion.txt</CodeVersionFile>
+      <CodeVersionSourceList>$(IntermediateOutputPath)CodeVersion.sources.txt</CodeVersionSourceList>
+    </PropertyGroup>
+    <!-- Réécrite seulement si elle change : c'est elle qui fait recalculer l'empreinte après une suppression. -->
+    <WriteLinesToFile File="$(CodeVersionSourceList)" Lines="@(CodeVersionSource)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
+
+  <Target Name="ComputeCodeVersion" DependsOnTargets="ListCodeVersionSources"
+          Inputs="@(CodeVersionSource);$(CodeVersionSourceList)" Outputs="$(CodeVersionFile)">
+    <HashSources Files="@(CodeVersionSource)">
+      <Output TaskParameter="Hash" PropertyName="CodeVersion" />
+    </HashSources>
+    <WriteLinesToFile File="$(CodeVersionFile)" Lines="$(CodeVersion)" Overwrite="true" />
+  </Target>
+
+  <Target Name="EmbedCodeVersion" BeforeTargets="AssignTargetPaths" DependsOnTargets="ComputeCodeVersion">
+    <ItemGroup>
+      <EmbeddedResource Include="$(CodeVersionFile)" LogicalName="CodeVersion" />
+    </ItemGroup>
+  </Target>
+
 </Project>

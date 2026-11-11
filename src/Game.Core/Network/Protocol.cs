@@ -14,8 +14,26 @@ namespace Game.Core.Network;
 /// </summary>
 public static class Protocol
 {
-    /// <summary>À changer à chaque modification incompatible des messages.</summary>
-    public const int Version = 1;
+    /// <summary>
+    /// Version de la poignée de main (<see cref="JoinRequest"/>, <see cref="JoinRefused"/>) : à changer si ces deux
+    /// messages changent de forme, pour qu'un ancien jeu comprenne encore qu'il est refusé. Tout le reste (messages,
+    /// simulation) est couvert par <see cref="CodeVersion"/>, sans rien à tenir à jour à la main.
+    /// </summary>
+    public const int Version = 2;
+
+    /// <summary>
+    /// Empreinte du code de Game.Core, calculée à la compilation (voir <c>Game.Core.csproj</c>) : deux jeux de même
+    /// version de code et de même contenu jouent les mêmes combats. Change à la moindre modification des sources.
+    /// </summary>
+    public static string CodeVersion { get; } = ReadCodeVersion();
+
+    private static string ReadCodeVersion()
+    {
+        using var stream = typeof(Protocol).Assembly.GetManifestResourceStream("CodeVersion")
+            ?? throw new InvalidOperationException("Game.Core was built without its CodeVersion resource (see Game.Core.csproj).");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd().Trim();
+    }
 
     public const int DefaultPort = 7777;
 
@@ -37,8 +55,10 @@ public abstract record ClientMessage;
 
 /// <summary>
 /// Rejoindre la partie. Un nom déjà connu dont le joueur est déconnecté en plein combat le reprend (reconnexion).
+/// Le serveur n'accepte que son propre protocole, son propre code (<see cref="Protocol.CodeVersion"/>) et son propre
+/// contenu (<see cref="GameContent.Version"/>).
 /// </summary>
-public sealed record JoinRequest(string Name, int ProtocolVersion, string ContentVersion) : ClientMessage;
+public sealed record JoinRequest(string Name, int ProtocolVersion, string CodeVersion, string ContentVersion) : ClientMessage;
 
 /// <summary>Au salon : choisir un héros, ou le laisser (<c>null</c>).</summary>
 public sealed record PickHero(UnitId? Unit) : ClientMessage;
@@ -72,6 +92,9 @@ public sealed record Welcome(int PlayerId) : ServerMessage;
 public enum JoinRefusal
 {
     ProtocolMismatch,
+
+    /// <summary>Le code du jeu diffère de celui du serveur (autre version du jeu) : les simulations divergeraient.</summary>
+    CodeMismatch,
 
     /// <summary>Le contenu (<c>data/</c>) diffère de celui du serveur : les simulations divergeraient.</summary>
     ContentMismatch,

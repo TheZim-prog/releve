@@ -8,7 +8,8 @@ public static class Texts
 {
     public static string JoinRefusal(JoinRefusal reason) => reason switch
     {
-        Game.Core.Network.JoinRefusal.ProtocolMismatch => "Version du jeu différente de celle de l'hôte : mettez-vous à jour.",
+        Game.Core.Network.JoinRefusal.ProtocolMismatch or Game.Core.Network.JoinRefusal.CodeMismatch =>
+            "Version du jeu différente de celle de l'hôte : comparez vos versions (en bas du menu) et prenez tous le dernier zip.",
         Game.Core.Network.JoinRefusal.ContentMismatch => "Données du jeu (data/) différentes de celles de l'hôte : mettez-vous à jour.",
         Game.Core.Network.JoinRefusal.InvalidName => $"Nom invalide (1 à {Protocol.MaxNameLength} caractères).",
         Game.Core.Network.JoinRefusal.NameTaken => "Ce nom est déjà pris par un joueur connecté.",

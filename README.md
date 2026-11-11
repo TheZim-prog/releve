@@ -70,8 +70,9 @@ même ».
   modèles d'export).
 - Le dossier `data/` est copié à côté de l'exécutable : c'est celui-là que lit le jeu exporté.
 - **Tout le monde doit avoir la même version** : après un changement de code ou de `data/`, refaire l'export et
-  renvoyer le zip à chacun (et republier le serveur dédié s'il y en a un). Sinon le serveur refuse le joueur (contenu
-  différent) ou le combat se désynchronise (code différent).
+  renvoyer le zip à chacun (et republier le serveur dédié s'il y en a un). Sinon le serveur refuse le joueur à la
+  connexion (« version du jeu différente » ou « données différentes »). La version du code est une empreinte des
+  sources de `Game.Core`, calculée à la compilation : rien à tenir à jour à la main.
 
 ## Options de développement
 

@@ -128,7 +128,9 @@ public partial class Main : Node
     {
         Disconnect();
         var (name, address, port) = LoadSettings();
-        var menu = new MenuScreen { PlayerName = name, Address = address, Port = port };
+        // La version affichée : celle du code puis celle du contenu, à comparer entre amis quand le serveur refuse.
+        var version = $"{Protocol.CodeVersion[..6]}-{_content.Version[..6]}";
+        var menu = new MenuScreen { PlayerName = name, Address = address, Port = port, GameVersion = version };
         menu.SoloPressed += StartSolo;
         menu.HostPressed += Host;
         menu.JoinPressed += Join;
@@ -220,7 +222,7 @@ public partial class Main : Node
                 return;
             }
             _client = client;
-            _client.Send(new JoinRequest(name, Protocol.Version, _content.Version));
+            _client.Send(new JoinRequest(name, Protocol.Version, Protocol.CodeVersion, _content.Version));
         }
         catch (Exception e) when (e is SocketException or OperationCanceledException)
         {
