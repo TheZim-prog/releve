@@ -100,6 +100,31 @@ public class ContentTests
     }
 
     [Fact]
+    public void TheStreetScenario_FieldsTheEstablishedHeroes_AtLevel20()
+    {
+        var catalog = Heroes.Concat(Enemies).Concat(Civilians).ToDictionary();
+        var setup = ScenarioDefinition.FromJson(Data(Path.Combine("scenarios", "street.json"))).ToSetup(Rules, catalog);
+        var sim = new CombatSimulation(setup);
+        (int MaxHp, int Initiative, int Power) Stats(string id)
+        {
+            var unit = sim.Units.Single(u => u.Definition.Id == id);
+            return (unit.MaxHp, unit.Initiative, unit.PowerPercent);
+        }
+
+        // Niveau 20 : 19 points de stats chacun, qui les ramènent des stats de base de l'archétype à celles du prologue.
+        Assert.All(setup.Units.Where(u => Heroes.ContainsKey(u.Definition.Id)),
+            u => Assert.Equal(19, u.Points!.Hp + u.Points.Power + u.Points.Initiative));
+        Assert.Equal((160, 70, 115), Stats("colossus"));
+        Assert.Equal((85, 160, 109), Stats("speedster"));
+        Assert.Equal((110, 120, 124), Stats("fighter"));
+        Assert.Equal((80, 100, 139), Stats("energetic"));
+        Assert.Equal((85, 100, 121), Stats("tech"));
+        Assert.Equal((75, 100, 121), Stats("telepath"));
+        // Les autres unités n'ont pas de points.
+        Assert.All(sim.Units.Where(u => !Heroes.ContainsKey(u.Definition.Id)), u => Assert.Equal(100, u.PowerPercent));
+    }
+
+    [Fact]
     public void Civilians_AreNeutralAndFlee()
     {
         var civilian = Civilians["civilian"];
@@ -126,11 +151,17 @@ public class ContentTests
     [MemberData(nameof(Skirmishes))]
     public void Skirmish_WithTheRealContent_EndsAndReplays(string name, string[] heroIds, (string Id, int X, int Y)[] enemies)
     {
-        // Les héros sont confiés à l'IA de base pour que le combat se joue seul.
+        // Les héros (ceux du prologue, avec les points de stats que leur donne le scénario de la rue) sont confiés à
+        // l'IA de base pour que le combat se joue seul.
+        var established = ScenarioDefinition.FromJson(Data(Path.Combine("scenarios", "street.json"))).Units
+            .Where(u => Heroes.ContainsKey(u.Unit))
+            .GroupBy(u => u.Unit)
+            .ToDictionary(g => g.Key, g => g.First().Points);
         var units = new List<UnitSetup>();
         var id = 1;
         for (var i = 0; i < heroIds.Length; i++)
-            units.Add((Heroes[heroIds[i]] with { Behavior = Behaviors.Basic }).ToSetup(new UnitId(id++), team: 0, new Cell(0, 2 + i)));
+            units.Add((Heroes[heroIds[i]] with { Behavior = Behaviors.Basic })
+                .ToSetup(new UnitId(id++), team: 0, new Cell(0, 2 + i), points: established.GetValueOrDefault(heroIds[i])));
         foreach (var (enemy, x, y) in enemies)
             units.Add(Enemies[enemy].ToSetup(new UnitId(id++), team: 1, new Cell(x, y)));
         // Des civils pris entre les deux camps : ils fuient, et les zones peuvent les blesser.

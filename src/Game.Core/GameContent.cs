@@ -43,6 +43,9 @@ public sealed class GameContent
         var scenarios = JsonFiles(dataDirectory, "scenarios")
             .Select(file => ScenarioDefinition.FromJson(Read(file)))
             .ToDictionary(s => s.Id);
+        // Chaque scénario doit pouvoir se monter avec ces règles et ces unités (unités connues, points de stats valides).
+        foreach (var scenario in scenarios.Values)
+            scenario.ToSetup(rules, units);
         return new GameContent
         {
             Rules = rules, Units = units, Scenarios = scenarios, Version = Convert.ToHexString(hash.GetHashAndReset())[..16],

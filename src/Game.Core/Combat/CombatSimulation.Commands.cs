@@ -239,13 +239,13 @@ public sealed partial class CombatSimulation
             // Immobilisée, jauge à 0 jusqu'au déclenchement (ReleaseCharges). Les dégâts sont fixés maintenant :
             // c'est l'attaque que le joueur a lancée et vue au sol.
             var charge = new PendingCharge(actionSkill, action.Target?.Id, action.Zone,
-                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs), DamagePercentOf(unit), action.Origin);
+                CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs), DamageFactorOf(unit), action.Origin);
             unit.Charge = charge;
             _events.Add(new ChargeStarted(CurrentTick, unit.Id, actionSkill.Id, charge.Target, charge.Zone, charge.ReleaseTick));
             return;
         }
 
-        Execute(unit, actionSkill, action.Target, action.Zone, DamagePercentOf(unit), action.Destination, action.Origin);
+        Execute(unit, actionSkill, action.Target, action.Zone, DamageFactorOf(unit), action.Destination, action.Origin);
         SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
     }
 

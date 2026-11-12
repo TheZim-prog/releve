@@ -29,7 +29,9 @@ public enum UnitStatus
 /// </summary>
 /// <param name="Team">Les unités d'une même équipe sont alliées, les autres ennemies.</param>
 /// <param name="InitialGauge">Jauge au début du combat, entre 0 et la capacité.</param>
-public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinition Definition, int InitialGauge = 0);
+/// <param name="Points">Points de stats de ce héros (<c>null</c> : aucun, les stats de son type).</param>
+public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinition Definition, int InitialGauge = 0,
+    StatPoints? Points = null);
 
 /// <summary>
 /// Intention d'une unité IA, fixée avant sa jauge pleine : la compétence prévue (<c>null</c> si aucune n'est
@@ -40,31 +42,35 @@ public sealed record Intention(string? SkillId, UnitId Target);
 /// <summary>
 /// Attaque en cours de charge : cible (attaque ciblée) ou cases fixées au sol (zone), et tick de déclenchement.
 /// Exactement l'un de <paramref name="Target"/> et <paramref name="Zone"/> est renseigné.
-/// <paramref name="DamagePercent"/> : multiplicateur de dégâts du lanceur, fixé au lancement (ex. surpuissant).
+/// <paramref name="DamageFactor"/> : multiplicateur de dégâts du lanceur (puissance, surpuissant), fixé au lancement,
+/// en dix-millièmes (10 000 = dégâts normaux).
 /// <paramref name="ZoneOrigin"/> : d'où part la zone (centre d'un carré, lanceur pour une ligne), pour la couverture.
 /// </summary>
-public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick, int DamagePercent,
+public sealed record PendingCharge(SkillDefinition Skill, UnitId? Target, IReadOnlyList<Cell>? Zone, int ReleaseTick, int DamageFactor,
     Cell? ZoneOrigin = null);
 
 /// <summary>État courant d'une unité. Seule la <see cref="CombatSimulation"/> le modifie.</summary>
 public sealed class Unit
 {
-    private readonly int _gaugeCapacity;
+    private readonly CombatRules _rules;
     private readonly Dictionary<string, int> _cooldownEndTicks = new();
     private readonly SortedDictionary<StatusKind, int> _statusEndTicks = new();
 
-    internal Unit(UnitSetup setup, int gaugeCapacity)
+    /// <param name="powerPercent">Puissance imposée (gadget : celle de l'unité qui le pose), sinon celle de ses points.</param>
+    internal Unit(UnitSetup setup, CombatRules rules, int? powerPercent = null)
     {
         var definition = setup.Definition;
+        var points = setup.Points ?? StatPoints.None;
         Id = setup.Id;
         Team = setup.Team;
         OriginalTeam = setup.Team;
         Position = setup.Position;
         Definition = definition;
-        Initiative = definition.Initiative;
+        Initiative = rules.InitiativeWith(definition.Initiative, points);
         Mobility = definition.Mobility;
-        MaxHp = definition.MaxHp;
-        Hp = definition.MaxHp;
+        MaxHp = rules.MaxHpWith(definition.MaxHp, points);
+        Hp = MaxHp;
+        PowerPercent = powerPercent ?? rules.PowerPercentWith(points);
         Skills = definition.Skills;
         OnDefeat = definition.OnDefeat;
         Gauge = setup.InitialGauge;
@@ -73,7 +79,7 @@ public sealed class Unit
         OpportunityAttacksLeft = definition.OpportunityAttacksPerCycle;
         Behavior = definition.Behavior;
         Passive = definition.Passive;
-        _gaugeCapacity = gaugeCapacity;
+        _rules = rules;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
 
@@ -92,9 +98,34 @@ public sealed class Unit
     /// <summary>Type de l'unité (données) : nom, stats et compétences de départ.</summary>
     public UnitDefinition Definition { get; }
 
+    /// <summary>Points de jauge gagnés par tick, points de stats compris.</summary>
     public int Initiative { get; }
     public int Mobility { get; }
+
+    /// <summary>PV max, points de stats compris.</summary>
     public int MaxHp { get; }
+
+    /// <summary>
+    /// Puissance, en % (100 sans point de stat) : multiplie les dégâts et les soins de toutes ses compétences. Un gadget
+    /// prend celle de l'unité qui le pose.
+    /// </summary>
+    public int PowerPercent { get; }
+
+    /// <summary>
+    /// Multiplicateur des dégâts qu'elle inflige en ce moment, en dix-millièmes (10 000 = dégâts normaux) : sa
+    /// puissance (%) fois le bonus de l'état surpuissant (%), sans arrondi intermédiaire.
+    /// </summary>
+    public int DamageFactor => PowerPercent * (HasStatus(StatusKind.Empowered) ? _rules.EmpoweredDamagePercent : 100);
+
+    /// <summary>
+    /// Fourchette de dégâts de la compétence telle qu'elle la lancerait maintenant (puissance et état surpuissant
+    /// compris ; hors vulnérabilité et couverture de la cible), pour l'affichage.
+    /// </summary>
+    public (int Min, int Max) DamageRange(SkillDefinition skill) =>
+        ((int)((long)skill.MinDamage * DamageFactor / 10_000), (int)((long)skill.MaxDamage * DamageFactor / 10_000));
+
+    /// <summary>Soin donné par cette unité : le tirage, multiplié par sa puissance.</summary>
+    internal int HealWith(int roll) => (int)((long)roll * PowerPercent / 100);
     public int Hp { get; internal set; }
     public IReadOnlyList<SkillDefinition> Skills { get; }
     public DefeatOutcome OnDefeat { get; }
@@ -109,7 +140,7 @@ public sealed class Unit
     /// <summary>Attaques d'opportunité restantes ; rechargées quand l'unité rejoue.</summary>
     public int OpportunityAttacksLeft { get; internal set; }
 
-    public bool IsGaugeFull => Gauge >= _gaugeCapacity;
+    public bool IsGaugeFull => Gauge >= _rules.GaugeCapacity;
 
     /// <summary>
     /// Peut agir : debout, jauge pleine, pas étourdie, pas en train de charger. Le reste tant qu'elle n'a pas agi.

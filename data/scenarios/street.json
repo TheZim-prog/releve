@@ -1,5 +1,6 @@
 // Combat libre du prototype : les héros (à gauche) contre une bande de rue (à droite), des civils
 // pris au milieu. Carte : '.' sol, '#' mur, 'o' obstacle bas (muret, voiture : couverture).
+// Les héros sont ceux du prologue : niveau 20, 19 points de stats répartis selon leur cliché.
 {
   "id": "street",
   "name": "Règlement de comptes dans la rue",
@@ -17,12 +18,12 @@
     ".................."
   ],
   "units": [
-    { "unit": "colossus", "team": 0, "x": 1, "y": 3 },
-    { "unit": "fighter", "team": 0, "x": 1, "y": 4 },
-    { "unit": "speedster", "team": 0, "x": 1, "y": 5 },
-    { "unit": "energetic", "team": 0, "x": 0, "y": 6 },
-    { "unit": "tech", "team": 0, "x": 0, "y": 2 },
-    { "unit": "telepath", "team": 0, "x": 0, "y": 4 },
+    { "unit": "colossus", "team": 0, "x": 1, "y": 3, "points": { "hp": 12, "power": 5, "initiative": 2 } },
+    { "unit": "fighter", "team": 0, "x": 1, "y": 4, "points": { "hp": 6, "power": 8, "initiative": 5 } },
+    { "unit": "speedster", "team": 0, "x": 1, "y": 5, "points": { "hp": 4, "power": 3, "initiative": 12 } },
+    { "unit": "energetic", "team": 0, "x": 0, "y": 6, "points": { "hp": 3, "power": 13, "initiative": 3 } },
+    { "unit": "tech", "team": 0, "x": 0, "y": 2, "points": { "hp": 5, "power": 7, "initiative": 7 } },
+    { "unit": "telepath", "team": 0, "x": 0, "y": 4, "points": { "hp": 5, "power": 7, "initiative": 7 } },
 
     { "unit": "brawler", "team": 1, "x": 15, "y": 3 },
     { "unit": "brawler", "team": 1, "x": 15, "y": 5 },

@@ -39,7 +39,7 @@ public partial class CombatView
         {
             var skill = unit.Skills[i];
             var cooldown = unit.CooldownEndTick(skill.Id) - _sim.CurrentTick;
-            var damage = skill.DealsDamage ? $", {skill.MinDamage}-{skill.MaxDamage}" : "";
+            var damage = skill.DealsDamage ? $", {DamageText(unit, skill)}" : "";
             var weight = skill.Weight == SkillWeight.Heavy ? "lourde" : "légère";
             var details = cooldown > 0
                 ? $"recharge {cooldown / (double)_data.Rules.TicksPerSecond:0.0} s"
@@ -108,6 +108,13 @@ public partial class CombatView
         tween.TweenProperty(label, "position", label.Position + new Vector3(0, 1f, 0), 1.0);
         tween.TweenProperty(label, "modulate:a", 0.0, 1.0);
         tween.Chain().TweenCallback(Callable.From(label.QueueFree));
+    }
+
+    /// <summary>Dégâts de la compétence tels que le héros les ferait maintenant (puissance et état surpuissant compris).</summary>
+    private static string DamageText(Unit unit, SkillDefinition skill)
+    {
+        var (min, max) = unit.DamageRange(skill);
+        return $"{min}-{max}";
     }
 
     private static Color ColorOf(Unit unit)

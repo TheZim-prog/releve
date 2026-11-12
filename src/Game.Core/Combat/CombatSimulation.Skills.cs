@@ -9,17 +9,17 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ;
     /// un coup ne touche que sa cible, donc la liste ne change pas en cours de route).
-    /// <paramref name="damagePercent"/> : multiplicateur de dégâts du lanceur (voir <see cref="DamagePercentOf"/>).
+    /// <paramref name="damageFactor"/> : multiplicateur de dégâts du lanceur, en dix-millièmes (voir <see cref="DamageFactorOf"/>).
     /// <paramref name="destination"/> : case où une télékinésie pose sa cible ; <paramref name="zoneOrigin"/> : d'où part
     /// une zone ordinaire (pour la couverture ; une attaque ciblée part du lanceur).
     /// </summary>
-    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damagePercent,
+    private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damageFactor,
         Cell? destination = null, Cell? zoneOrigin = null)
     {
         // Une compétence exécutée est une « source » : un dôme bloque toute la source, pour tous ses protégés.
         if (skill.SelfMove is { } selfMove)
         {
-            ExecuteSelfMove(caster, skill, selfMove, target, zone!, destination!.Value, damagePercent);
+            ExecuteSelfMove(caster, skill, selfMove, target, zone!, destination!.Value, damageFactor);
         }
         else if (skill.IsRescue)
         {
@@ -33,11 +33,11 @@ public sealed partial class CombatSimulation
         else if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
-            var landed = ResolveHit(caster, skill, target, damagePercent, origin: caster.Position);
+            var landed = ResolveHit(caster, skill, target, damageFactor, origin: caster.Position);
             if (landed && target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
             {
                 if (move.Type == ForcedMoveType.Push)
-                    Push(caster, skill, target, move, damagePercent);
+                    Push(caster, skill, target, move, damageFactor);
                 else
                     Displace(target, destination!.Value);
             }
@@ -52,7 +52,7 @@ public sealed partial class CombatSimulation
             else
             {
                 foreach (var unit in UnitsAffectedBy(caster, skill, zone))
-                    ResolveHit(caster, skill, unit, damagePercent, origin: zoneOrigin);
+                    ResolveHit(caster, skill, unit, damageFactor, origin: zoneOrigin);
             }
         }
         EndSource();
@@ -64,7 +64,7 @@ public sealed partial class CombatSimulation
     /// Charge = course jusqu'à l'unité percutée, puis le coup (aucun si le décor l'a arrêtée).
     /// </summary>
     private void ExecuteSelfMove(Unit caster, SkillDefinition skill, SelfMoveType selfMove, Unit? struck,
-        IReadOnlyList<Cell>? cells, Cell destination, int damagePercent)
+        IReadOnlyList<Cell>? cells, Cell destination, int damageFactor)
     {
         switch (selfMove)
         {
@@ -77,14 +77,14 @@ public sealed partial class CombatSimulation
                                             && crossed.Contains(u.Position)).ToList();
                 Displace(caster, destination);
                 foreach (var unit in hit)
-                    ResolveHit(caster, skill, unit, damagePercent);
+                    ResolveHit(caster, skill, unit, damageFactor);
                 break;
             }
             case SelfMoveType.Leap:
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, cells));
                 Displace(caster, destination);
                 foreach (var unit in UnitsAffectedBy(caster, skill, cells!))
-                    ResolveHit(caster, skill, unit, damagePercent, origin: destination); // l'onde part de l'atterrissage
+                    ResolveHit(caster, skill, unit, damageFactor, origin: destination); // l'onde part de l'atterrissage
                 break;
             case SelfMoveType.Rush:
                 // Même ordre que les autres : la compétence, la course, puis le coup (s'il a percuté quelqu'un).
@@ -92,7 +92,7 @@ public sealed partial class CombatSimulation
                 if (destination != caster.Position)
                     Displace(caster, destination);
                 if (struck is not null)
-                    ResolveHit(caster, skill, struck, damagePercent);
+                    ResolveHit(caster, skill, struck, damageFactor);
                 break;
         }
     }
@@ -130,7 +130,8 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Pose une unité invoquée sur <paramref name="cell"/>, de l'équipe du lanceur, jauge vide ; elle remplace celle
-    /// du même type déjà posée par ce lanceur. Son identifiant suit le plus grand existant (déterministe).
+    /// du même type déjà posée par ce lanceur. Son identifiant suit le plus grand existant (déterministe). Elle
+    /// profite de la puissance du lanceur (ses dégâts et ses soins), pas de ses autres points de stats.
     /// </summary>
     private void Summon(Unit owner, UnitDefinition definition, Cell cell)
     {
@@ -139,7 +140,7 @@ public sealed partial class CombatSimulation
             Dismiss(previous);
 
         var id = new UnitId(_units.Max(u => u.Id.Value) + 1);
-        var unit = new Unit(definition.ToSetup(id, owner.Team, cell), Rules.GaugeCapacity) { SummonedBy = owner.Id };
+        var unit = new Unit(definition.ToSetup(id, owner.Team, cell), Rules, owner.PowerPercent) { SummonedBy = owner.Id };
         _units.Add(unit);
         _events.Add(new UnitSummoned(CurrentTick, id, definition.Id, owner.Id, owner.Team, cell));
     }
@@ -150,7 +151,7 @@ public sealed partial class CombatSimulation
     /// d'angle qu'un déplacement de la cible) ; une collision fait des dégâts à la cible et à l'unité percutée si
     /// elle est debout.
     /// </summary>
-    private void Push(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damagePercent)
+    private void Push(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor)
     {
         var origin = caster.Position;
         var step = (X: Math.Sign(target.Position.X - origin.X), Y: Math.Sign(target.Position.Y - origin.Y));
@@ -194,7 +195,7 @@ public sealed partial class CombatSimulation
             if (hit is { Status: UnitStatus.Active, IsCivilian: false } && !IsBlockedByDome(skill, hit))
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
-                Damage(hit, Scaled(damage, damagePercent, hit), fallbackCell: null);
+                Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null);
             }
         }
     }
@@ -223,10 +224,10 @@ public sealed partial class CombatSimulation
             unit.Charge = null;
             var skill = charge.Skill;
             if (charge.Zone is not null)
-                Execute(unit, skill, null, charge.Zone, charge.DamagePercent, zoneOrigin: charge.ZoneOrigin);
+                Execute(unit, skill, null, charge.Zone, charge.DamageFactor, zoneOrigin: charge.ZoneOrigin);
             else if (charge.Target is { } targetId && FindUnit(targetId) is { } target
                      && CheckTarget(unit, unit.Position, target, skill) is null)
-                Execute(unit, skill, target, null, charge.DamagePercent);
+                Execute(unit, skill, target, null, charge.DamageFactor);
             else
                 _events.Add(new ChargeMissed(CurrentTick, unit.Id, skill.Id, charge.Target!.Value));
 

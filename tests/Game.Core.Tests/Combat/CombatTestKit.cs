@@ -30,6 +30,10 @@ internal static class CombatTestKit
         ReviveWeight = SkillWeight.Light,
         CoverDamageReductionPercent = 50,
         LowObstacleHp = 40,
+        // Un point de stat : +10 % de la stat de base (ou +10 points de puissance), pour des comptes ronds.
+        HpPercentPerStatPoint = 10,
+        PowerPercentPerStatPoint = 10,
+        InitiativePercentPerStatPoint = 10,
     };
 
     /// <summary>Attaque légère, 10 dégâts fixes, sans recharge.</summary>
@@ -53,7 +57,7 @@ internal static class CombatTestKit
         int initiative = 10, int mobility = 3, int gauge = 0, int hp = 100,
         DefeatOutcome onDefeat = DefeatOutcome.Removed, IReadOnlyList<SkillDefinition>? skills = null,
         string? basicAttack = null, int opportunityAttacks = 1, string? behavior = null,
-        PassiveKind? passive = null, bool isBoss = false, bool isRobot = false)
+        PassiveKind? passive = null, bool isBoss = false, bool isRobot = false, StatPoints? points = null)
     {
         var definition = new UnitDefinition
         {
@@ -71,7 +75,7 @@ internal static class CombatTestKit
             IsBoss = isBoss,
             IsRobot = isRobot,
         };
-        return definition.ToSetup(new UnitId(id), team, new Cell(x, y), gauge);
+        return definition.ToSetup(new UnitId(id), team, new Cell(x, y), gauge, points);
     }
 
     public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);

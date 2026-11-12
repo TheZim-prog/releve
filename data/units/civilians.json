@@ -5,7 +5,7 @@
     "id": "civilian",
     "name": "Civil",
     "isCivilian": true,
-    "maxHp": 30, "initiative": 7, "mobility": 3,
+    "maxHp": 30, "initiative": 70, "mobility": 3,
     "onDefeat": "removed",
     "basicAttack": null,
     "opportunityAttacksPerCycle": 0,

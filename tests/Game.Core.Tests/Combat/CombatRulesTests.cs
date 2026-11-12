@@ -24,6 +24,9 @@ public class CombatRulesTests
           "reviveWeight": "light",
           "coverDamageReductionPercent": 50,
           "lowObstacleHp": 40,
+          "hpPercentPerStatPoint": 3,
+          "powerPercentPerStatPoint": 3,
+          "initiativePercentPerStatPoint": 2,
         }
         """;
 

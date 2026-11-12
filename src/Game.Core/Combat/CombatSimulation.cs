@@ -57,7 +57,7 @@ public sealed partial class CombatSimulation
         foreach (var unit in setup.Units)
         {
             Validate(unit);
-            _units.Add(new Unit(unit, Rules.GaugeCapacity));
+            _units.Add(new Unit(unit, Rules));
         }
     }
 
@@ -260,5 +260,12 @@ public sealed partial class CombatSimulation
             throw new ArgumentException($"Unit {setup.Id} shares cell {setup.Position} with another unit.");
         if (setup.InitialGauge < 0 || setup.InitialGauge > Rules.GaugeCapacity)
             throw new ArgumentException($"Unit {setup.Id} has an initial gauge outside [0, {Rules.GaugeCapacity}].");
+        if (setup.Points is { } points)
+        {
+            points.Validate();
+            // Même borne que pour l'initiative de base (UnitDefinition.ValidateAgainst), points de stats compris.
+            if (Rules.InitiativeWith(setup.Definition.Initiative, points) > Rules.GaugeCapacity)
+                throw new ArgumentException($"Unit {setup.Id} has an initiative above the gauge capacity ({Rules.GaugeCapacity}).");
+        }
     }
 }

@@ -11,6 +11,9 @@ public sealed record ScenarioUnit
     public required int Team { get; init; }
     public required int X { get; init; }
     public required int Y { get; init; }
+
+    /// <summary>Points de stats de ce héros (facultatif : aucun par défaut).</summary>
+    public StatPoints? Points { get; init; }
 }
 
 /// <summary>
@@ -53,12 +56,21 @@ public sealed record ScenarioDefinition
                 throw new ArgumentException($"Scenario '{Id}': unit '{unit.Unit}' stands on a blocked cell {cell}.");
             if (!taken.Add(cell))
                 throw new ArgumentException($"Scenario '{Id}': two units on {cell}.");
+            try
+            {
+                unit.Points?.Validate();
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException($"Scenario '{Id}': unit '{unit.Unit}': {e.Message}", e);
+            }
         }
     }
 
     /// <summary>
     /// État initial du combat : la carte, et les unités tirées du <paramref name="catalog"/> (identifiants 1, 2, 3…
-    /// dans l'ordre du scénario, jauges vides).
+    /// dans l'ordre du scénario, jauges vides). Refuse une unité inconnue, ou dont les points de stats portent
+    /// l'initiative au-delà de la capacité de la jauge.
     /// </summary>
     public CombatSetup ToSetup(CombatRules rules, IReadOnlyDictionary<string, UnitDefinition> catalog)
     {
@@ -66,9 +78,15 @@ public sealed record ScenarioDefinition
         ArgumentNullException.ThrowIfNull(catalog);
         var units = Units
             .Select((u, i) => catalog.TryGetValue(u.Unit, out var definition)
-                ? definition.ToSetup(new UnitId(i + 1), u.Team, new Cell(u.X, u.Y))
+                ? definition.ToSetup(new UnitId(i + 1), u.Team, new Cell(u.X, u.Y), points: u.Points)
                 : throw new ArgumentException($"Scenario '{Id}': unknown unit '{u.Unit}'."))
             .ToList();
+        foreach (var unit in units)
+        {
+            if (rules.InitiativeWith(unit.Definition.Initiative, unit.Points ?? StatPoints.None) > rules.GaugeCapacity)
+                throw new ArgumentException(
+                    $"Scenario '{Id}': unit '{unit.Definition.Id}' has an initiative above the gauge capacity ({rules.GaugeCapacity}) with its stat points.");
+        }
         return new CombatSetup(rules, Grid.FromRows(Map.ToArray()), units, Seed);
     }
 }

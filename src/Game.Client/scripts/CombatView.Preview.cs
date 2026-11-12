@@ -170,7 +170,7 @@ public partial class CombatView
 
         if (reason is { } r)
             return (aim, target, $"{prefix} : {Texts.Rejection(r)}", new Color(1f, 0.5f, 0.45f));
-        var damage = aiming.Skill is { DealsDamage: true } s ? $" ({s.MinDamage}-{s.MaxDamage} dégâts)" : "";
+        var damage = aiming.Skill is { DealsDamage: true } s ? $" ({DamageText(unit, s)} dégâts)" : "";
         var when = waiting ? "clic : partira dès que possible" : "clic pour lancer";
         return (aim, target, $"{prefix}{damage} : {when}", new Color(0.6f, 1f, 0.6f));
     }

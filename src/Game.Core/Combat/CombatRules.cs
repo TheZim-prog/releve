@@ -54,6 +54,15 @@ public sealed record CombatRules
     /// <summary>PV d'un obstacle bas : il encaisse les dégâts qu'il absorbe et devient du sol à 0.</summary>
     public required int LowObstacleHp { get; init; }
 
+    /// <summary>Ce qu'ajoute un point de stat mis dans les PV, en % des PV de base du type d'unité.</summary>
+    public required int HpPercentPerStatPoint { get; init; }
+
+    /// <summary>Ce qu'ajoute un point de stat mis dans la puissance, en points de % (la puissance de base vaut 100 %).</summary>
+    public required int PowerPercentPerStatPoint { get; init; }
+
+    /// <summary>Ce qu'ajoute un point de stat mis dans l'initiative, en % de l'initiative de base du type d'unité.</summary>
+    public required int InitiativePercentPerStatPoint { get; init; }
+
     public static CombatRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<CombatRules>(json);
@@ -63,6 +72,19 @@ public sealed record CombatRules
 
     /// <summary>Valeur de jauge correspondant à <paramref name="percent"/> % de la capacité.</summary>
     public int GaugeAt(int percent) => (int)((long)GaugeCapacity * percent / 100);
+
+    /// <summary>PV max d'une unité : ceux de son type, augmentés par ses points de stats (arrondi au plus proche).</summary>
+    public int MaxHpWith(int baseMaxHp, StatPoints points) => WithPoints(baseMaxHp, HpPercentPerStatPoint, points.Hp);
+
+    /// <summary>Initiative d'une unité : celle de son type, augmentée par ses points de stats (arrondi au plus proche).</summary>
+    public int InitiativeWith(int baseInitiative, StatPoints points) =>
+        WithPoints(baseInitiative, InitiativePercentPerStatPoint, points.Initiative);
+
+    /// <summary>Puissance d'une unité, en % : 100 sans point, puis ce qu'ajoutent ses points de stats.</summary>
+    public int PowerPercentWith(StatPoints points) => 100 + PowerPercentPerStatPoint * points.Power;
+
+    private static int WithPoints(int baseValue, int percentPerPoint, int points) =>
+        (int)(((long)baseValue * (100 + (long)percentPerPoint * points) + 50) / 100);
 
     /// <summary>Durée en ticks, arrondie au tick supérieur.</summary>
     public int MillisecondsToTicks(int milliseconds) =>
@@ -96,6 +118,9 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(WeakPointExposedMs)} must be positive.");
         if (GripDurationPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(GripDurationPercent)} must be between 100 and 1000.");
+        ValidatePercent(HpPercentPerStatPoint, nameof(HpPercentPerStatPoint), max: 100); // 0 : le point n'apporte rien
+        ValidatePercent(PowerPercentPerStatPoint, nameof(PowerPercentPerStatPoint), max: 100);
+        ValidatePercent(InitiativePercentPerStatPoint, nameof(InitiativePercentPerStatPoint), max: 100);
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

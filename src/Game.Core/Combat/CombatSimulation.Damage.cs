@@ -7,7 +7,7 @@ public sealed partial class CombatSimulation
 {
     /// <summary>
     /// Effets d'un coup de <paramref name="attacker"/> sur sa cible : dégâts (s'il y en a : exécution si la cible est
-    /// assez basse et pas un boss, sinon tirage multiplié par <paramref name="damagePercent"/> et par la vulnérabilité
+    /// assez basse et pas un boss, sinon tirage multiplié par <paramref name="damageFactor"/> et par la vulnérabilité
     /// de la cible), Point faible de l'attaquant, puis états si la cible est encore debout, puis gain de jauge.
     /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
     /// (seulement possible en plein déplacement, en traversant un allié).
@@ -15,7 +15,7 @@ public sealed partial class CombatSimulation
     /// exécution l'ignore.
     /// Renvoie faux si un dôme a bloqué le coup (il n'a alors aucun effet).
     /// </summary>
-    private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damagePercent, Cell? fallbackCell = null,
+    private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damageFactor, Cell? fallbackCell = null,
         Cell? origin = null)
     {
         if (IsBlockedByDome(skill, target))
@@ -43,7 +43,7 @@ public sealed partial class CombatSimulation
                 var roll = skill.DealsDamage ? _random.NextInt(skill.MinDamage, skill.MaxDamage) : 0;
                 if (robotBonus is { DealsDamage: true })
                     roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
-                dealt = Scaled(roll, damagePercent, target);
+                dealt = Scaled(roll, damageFactor, target);
                 if (origin is { } from && CoverFor(from, target.Position) is { } cover)
                     dealt = AbsorbByCover(target, cover, dealt);
             }
@@ -57,7 +57,7 @@ public sealed partial class CombatSimulation
         if (target.Status != UnitStatus.Active)
             return true;
         if (skill.Heals)
-            Heal(target, _random.NextInt(skill.MinHeal, skill.MaxHeal));
+            Heal(target, attacker.HealWith(_random.NextInt(skill.MinHeal, skill.MaxHeal)));
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
         if (skill.GaugeGainPercent > 0)
@@ -65,17 +65,17 @@ public sealed partial class CombatSimulation
         return true;
     }
 
-    /// <summary>Multiplicateur des dégâts infligés par l'unité, en % (surpuissant ou non).</summary>
-    private int DamagePercentOf(Unit unit) => unit.HasStatus(StatusKind.Empowered) ? Rules.EmpoweredDamagePercent : 100;
+    /// <summary>Multiplicateur des dégâts infligés par l'unité, en dix-millièmes (voir <see cref="Unit.DamageFactor"/>).</summary>
+    private static int DamageFactorOf(Unit unit) => unit.DamageFactor;
 
     /// <summary>
-    /// Dégâts finaux : tirage × bonus de l'attaquant (<paramref name="damagePercent"/>) × vulnérabilité de la cible,
+    /// Dégâts finaux : tirage × bonus de l'attaquant (<paramref name="damageFactor"/>) × vulnérabilité de la cible,
     /// en une seule division (pas d'arrondi intermédiaire).
     /// </summary>
-    private int Scaled(int damage, int damagePercent, Unit target)
+    private int Scaled(int damage, int damageFactor, Unit target)
     {
         var exposedPercent = target.HasStatus(StatusKind.Exposed) ? Rules.ExposedDamageTakenPercent : 100;
-        return (int)((long)damage * damagePercent * exposedPercent / 10_000);
+        return (int)((long)damage * damageFactor * exposedPercent / 1_000_000);
     }
 
     /// <summary>Exécution : la cible est au plus au seuil de PV de la compétence, et ce n'est pas un boss.</summary>

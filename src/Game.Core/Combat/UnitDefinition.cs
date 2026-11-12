@@ -74,7 +74,8 @@ public sealed record UnitDefinition
     public int? FleeAtHpPercent { get; init; }
 
     /// <summary>Instance de cette unité pour un combat.</summary>
-    public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0) => new(id, team, position, this, initialGauge);
+    public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0, StatPoints? points = null) =>
+        new(id, team, position, this, initialGauge, points);
 
     public static IReadOnlyList<UnitDefinition> ListFromJson(string json) =>
         DataJson.ValidateList(DataJson.Deserialize<List<UnitDefinition?>>(json), u => u.Validate(), u => u.Id, "unit");
