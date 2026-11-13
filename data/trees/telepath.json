@@ -1,0 +1,51 @@
+// Arbre de compétences : Télépathe (docs/design.md 2.7). Trois branches de trois paliers ; chaque compétence des paliers
+// 1 et 2 a une variante. Les compétences sont décrites dans data/skills ; celles qui ne sont pas encore codées sont
+// listées dans "planned" avec leur nom (à retirer de cette liste quand on les ajoute à la bibliothèque).
+{
+  "archetype": "telepath",
+  "branches": [
+    {
+      "id": "mentalist", "name": "Mentaliste",
+      "tiers": [
+        { "actives": [ { "skill": "paralysis", "variant": "torpor" }, { "skill": "telepathic-strike", "variant": "psychic-scream" } ] },
+        { "actives": [ { "skill": "confusion", "variant": "panic" } ], "passives": [ { "id": "grip", "name": "Emprise" } ] },
+        { "actives": [ { "skill": "domination" } ], "passives": [ { "id": "contagion", "name": "Contagion", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "kinetic", "name": "Kinésiste",
+      "tiers": [
+        { "actives": [ { "skill": "telekinesis", "variant": "shove" }, { "skill": "projectile", "variant": "telekinetic-throw" } ] },
+        { "actives": [ { "skill": "vise", "variant": "wrench" } ], "passives": [ { "id": "kineticScreen", "name": "Écran cinétique", "planned": true } ] },
+        { "actives": [ { "skill": "force-wave" } ], "passives": [ { "id": "impact", "name": "Impact", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "empath", "name": "Empathe",
+      "tiers": [
+        { "actives": [ { "skill": "siphon", "variant": "transfusion" }, { "skill": "stimulation", "variant": "focus" } ] },
+        { "actives": [ { "skill": "clarity", "variant": "serenity" } ], "passives": [ { "id": "presence", "name": "Présence", "planned": true } ] },
+        { "actives": [ { "skill": "awakening" } ], "passives": [ { "id": "guardianAngel", "name": "Ange gardien", "planned": true } ] }
+      ]
+    }
+  ],
+  "planned": {
+    "torpor": "Torpeur",
+    "telepathic-strike": "Frappe télépathique",
+    "psychic-scream": "Cri psychique",
+    "panic": "Panique",
+    "shove": "Poussée",
+    "projectile": "Projectile",
+    "telekinetic-throw": "Lancer de décor",
+    "vise": "Étau",
+    "wrench": "Arrachement",
+    "force-wave": "Onde de force",
+    "siphon": "Siphon",
+    "transfusion": "Transfusion",
+    "stimulation": "Stimulation",
+    "focus": "Concentration",
+    "clarity": "Clarté",
+    "serenity": "Sérénité",
+    "awakening": "Éveil"
+  }
+}

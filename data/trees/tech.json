@@ -1,0 +1,51 @@
+// Arbre de compétences : Tech (docs/design.md 2.7). Trois branches de trois paliers ; chaque compétence des paliers
+// 1 et 2 a une variante. Les compétences sont décrites dans data/skills ; celles qui ne sont pas encore codées sont
+// listées dans "planned" avec leur nom (à retirer de cette liste quand on les ajoute à la bibliothèque).
+{
+  "archetype": "tech",
+  "branches": [
+    {
+      "id": "engineer", "name": "Ingénieur",
+      "tiers": [
+        { "actives": [ { "skill": "turret", "variant": "suppression-turret" }, { "skill": "nano-heal", "variant": "shield-beacon" } ] },
+        { "actives": [ { "skill": "trap", "variant": "explosive-trap" } ], "passives": [ { "id": "overclocking", "name": "Surcadençage", "planned": true } ] },
+        { "actives": [ { "skill": "combat-drone" } ], "passives": [ { "id": "doubleDeployment", "name": "Double déploiement", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "tactician", "name": "Tacticien",
+      "tiers": [
+        { "actives": [ { "skill": "designation-shot", "variant": "suppression-shot" }, { "skill": "covering-fire", "variant": "close-protection" } ] },
+        { "actives": [ { "skill": "tactical-order", "variant": "reload" } ], "passives": [ { "id": "tacticalAnalysis", "name": "Analyse tactique", "planned": true } ] },
+        { "actives": [ { "skill": "coordinated-strike" } ], "passives": [ { "id": "command", "name": "Commandement", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "saboteur", "name": "Saboteur",
+      "tiers": [
+        { "actives": [ { "skill": "electroshock", "variant": "net" }, { "skill": "jamming", "variant": "interference" } ] },
+        { "actives": [ { "skill": "hacking", "variant": "virus" } ], "passives": [ { "id": "jammingField", "name": "Champ de brouillage", "planned": true } ] },
+        { "actives": [ { "skill": "emp" } ], "passives": [ { "id": "energyRecovery", "name": "Récupération d'énergie", "planned": true } ] }
+      ]
+    }
+  ],
+  "planned": {
+    "suppression-turret": "Tourelle de suppression",
+    "shield-beacon": "Balise bouclier",
+    "trap": "Piège",
+    "explosive-trap": "Piège explosif",
+    "combat-drone": "Drone de combat",
+    "designation-shot": "Tir de désignation",
+    "suppression-shot": "Tir de suppression",
+    "covering-fire": "Tir de couverture",
+    "close-protection": "Protection rapprochée",
+    "reload": "Rechargement",
+    "coordinated-strike": "Frappe coordonnée",
+    "electroshock": "Électrochoc",
+    "net": "Filet",
+    "jamming": "Brouillage",
+    "interference": "Interférences",
+    "hacking": "Piratage",
+    "virus": "Virus"
+  }
+}

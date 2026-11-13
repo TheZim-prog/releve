@@ -1,0 +1,9 @@
+// Ce que font les gadgets du tech par eux-mêmes. Ils profitent de la puissance du tech qui les pose.
+[
+  { "id": "turret-shot", "name": "Tir de tourelle", "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 8, "cooldownMs": 0 },
+  {
+    "id": "nano-pulse", "name": "Impulsion de soin", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0,
+    "minHeal": 9, "maxHeal": 12,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "allies" }
+  }
+]

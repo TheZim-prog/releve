@@ -1,0 +1,16 @@
+// Énergétique, branche Brasier : le corps à corps.
+[
+  {
+    // Explosion autour de lui, pour se dégager.
+    "id": "nova", "name": "Nova",
+    "weight": "light", "range": 0, "minDamage": 9, "maxDamage": 12, "cooldownMs": 8000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  },
+  {
+    // Plus de dégâts pendant 2 ou 3 actions. 11,5 s : lancée (lourde), elle couvre 3 actions légères d'un héros établi
+    // (à 5 s, 8 s et 11 s), ou 2 si l'une est lourde.
+    "id": "energy-form", "name": "Forme d'énergie pure",
+    "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "effects": [ { "status": "empowered", "durationMs": 11500 } ]
+  }
+]

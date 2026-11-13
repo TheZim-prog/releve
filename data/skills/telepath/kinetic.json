@@ -1,0 +1,9 @@
+// Télépathe, branche Kinésiste : déplacer la matière (marche aussi sur les robots).
+[
+  {
+    // Déplace un allié ou un ennemi sur une case libre choisie.
+    "id": "telekinesis", "name": "Télékinésie",
+    "target": "any", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "forcedMove": { "type": "place", "distance": 3 }
+  }
+]

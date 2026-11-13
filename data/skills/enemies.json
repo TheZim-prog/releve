@@ -1,0 +1,34 @@
+// Compétences des ennemis du prologue (docs/design.md section 3).
+[
+  { "id": "brawler-punch", "name": "Coup de poing", "weight": "light", "range": 1, "minDamage": 8, "maxDamage": 12, "cooldownMs": 0 },
+  { "id": "gunner-shot", "name": "Tir", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 },
+  {
+    // Ligne chargée, esquivable.
+    "id": "aimed-burst", "name": "Tir appuyé",
+    "weight": "heavy", "range": 1, "minDamage": 16, "maxDamage": 20, "cooldownMs": 10000,
+    "chargeMs": 1000,
+    "zone": { "shape": "line", "size": 6, "throughWalls": false }
+  },
+  { "id": "heavy-blow", "name": "Gros coup", "weight": "heavy", "range": 1, "minDamage": 18, "maxDamage": 24, "cooldownMs": 0 },
+  {
+    // Zone chargée autour de la brute.
+    "id": "seismic-strike", "name": "Frappe sismique",
+    "weight": "heavy", "range": 0, "minDamage": 25, "maxDamage": 30, "cooldownMs": 14000,
+    "chargeMs": 2000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  },
+  { "id": "power-punch", "name": "Coup puissant", "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 20, "cooldownMs": 0 },
+  {
+    // Fonce sur un ennemi aligné, percute la première unité de sa ligne et la déséquilibre.
+    "id": "charge", "name": "Charge",
+    "weight": "light", "range": 5, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
+    "selfMove": "rush",
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // Dégâts autour du caïd.
+    "id": "impact-wave", "name": "Onde d'impact",
+    "weight": "light", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  }
+]

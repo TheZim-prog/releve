@@ -1,0 +1,9 @@
+// Colosse, branche Lutteur : déplacer les ennemis, tenir une ligne.
+[
+  {
+    // Frappe et projette la cible ; dégâts de collision contre un mur ou une unité.
+    "id": "projection", "name": "Projection",
+    "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 13, "cooldownMs": 10000,
+    "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 7, "collisionMaxDamage": 11 }
+  }
+]

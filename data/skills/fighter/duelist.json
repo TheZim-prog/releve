@@ -1,0 +1,8 @@
+// Combattant, branche Duelliste : tenir en mêlée.
+[
+  {
+    "id": "stunning-blow", "name": "Coup étourdissant",
+    "weight": "light", "range": 1, "minDamage": 5, "maxDamage": 8, "cooldownMs": 12000,
+    "effects": [ { "status": "stunned", "durationMs": 2000 } ]
+  }
+]

@@ -1,0 +1,10 @@
+// Colosse, branche Rempart : protéger les alliés.
+[
+  {
+    // Bloque la prochaine attaque contre les alliés dessous ; tombe à la prochaine action du colosse.
+    "id": "dome", "name": "Bouclier de zone",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "createsDome": true
+  }
+]

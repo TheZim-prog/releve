@@ -1,0 +1,51 @@
+// Arbre de compétences : Combattant (docs/design.md 2.7). Trois branches de trois paliers ; chaque compétence des paliers
+// 1 et 2 a une variante. Les compétences sont décrites dans data/skills ; celles qui ne sont pas encore codées sont
+// listées dans "planned" avec leur nom (à retirer de cette liste quand on les ajoute à la bibliothèque).
+{
+  "archetype": "fighter",
+  "branches": [
+    {
+      "id": "executioner", "name": "Exécuteur",
+      "tiers": [
+        { "actives": [ { "skill": "precise-strike", "variant": "pincer" }, { "skill": "rush", "variant": "retreat" } ] },
+        { "actives": [ { "skill": "relentless", "variant": "finishing-blow" } ], "passives": [ { "id": "weakPoint", "name": "Point faible" } ] },
+        { "actives": [ { "skill": "execution" } ], "passives": [ { "id": "opportunist", "name": "Opportuniste", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "duelist", "name": "Duelliste",
+      "tiers": [
+        { "actives": [ { "skill": "stunning-blow", "variant": "sweep" }, { "skill": "parry", "variant": "deflection" } ] },
+        { "actives": [ { "skill": "disarm", "variant": "offbeat" } ], "passives": [ { "id": "riposte", "name": "Riposte", "planned": true } ] },
+        { "actives": [ { "skill": "weapon-master" } ], "passives": [ { "id": "aloneAgainstAll", "name": "Seul contre tous", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "skirmisher", "name": "Franc-tireur",
+      "tiers": [
+        { "actives": [ { "skill": "throwing-blades", "variant": "volley" }, { "skill": "smoke-bomb", "variant": "tear-gas" } ] },
+        { "actives": [ { "skill": "trap", "variant": "explosive-trap" } ], "passives": [ { "id": "firstBlood", "name": "Premier sang", "planned": true } ] },
+        { "actives": [ { "skill": "deadly-throw" } ], "passives": [ { "id": "ambusher", "name": "Embusqué", "planned": true } ] }
+      ]
+    }
+  ],
+  "planned": {
+    "pincer": "Prise en tenaille",
+    "rush": "Ruée",
+    "retreat": "Retraite",
+    "relentless": "Acharnement",
+    "finishing-blow": "Coup de grâce",
+    "sweep": "Balayage",
+    "parry": "Parade",
+    "deflection": "Déviation",
+    "disarm": "Désarmement",
+    "offbeat": "Contretemps",
+    "weapon-master": "Maître d'armes",
+    "volley": "Volée",
+    "smoke-bomb": "Fumigène",
+    "tear-gas": "Lacrymogène",
+    "trap": "Piège",
+    "explosive-trap": "Piège explosif",
+    "deadly-throw": "Lancer mortel"
+  }
+}

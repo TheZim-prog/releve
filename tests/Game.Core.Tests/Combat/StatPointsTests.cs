@@ -185,44 +185,4 @@ public class StatPointsTests
         Assert.Throws<ArgumentException>(() =>
             Simulation(new Grid(3, 1), Unit(1, team: 0, 0, 0, initiative: 90, points: Points(initiative: 2))));
     }
-
-    [Fact]
-    public void AScenario_GivesTheirPointsToItsUnits()
-    {
-        const string json = """
-            {
-              "id": "test", "name": "Test", "seed": 7,
-              "map": [ "..." ],
-              "units": [
-                { "unit": "hero", "team": 0, "x": 0, "y": 0, "points": { "hp": 2, "power": 1 } },
-                { "unit": "hero", "team": 1, "x": 2, "y": 0 }
-              ]
-            }
-            """;
-        var catalog = new Dictionary<string, UnitDefinition> { ["hero"] = Unit(0, 0, 0, 0, hp: 100).Definition with { Id = "hero" } };
-
-        var sim = new CombatSimulation(ScenarioDefinition.FromJson(json).ToSetup(Rules, catalog));
-
-        Assert.Equal((120, 110, 10), (sim.Get(1).MaxHp, sim.Get(1).PowerPercent, sim.Get(1).Initiative));
-        Assert.Equal((100, 100), (sim.Get(2).MaxHp, sim.Get(2).PowerPercent));
-        Assert.Throws<ArgumentException>(() => ScenarioDefinition.FromJson(json.Replace("\"hp\": 2", "\"hp\": -2")));
-    }
-
-    [Fact]
-    public void AScenario_RefusesPointsThatPushTheInitiativeAboveTheGaugeCapacity()
-    {
-        const string json = """
-            {
-              "id": "test", "name": "Test", "seed": 7,
-              "map": [ "..." ],
-              "units": [ { "unit": "hero", "team": 0, "x": 0, "y": 0, "points": { "initiative": 1 } } ]
-            }
-            """;
-        var catalog = new Dictionary<string, UnitDefinition> { ["hero"] = Unit(0, 0, 0, 0, initiative: 90).Definition with { Id = "hero" } };
-
-        ScenarioDefinition.FromJson(json).ToSetup(Rules, catalog); // 99 : sous la capacité (100)
-
-        var tooFast = ScenarioDefinition.FromJson(json.Replace("\"initiative\": 1", "\"initiative\": 2")); // 108
-        Assert.Throws<ArgumentException>(() => tooFast.ToSetup(Rules, catalog));
-    }
 }

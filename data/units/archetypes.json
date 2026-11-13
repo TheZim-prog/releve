@@ -1,0 +1,59 @@
+// Archétypes de héros : les stats de BASE (une recrue de niveau 1) et l'attaque de base. Le reste d'un héros vient de
+// sa fiche (data/heroes) : points de stats, compétences et passif équipés, pris dans son arbre (data/trees).
+// L'initiative est en points de jauge par tick (voir combat-rules.json).
+[
+  {
+    "id": "colossus", "name": "Colosse",
+    "maxHp": 118, "initiative": 67, "mobility": 3,
+    "onDefeat": "downed",
+    "basicAttack": "punch",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": ["punch"]
+  },
+  {
+    "id": "speedster", "name": "Speedster",
+    "maxHp": 76, "initiative": 129, "mobility": 6,
+    "onDefeat": "downed",
+    "basicAttack": "flurry",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": ["flurry"]
+  },
+  {
+    "id": "fighter", "name": "Combattant",
+    "maxHp": 93, "initiative": 109, "mobility": 4,
+    "onDefeat": "downed",
+    "basicAttack": "combo",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": ["combo"]
+  },
+  {
+    "id": "energetic", "name": "Énergétique",
+    "maxHp": 73, "initiative": 94, "mobility": 4,
+    "onDefeat": "downed",
+    "basicAttack": "bolt",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": ["bolt"]
+  },
+  {
+    "id": "tech", "name": "Tech",
+    "maxHp": 74, "initiative": 88, "mobility": 4,
+    "onDefeat": "downed",
+    "basicAttack": "shot",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": ["shot"]
+  },
+  {
+    "id": "telepath", "name": "Télépathe",
+    "maxHp": 65, "initiative": 88, "mobility": 3,
+    "onDefeat": "downed",
+    "basicAttack": "psi-dart",
+    "opportunityAttacksPerCycle": 1,
+    "behavior": null,
+    "skills": ["psi-dart"]
+  }
+]

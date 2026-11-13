@@ -1,0 +1,4 @@
+// Tech : attaque de base.
+[
+  { "id": "shot", "name": "Tir", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 9, "cooldownMs": 0 }
+]

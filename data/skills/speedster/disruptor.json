@@ -1,0 +1,10 @@
+// Speedster, branche Perturbateur : gêner les ennemis.
+[
+  {
+    // Déséquilibre toutes les unités de la zone.
+    "id": "whirlwind", "name": "Tourbillon",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  }
+]

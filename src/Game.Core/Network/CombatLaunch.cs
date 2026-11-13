@@ -17,7 +17,7 @@ public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignmen
     public CombatSetup BuildSetup(GameContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        var setup = Scenario(content, ScenarioId).ToSetup(content.Rules, content.Units);
+        var setup = content.SetupFor(ScenarioId);
         var played = Heroes.Select(h => h.Unit).ToHashSet();
         var units = setup.Units
             .Select(u => IsPlayableHero(u) && !played.Contains(u.Id)
@@ -31,7 +31,7 @@ public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignmen
     public static IReadOnlyList<UnitSetup> PlayableHeroes(GameContent content, string scenarioId)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return Scenario(content, scenarioId).ToSetup(content.Rules, content.Units).Units.Where(IsPlayableHero).ToList();
+        return content.SetupFor(scenarioId).Units.Where(IsPlayableHero).ToList();
     }
 
     /// <summary>
@@ -54,9 +54,4 @@ public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignmen
 
     private static bool IsPlayableHero(UnitSetup unit) =>
         unit.Team == PlayerTeam && unit.Definition.Behavior is null && !unit.Definition.IsCivilian;
-
-    private static ScenarioDefinition Scenario(GameContent content, string scenarioId) =>
-        content.Scenarios.TryGetValue(scenarioId, out var scenario)
-            ? scenario
-            : throw new ArgumentException($"Unknown scenario '{scenarioId}'.", nameof(scenarioId));
 }

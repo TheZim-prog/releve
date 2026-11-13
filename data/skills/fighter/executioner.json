@@ -1,0 +1,10 @@
+// Combattant, branche Exécuteur : éliminer une cible précise.
+[
+  { "id": "precise-strike", "name": "Frappe précise", "weight": "light", "range": 1, "minDamage": 18, "maxDamage": 23, "cooldownMs": 8000 },
+  {
+    // Achève une cible sous 30 % de PV (pas un boss), sinon très gros dégâts.
+    "id": "execution", "name": "Exécution",
+    "weight": "heavy", "range": 1, "minDamage": 24, "maxDamage": 31, "cooldownMs": 20000,
+    "executeAtOrBelowPercent": 30
+  }
+]

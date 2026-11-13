@@ -1,0 +1,4 @@
+// Speedster : attaque de base.
+[
+  { "id": "flurry", "name": "Rafale de coups", "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 }
+]

@@ -25,6 +25,7 @@ internal static class CombatTestKit
         ExposedDamageTakenPercent = 125,
         WeakPointExposedMs = 1000, // 20 ticks
         GripDurationPercent = 150,
+        VigilanceExtraOpportunityAttacks = 1,
         IntentionThresholdPercent = 50,
         ReviveHpPercent = 25,
         ReviveWeight = SkillWeight.Light,

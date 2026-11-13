@@ -1,0 +1,51 @@
+// Arbre de compétences : Colosse (docs/design.md 2.7). Trois branches de trois paliers ; chaque compétence des paliers
+// 1 et 2 a une variante. Les compétences sont décrites dans data/skills ; celles qui ne sont pas encore codées sont
+// listées dans "planned" avec leur nom (à retirer de cette liste quand on les ajoute à la bibliothèque).
+{
+  "archetype": "colossus",
+  "branches": [
+    {
+      "id": "bulwark", "name": "Rempart",
+      "tiers": [
+        { "actives": [ { "skill": "dome", "variant": "personal-shield" }, { "skill": "provocation", "variant": "challenge" } ] },
+        { "actives": [ { "skill": "steel-skin", "variant": "aegis" } ], "passives": [ { "id": "bodyguard", "name": "Garde du corps", "planned": true } ] },
+        { "actives": [ { "skill": "fortress" } ], "passives": [ { "id": "unshakable", "name": "Inébranlable", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "bruiser", "name": "Cogneur",
+      "tiers": [
+        { "actives": [ { "skill": "leap", "variant": "crush" }, { "skill": "hammer-blow", "variant": "quake" } ] },
+        { "actives": [ { "skill": "throw-scenery", "variant": "barricade" } ], "passives": [ { "id": "rage", "name": "Rage", "planned": true } ] },
+        { "actives": [ { "skill": "shockwave" } ], "passives": [ { "id": "momentum", "name": "Sur sa lancée", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "wrestler", "name": "Lutteur",
+      "tiers": [
+        { "actives": [ { "skill": "projection", "variant": "reversal" }, { "skill": "arm-lock", "variant": "dismantle" } ] },
+        { "actives": [ { "skill": "catapult", "variant": "cannonball" } ], "passives": [ { "id": "vigilance", "name": "Vigilance" } ] },
+        { "actives": [ { "skill": "spin-throw" } ], "passives": [ { "id": "stoppingBlow", "name": "Coup d'arrêt", "planned": true } ] }
+      ]
+    }
+  ],
+  "planned": {
+    "personal-shield": "Bouclier personnel",
+    "provocation": "Provocation",
+    "challenge": "Défi",
+    "steel-skin": "Peau d'acier",
+    "aegis": "Égide",
+    "fortress": "Forteresse",
+    "crush": "Écrasement",
+    "hammer-blow": "Coup de marteau",
+    "quake": "Séisme",
+    "throw-scenery": "Lancer de décor",
+    "barricade": "Barricade",
+    "reversal": "Renversement",
+    "arm-lock": "Clé",
+    "dismantle": "Démontage",
+    "catapult": "Catapulte",
+    "cannonball": "Boulet",
+    "spin-throw": "Tourniquet"
+  }
+}

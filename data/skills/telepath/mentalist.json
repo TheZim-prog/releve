@@ -1,0 +1,21 @@
+// Télépathe, branche Mentaliste : contrôler les esprits (pouvoirs mentaux : sans effet sur les robots).
+[
+  {
+    // Étourdit plus longtemps que le coup du combattant.
+    "id": "paralysis", "name": "Paralysie",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
+    "effects": [ { "status": "stunned", "durationMs": 3000 } ]
+  },
+  {
+    // La cible attaque l'unité la plus proche, alliée ou non.
+    "id": "confusion", "name": "Confusion",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
+    "effects": [ { "status": "confused", "durationMs": 4000 } ]
+  },
+  {
+    // Prend le contrôle d'un ennemi (hors boss) quelques secondes.
+    "id": "domination", "name": "Domination",
+    "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 30000, "isMental": true,
+    "effects": [ { "status": "dominated", "durationMs": 5000 } ]
+  }
+]

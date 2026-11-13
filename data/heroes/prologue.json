@@ -1,0 +1,48 @@
+// Les héros établis du prologue : niveau 20, 19 points de stats répartis selon leur cliché, et le kit fixe du prologue
+// (4 compétences et un passif). Leurs cases achetées respectent les paliers de leur arbre ; certaines ne sont pas
+// encore codées (elles comptent pour ouvrir les paliers, mais ne peuvent pas être équipées).
+[
+  {
+    "id": "prologue-colossus", "archetype": "colossus", "level": 20,
+    "points": { "hp": 12, "power": 5, "initiative": 2 },
+    "learned": ["dome", "leap", "hammer-blow", "throw-scenery", "rage", "shockwave", "projection", "arm-lock", "vigilance"],
+    "equipped": ["dome", "leap", "projection", "shockwave"],
+    "passive": "vigilance"
+  },
+  {
+    "id": "prologue-speedster", "archetype": "speedster", "level": 20,
+    "points": { "hp": 4, "power": 3, "initiative": 12 },
+    "learned": ["breakthrough", "round-trip", "chain-strike", "ignoresOpportunityAttacks", "hyperspeed", "whirlwind", "flash-rescue"],
+    "equipped": ["whirlwind", "breakthrough", "flash-rescue", "hyperspeed"],
+    "passive": "ignoresOpportunityAttacks"
+  },
+  {
+    "id": "prologue-fighter", "archetype": "fighter", "level": 20,
+    "points": { "hp": 6, "power": 8, "initiative": 5 },
+    "learned": ["precise-strike", "rush", "relentless", "weakPoint", "execution", "throwing-blades", "stunning-blow"],
+    "equipped": ["precise-strike", "throwing-blades", "stunning-blow", "execution"],
+    "passive": "weakPoint"
+  },
+  {
+    // Son passif du prologue, Démesure, n'est pas encore codé : il l'a acheté, mais ne l'équipe pas.
+    "id": "prologue-energetic", "archetype": "energetic", "level": 20,
+    "points": { "hp": 3, "power": 13, "initiative": 3 },
+    "learned": ["beam", "blast", "nova", "propulsion", "melting-point", "excess", "energy-form"],
+    "equipped": ["beam", "blast", "nova", "energy-form"]
+  },
+  {
+    // Son passif du prologue, Analyse tactique, n'est pas encore codé : il l'a acheté, mais ne l'équipe pas.
+    "id": "prologue-tech", "archetype": "tech", "level": 20,
+    "points": { "hp": 5, "power": 7, "initiative": 7 },
+    "learned": ["turret", "nano-heal", "designation-shot", "covering-fire", "tactical-order", "tacticalAnalysis",
+                "electroshock", "jamming", "hacking", "jammingField", "emp"],
+    "equipped": ["turret", "nano-heal", "tactical-order", "emp"]
+  },
+  {
+    "id": "prologue-telepath", "archetype": "telepath", "level": 20,
+    "points": { "hp": 5, "power": 7, "initiative": 7 },
+    "learned": ["paralysis", "telepathic-strike", "confusion", "grip", "domination", "telekinesis"],
+    "equipped": ["paralysis", "confusion", "domination", "telekinesis"],
+    "passive": "grip"
+  }
+]

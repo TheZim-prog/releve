@@ -1,0 +1,4 @@
+// Énergétique : attaque de base.
+[
+  { "id": "bolt", "name": "Trait d'énergie", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 }
+]

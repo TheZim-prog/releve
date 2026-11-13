@@ -1,0 +1,18 @@
+// Colosse, branche Cogneur : dégâts au milieu de la mêlée.
+[
+  {
+    // Atterrit sur une case libre et frappe tout le monde autour.
+    "id": "leap", "name": "Saut",
+    "weight": "light", "range": 4, "minDamage": 13, "maxDamage": 16, "cooldownMs": 12000,
+    "selfMove": "leap",
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  },
+  {
+    // Frappe au sol : une vague en ligne, chargée, donc esquivable.
+    "id": "shockwave", "name": "Onde de choc",
+    "weight": "heavy", "range": 1, "minDamage": 18, "maxDamage": 23, "cooldownMs": 12000,
+    "chargeMs": 1500,
+    "zone": { "shape": "line", "size": 4, "throughWalls": false },
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  }
+]

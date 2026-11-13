@@ -1,0 +1,27 @@
+// Progression des héros (docs/design.md 2.6 et 2.7). Ce que vaut un point de stat en combat est dans combat-rules.json.
+{
+  "maxLevel": 20,
+
+  // Points de stats : un par niveau gagné (19 au niveau 20).
+  "statPointsPerLevel": 1,
+
+  // Points de compétence : 3 à la création, puis 1 à chaque niveau pair (13 au niveau 20).
+  "startingSkillPoints": 3,
+  "levelsPerSkillPoint": 2,
+
+  // Compétences actives équipées avant une mission. L'emplacement de passif est à part, dès le départ.
+  "activeSlots": [
+    { "fromLevel": 1, "count": 3 },
+    { "fromLevel": 10, "count": 4 }
+  ],
+
+  // Forme d'un arbre : trois branches de trois paliers. Un palier s'ouvre quand assez de points ont été dépensés dans
+  // les paliers précédents de la branche. Les compétences des paliers 1 et 2 ont chacune une variante ; celle du
+  // palier 3, toujours une action lourde, n'en a pas.
+  "branchesPerTree": 3,
+  "tiers": [
+    { "pointsInBranch": 0, "actives": 2, "passives": 0, "variants": true, "requiresHeavy": false },
+    { "pointsInBranch": 2, "actives": 1, "passives": 1, "variants": true, "requiresHeavy": false },
+    { "pointsInBranch": 4, "actives": 1, "passives": 1, "variants": false, "requiresHeavy": true }
+  ]
+}

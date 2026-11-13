@@ -1,0 +1,51 @@
+// Arbre de compétences : Speedster (docs/design.md 2.7). Trois branches de trois paliers ; chaque compétence des paliers
+// 1 et 2 a une variante. Les compétences sont décrites dans data/skills ; celles qui ne sont pas encore codées sont
+// listées dans "planned" avec leur nom (à retirer de cette liste quand on les ajoute à la bibliothèque).
+{
+  "archetype": "speedster",
+  "branches": [
+    {
+      "id": "lightning", "name": "Éclair",
+      "tiers": [
+        { "actives": [ { "skill": "breakthrough", "variant": "slalom" }, { "skill": "round-trip", "variant": "running-strike" } ] },
+        { "actives": [ { "skill": "chain-strike", "variant": "ricochet" } ], "passives": [ { "id": "ignoresOpportunityAttacks", "name": "Insaisissable" } ] },
+        { "actives": [ { "skill": "hyperspeed" } ], "passives": [ { "id": "reflexes", "name": "Réflexes", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "rescuer", "name": "Sauveteur",
+      "tiers": [
+        { "actives": [ { "skill": "flash-rescue", "variant": "express-revive" }, { "skill": "clearance", "variant": "trip" } ] },
+        { "actives": [ { "skill": "carry", "variant": "swap" } ], "passives": [ { "id": "slipstream", "name": "Sillage", "planned": true } ] },
+        { "actives": [ { "skill": "collective-surge" } ], "passives": [ { "id": "flyingStart", "name": "Départ canon", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "disruptor", "name": "Perturbateur",
+      "tiers": [
+        { "actives": [ { "skill": "whirlwind", "variant": "wind-wall" }, { "skill": "harassment", "variant": "pickpocket" } ] },
+        { "actives": [ { "skill": "afterimage", "variant": "rigged-decoy" } ], "passives": [ { "id": "diversion", "name": "Diversion", "planned": true } ] },
+        { "actives": [ { "skill": "vortex" } ], "passives": [ { "id": "timeThief", "name": "Voleur de temps", "planned": true } ] }
+      ]
+    }
+  ],
+  "planned": {
+    "slalom": "Slalom",
+    "round-trip": "Aller-retour",
+    "running-strike": "Coup d'élan",
+    "chain-strike": "Frappe en chaîne",
+    "ricochet": "Ricochet",
+    "express-revive": "Réanimation express",
+    "clearance": "Dégagement",
+    "trip": "Croche-pied",
+    "carry": "Transport",
+    "swap": "Permutation",
+    "collective-surge": "Élan collectif",
+    "wind-wall": "Mur de vent",
+    "harassment": "Harcèlement",
+    "pickpocket": "Vol à la tire",
+    "afterimage": "Image rémanente",
+    "rigged-decoy": "Leurre piégé",
+    "vortex": "Vortex"
+  }
+}

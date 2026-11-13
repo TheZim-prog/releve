@@ -1,0 +1,4 @@
+// Télépathe : attaque de base.
+[
+  { "id": "psi-dart", "name": "Dard psychique", "weight": "light", "range": 5, "minDamage": 4, "maxDamage": 7, "cooldownMs": 0 }
+]

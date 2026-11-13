@@ -1,0 +1,16 @@
+// Énergétique, branche Feu : dégâts à distance.
+[
+  {
+    // Ligne qui traverse les ennemis et le décor.
+    "id": "beam", "name": "Rayon",
+    "weight": "light", "range": 1, "minDamage": 10, "maxDamage": 13, "cooldownMs": 8000,
+    "zone": { "shape": "line", "size": 6, "throughWalls": true }
+  },
+  {
+    // Zone chargée à distance, esquivable.
+    "id": "blast", "name": "Déflagration",
+    "weight": "heavy", "range": 6, "minDamage": 16, "maxDamage": 20, "cooldownMs": 12000,
+    "chargeMs": 1500,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  }
+]

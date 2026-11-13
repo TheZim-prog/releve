@@ -1,0 +1,45 @@
+# Contenu du jeu
+
+Tout ce qui se règle sans toucher au code. Les fichiers sont du JSON avec commentaires (`//`) ; ils sont tous vérifiés
+au lancement du jeu, du serveur et des tests, et une erreur dit quel fichier ou quel identifiant est en cause.
+
+Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`name`) sont en français.
+
+## Organisation
+
+| Dossier ou fichier | Contenu |
+|---|---|
+| `combat-rules.json` | Réglages du combat : jauge, poids des actions, états, couverture, valeur d'un point de stat. |
+| `progression.json` | Niveaux, points de stats et de compétences, emplacements, forme des arbres. |
+| `skills/` | La bibliothèque de compétences : chacune est décrite **une seule fois**, dans le fichier de son archétype et de sa branche. |
+| `units/` | Les types d'unités : archétypes de héros (stats de base), ennemis, gadgets, civils. |
+| `trees/` | Un arbre de compétences par archétype : branches, paliers, variantes, passifs. |
+| `heroes/` | Des héros prêts à jouer (ceux du prologue) : niveau, points de stats, cases achetées, équipement. |
+| `scenarios/` | Les combats : la carte, et les unités et les héros placés dessus. |
+
+## Qui désigne qui
+
+Rien n'est copié : on désigne par identifiant.
+
+- Une **unité** liste ses compétences : `"skills": ["punch"]`.
+- Une **compétence** d'invocation désigne l'unité qu'elle pose : `"summon": "turret"`.
+- Un **arbre** désigne ses compétences et leurs variantes : `{ "skill": "dome", "variant": "personal-shield" }`.
+- Un **héros** désigne son archétype, les cases qu'il a achetées et ce qu'il équipe.
+- Un **scénario** place soit une unité (`"unit": "brawler"`), soit un héros (`"hero": "prologue-colossus"`).
+
+## Gestes courants
+
+**Régler une valeur** (dégâts, portée, recharge, durée) : la changer dans le fichier de la compétence, sous `skills/`.
+Les dégâts écrits sont ceux d'une recrue ; la puissance du héros les multiplie.
+
+**Ajouter une compétence prévue par un arbre** :
+
+1. la décrire dans `skills/<archétype>/<branche>.json` ;
+2. la retirer de la liste `"planned"` de l'arbre (le jeu refuse de se lancer tant qu'elle est aux deux endroits) ;
+3. un héros peut alors l'équiper.
+
+**Ajouter un passif** : il faut du code (`PassiveKind`), puis retirer `"planned": true` de sa case dans l'arbre.
+
+**Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
+progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et
+seulement des compétences déjà codées dans l'équipement.

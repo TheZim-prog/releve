@@ -1,0 +1,4 @@
+// Combattant : attaque de base.
+[
+  { "id": "combo", "name": "Enchaînement", "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 12, "cooldownMs": 0 }
+]

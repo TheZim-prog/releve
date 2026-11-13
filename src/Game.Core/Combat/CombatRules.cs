@@ -39,6 +39,9 @@ public sealed record CombatRules
     /// <summary>Durée des états néfastes posés par une unité qui a le passif Emprise, en % de la durée normale.</summary>
     public required int GripDurationPercent { get; init; }
 
+    /// <summary>Attaques d'opportunité en plus par cycle pour une unité qui a le passif Vigilance.</summary>
+    public required int VigilanceExtraOpportunityAttacks { get; init; }
+
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
@@ -118,6 +121,8 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(WeakPointExposedMs)} must be positive.");
         if (GripDurationPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(GripDurationPercent)} must be between 100 and 1000.");
+        if (VigilanceExtraOpportunityAttacks is < 1 or > 10)
+            throw new ArgumentException($"{nameof(VigilanceExtraOpportunityAttacks)} must be between 1 and 10.");
         ValidatePercent(HpPercentPerStatPoint, nameof(HpPercentPerStatPoint), max: 100); // 0 : le point n'apporte rien
         ValidatePercent(PowerPercentPerStatPoint, nameof(PowerPercentPerStatPoint), max: 100);
         ValidatePercent(InitiativePercentPerStatPoint, nameof(InitiativePercentPerStatPoint), max: 100);

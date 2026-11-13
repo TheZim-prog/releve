@@ -19,6 +19,7 @@ public class CombatRulesTests
           "exposedDamageTakenPercent": 125,
           "weakPointExposedMs": 4000,
           "gripDurationPercent": 150,
+          "vigilanceExtraOpportunityAttacks": 1,
           "intentionThresholdPercent": 50,
           "reviveHpPercent": 25,
           "reviveWeight": "light",

@@ -1,0 +1,51 @@
+// Arbre de compétences : Énergétique (docs/design.md 2.7). Trois branches de trois paliers ; chaque compétence des paliers
+// 1 et 2 a une variante. Les compétences sont décrites dans data/skills ; celles qui ne sont pas encore codées sont
+// listées dans "planned" avec leur nom (à retirer de cette liste quand on les ajoute à la bibliothèque).
+{
+  "archetype": "energetic",
+  "branches": [
+    {
+      "id": "fire", "name": "Feu",
+      "tiers": [
+        { "actives": [ { "skill": "beam", "variant": "electric-arc" }, { "skill": "blast", "variant": "controlled-blast" } ] },
+        { "actives": [ { "skill": "fire-lance", "variant": "chain-lightning" } ], "passives": [ { "id": "piercing", "name": "Perforant", "planned": true } ] },
+        { "actives": [ { "skill": "star" } ], "passives": [ { "id": "chainReaction", "name": "Réaction en chaîne", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "blaze", "name": "Brasier",
+      "tiers": [
+        { "actives": [ { "skill": "nova", "variant": "recoil-wave" }, { "skill": "propulsion", "variant": "comet" } ] },
+        { "actives": [ { "skill": "melting-point", "variant": "discharge" } ], "passives": [ { "id": "excess", "name": "Démesure", "planned": true } ] },
+        { "actives": [ { "skill": "energy-form" } ], "passives": [ { "id": "furnace", "name": "Fournaise", "planned": true } ] }
+      ]
+    },
+    {
+      "id": "ice", "name": "Glace",
+      "tiers": [
+        { "actives": [ { "skill": "ice-shard", "variant": "freeze" }, { "skill": "ice-wall", "variant": "ice-pillar" } ] },
+        { "actives": [ { "skill": "black-ice", "variant": "frostbite" } ], "passives": [ { "id": "frost", "name": "Givre", "planned": true } ] },
+        { "actives": [ { "skill": "absolute-zero" } ], "passives": [ { "id": "frostShell", "name": "Carapace de givre", "planned": true } ] }
+      ]
+    }
+  ],
+  "planned": {
+    "electric-arc": "Arc électrique",
+    "controlled-blast": "Tir maîtrisé",
+    "fire-lance": "Lance de feu",
+    "chain-lightning": "Chaîne d'éclairs",
+    "star": "Astre",
+    "recoil-wave": "Onde de recul",
+    "propulsion": "Propulsion",
+    "comet": "Comète",
+    "melting-point": "Point de fusion",
+    "discharge": "Décharge",
+    "ice-shard": "Éclat de glace",
+    "freeze": "Gel",
+    "ice-wall": "Mur de glace",
+    "ice-pillar": "Pilier de glace",
+    "black-ice": "Verglas",
+    "frostbite": "Engelure",
+    "absolute-zero": "Zéro absolu"
+  }
+}

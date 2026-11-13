@@ -1,0 +1,4 @@
+// Colosse : attaque de base. Les dégâts sont ceux d'une recrue (puissance 100 %).
+[
+  { "id": "punch", "name": "Coup de poing", "weight": "light", "range": 1, "minDamage": 11, "maxDamage": 14, "cooldownMs": 0 }
+]

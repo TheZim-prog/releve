@@ -11,10 +11,12 @@ namespace Game.Core.Tests;
 /// </summary>
 public class ContentTests
 {
-    private static readonly CombatRules Rules = CombatRules.FromJson(Data("combat-rules.json"));
-    private static readonly IReadOnlyDictionary<string, UnitDefinition> Heroes = Load("heroes.json");
-    private static readonly IReadOnlyDictionary<string, UnitDefinition> Enemies = Load("enemies.json");
-    private static readonly IReadOnlyDictionary<string, UnitDefinition> Civilians = Load("civilians.json");
+    private static readonly string[] Archetypes = { "colossus", "energetic", "fighter", "speedster", "tech", "telepath" };
+
+    private static readonly GameContent Content = GameContent.Load(Path.Combine(AppContext.BaseDirectory, "data"));
+    private static readonly CombatRules Rules = Content.Rules;
+    private static readonly IReadOnlyDictionary<string, SkillDefinition> Skills = Content.Skills;
+    private static readonly IReadOnlyDictionary<string, UnitDefinition> Units = Content.Units;
 
     private static readonly Grid Arena = Grid.FromRows(
         "................",
@@ -30,68 +32,98 @@ public class ContentTests
 
     public ContentTests(ITestOutputHelper output) => _output = output;
 
-    private static string Data(string path) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", path));
-
-    private static IReadOnlyDictionary<string, UnitDefinition> Load(string file) =>
-        UnitDefinition.ListFromJson(Data(Path.Combine("units", file))).ToDictionary(u => u.Id);
+    [Fact]
+    public void TheArchetypes_AreTheSixOfTheDesign_WithOnlyTheirBasicAttack()
+    {
+        Assert.Equal(Archetypes, Content.Heroes!.Trees.Keys.Order());
+        Assert.All(Archetypes, id =>
+        {
+            var archetype = Units[id];
+            Assert.Null(archetype.Behavior);
+            Assert.Null(archetype.Passive);
+            Assert.Equal(DefeatOutcome.Downed, archetype.OnDefeat);
+            Assert.Equal(archetype.BasicAttack, archetype.Skills.Single().Id);
+        });
+    }
 
     [Fact]
-    public void Heroes_AreTheSixArchetypes()
+    public void TheSkillLibrary_HoldsThePrologueKits()
     {
-        Assert.Equal(
-            new[] { "colossus", "energetic", "fighter", "speedster", "tech", "telepath" },
-            Heroes.Keys.Order());
-        Assert.All(Heroes.Values, h =>
+        Assert.Equal(SkillTargeting.Self, Skills["hyperspeed"].Target);
+        Assert.Equal(ForcedMoveType.Push, Skills["projection"].ForcedMove!.Type);
+        Assert.True(Skills["dome"].CreatesDome);
+        Assert.Equal("turret", Skills["turret"].Summon!.Id);
+        Assert.True(Skills["nano-heal"].Summon is { Id: "nano-beacon", MaxActivations: 3 });
+        Assert.True(Skills["execution"].ExecuteAtOrBelowPercent > 0);
+        Assert.Equal(SelfMoveType.Pierce, Skills["breakthrough"].SelfMove);
+        Assert.True(Skills["flash-rescue"].IsRescue);
+        Assert.All(new[] { "paralysis", "confusion", "domination" }, id => Assert.True(Skills[id].IsMental));
+        Assert.Equal(SelfMoveType.Leap, Skills["leap"].SelfMove);
+        Assert.Equal(SelfMoveType.Rush, Skills["charge"].SelfMove);
+        Assert.Equal(ForcedMoveType.Place, Skills["telekinesis"].ForcedMove!.Type);
+        Assert.Equal(SkillTargeting.Self, Skills["energy-form"].Target);
+        Assert.Equal(SkillTargeting.Ally, Skills["tactical-order"].Target);
+        Assert.True(Skills["tactical-order"].GaugeGainPercent > 0);
+    }
+
+    [Fact]
+    public void EveryTree_HasThreeBranches_EighteenNodes_AndNineVariants()
+    {
+        Assert.All(Content.Heroes!.Trees.Values, tree =>
         {
-            Assert.Null(h.Behavior);
-            Assert.Equal(DefeatOutcome.Downed, h.OnDefeat);
-            h.ValidateAgainst(Rules);
+            var nodes = tree.Nodes();
+            Assert.Equal(3, tree.Branches.Count);
+            Assert.Equal((12, 6), (nodes.Count(n => !n.IsPassive), nodes.Count(n => n.IsPassive)));
+            Assert.Equal(9, nodes.Count(n => n.Variant is not null));
         });
-        Assert.Equal(PassiveKind.IgnoresOpportunityAttacks, Heroes["speedster"].Passive);
-        Assert.Contains(Heroes["speedster"].Skills, s => s.Id == "hyperspeed" && s.Target == SkillTargeting.Self);
-        Assert.Contains(Heroes["colossus"].Skills, s => s.Id == "projection" && s.ForcedMove!.Type == ForcedMoveType.Push);
-        Assert.Contains(Heroes["colossus"].Skills, s => s.Id == "dome" && s.CreatesDome);
-        Assert.Contains(Heroes["tech"].Skills, s => s.Summon?.Id == "turret");
-        Assert.Contains(Heroes["tech"].Skills, s => s.Summon is { Id: "nano-beacon", MaxActivations: 3 });
-        Assert.Equal(PassiveKind.WeakPoint, Heroes["fighter"].Passive);
-        Assert.Contains(Heroes["fighter"].Skills, s => s.Id == "execution" && s.ExecuteAtOrBelowPercent > 0);
-        Assert.True(Enemies["kingpin"].IsBoss);
-        Assert.Contains(Heroes["speedster"].Skills, s => s.SelfMove == SelfMoveType.Pierce);
-        Assert.Contains(Heroes["speedster"].Skills, s => s.IsRescue);
-        Assert.Equal(PassiveKind.Grip, Heroes["telepath"].Passive);
-        Assert.All(new[] { "paralysis", "confusion", "domination" },
-            id => Assert.True(Heroes["telepath"].Skills.Single(s => s.Id == id).IsMental));
-        Assert.Contains(Heroes["colossus"].Skills, s => s.SelfMove == SelfMoveType.Leap);
-        Assert.Contains(Enemies["kingpin"].Skills, s => s.SelfMove == SelfMoveType.Rush);
-        Assert.Contains(Heroes["telepath"].Skills, s => s.Id == "telekinesis" && s.ForcedMove!.Type == ForcedMoveType.Place);
-        Assert.Contains(Heroes["energetic"].Skills, s => s.Id == "energy-form" && s.Target == SkillTargeting.Self);
-        var order = Heroes["tech"].Skills.Single(s => s.Id == "tactical-order");
-        Assert.Equal(SkillTargeting.Ally, order.Target);
-        Assert.True(order.GaugeGainPercent > 0);
+    }
+
+    [Fact]
+    public void ThePrologueHeroes_KeepTheirKits()
+    {
+        // L'attaque de base, puis les quatre compétences du kit, dans l'ordre des boutons ; et le passif.
+        (string Skills, PassiveKind? Passive) Kit(string hero)
+        {
+            var definition = Content.Heroes!.Unit(hero).Definition;
+            return (string.Join(" ", definition.Skills.Select(s => s.Id)), definition.Passive);
+        }
+
+        Assert.Equal(("punch dome leap projection shockwave", PassiveKind.Vigilance), Kit("prologue-colossus"));
+        Assert.Equal(("flurry whirlwind breakthrough flash-rescue hyperspeed", PassiveKind.IgnoresOpportunityAttacks), Kit("prologue-speedster"));
+        Assert.Equal(("combo precise-strike throwing-blades stunning-blow execution", PassiveKind.WeakPoint), Kit("prologue-fighter"));
+        Assert.Equal(("bolt beam blast nova energy-form", null), Kit("prologue-energetic"));
+        Assert.Equal(("shot turret nano-heal tactical-order emp", null), Kit("prologue-tech"));
+        Assert.Equal(("psi-dart paralysis confusion domination telekinesis", PassiveKind.Grip), Kit("prologue-telepath"));
     }
 
     [Fact]
     public void Enemies_AreThePrologueOnes()
     {
-        Assert.Equal(new[] { "brawler", "brute", "gunner", "kingpin" }, Enemies.Keys.Order());
-        Assert.All(Enemies.Values, e =>
+        var enemies = new[] { "brawler", "brute", "gunner", "kingpin" };
+
+        Assert.Equal(enemies, Units.Values.Where(u => u.Behavior is Behaviors.Basic or Behaviors.Gunner && u.Mobility > 0).Select(u => u.Id).Order());
+        Assert.All(enemies, id =>
         {
-            Assert.Equal(e.Id == "gunner" ? Behaviors.Gunner : Behaviors.Basic, e.Behavior);
-            Assert.Equal(DefeatOutcome.Removed, e.OnDefeat);
-            Assert.Equal(e.Id == "kingpin" ? 30 : null, e.FleeAtHpPercent);
-            e.ValidateAgainst(Rules);
+            var enemy = Units[id];
+            Assert.Equal(id == "gunner" ? Behaviors.Gunner : Behaviors.Basic, enemy.Behavior);
+            Assert.Equal(DefeatOutcome.Removed, enemy.OnDefeat);
+            Assert.Equal(id == "kingpin" ? 30 : null, enemy.FleeAtHpPercent);
         });
+        Assert.True(Units["kingpin"].IsBoss);
+    }
+
+    [Fact]
+    public void Civilians_AreNeutralAndFlee()
+    {
+        Assert.True(Units["civilian"].IsCivilian);
+        Assert.Equal(Behaviors.Flee, Units["civilian"].Behavior);
     }
 
     [Fact]
     public void TheStreetScenario_LoadsAndPlays()
     {
-        var catalog = Heroes.Concat(Enemies).Concat(Civilians).ToDictionary();
-        var scenario = ScenarioDefinition.FromJson(Data(Path.Combine("scenarios", "street.json")));
-        var setup = scenario.ToSetup(Rules, catalog);
-
         // Les héros attendent (personne ne les commande) : l'IA ennemie et les civils jouent.
-        var sim = new CombatSimulation(setup);
+        var sim = new CombatSimulation(Content.SetupFor("street"));
         for (var i = 0; i < Rules.TicksPerSecond * 30; i++)
             sim.Tick();
 
@@ -102,35 +134,28 @@ public class ContentTests
     [Fact]
     public void TheStreetScenario_FieldsTheEstablishedHeroes_AtLevel20()
     {
-        var catalog = Heroes.Concat(Enemies).Concat(Civilians).ToDictionary();
-        var setup = ScenarioDefinition.FromJson(Data(Path.Combine("scenarios", "street.json"))).ToSetup(Rules, catalog);
-        var sim = new CombatSimulation(setup);
+        var sim = new CombatSimulation(Content.SetupFor("street"));
         (int MaxHp, int Initiative, int Power) Stats(string id)
         {
             var unit = sim.Units.Single(u => u.Definition.Id == id);
             return (unit.MaxHp, unit.Initiative, unit.PowerPercent);
         }
 
-        // Niveau 20 : 19 points de stats chacun, qui les ramènent des stats de base de l'archétype à celles du prologue.
-        Assert.All(setup.Units.Where(u => Heroes.ContainsKey(u.Definition.Id)),
-            u => Assert.Equal(19, u.Points!.Hp + u.Points.Power + u.Points.Initiative));
+        // Niveau 20 : 19 points de stats chacun, qui les portent des stats de base de l'archétype à celles du prologue.
+        Assert.All(Content.Heroes!.Sheets.Values, hero =>
+        {
+            Assert.Equal(20, hero.Level);
+            Assert.Equal(19, hero.Points.Hp + hero.Points.Power + hero.Points.Initiative);
+        });
         Assert.Equal((160, 70, 115), Stats("colossus"));
         Assert.Equal((85, 160, 109), Stats("speedster"));
         Assert.Equal((110, 120, 124), Stats("fighter"));
         Assert.Equal((80, 100, 139), Stats("energetic"));
         Assert.Equal((85, 100, 121), Stats("tech"));
         Assert.Equal((75, 100, 121), Stats("telepath"));
+        Assert.Equal(2, sim.Units.Single(u => u.Definition.Id == "colossus").OpportunityAttacksPerCycle); // Vigilance
         // Les autres unités n'ont pas de points.
-        Assert.All(sim.Units.Where(u => !Heroes.ContainsKey(u.Definition.Id)), u => Assert.Equal(100, u.PowerPercent));
-    }
-
-    [Fact]
-    public void Civilians_AreNeutralAndFlee()
-    {
-        var civilian = Civilians["civilian"];
-        Assert.True(civilian.IsCivilian);
-        Assert.Equal(Behaviors.Flee, civilian.Behavior);
-        civilian.ValidateAgainst(Rules);
+        Assert.All(sim.Units.Where(u => !Archetypes.Contains(u.Definition.Id)), u => Assert.Equal(100, u.PowerPercent));
     }
 
     public static TheoryData<string, string[], (string Id, int X, int Y)[]> Skirmishes => new()
@@ -151,22 +176,19 @@ public class ContentTests
     [MemberData(nameof(Skirmishes))]
     public void Skirmish_WithTheRealContent_EndsAndReplays(string name, string[] heroIds, (string Id, int X, int Y)[] enemies)
     {
-        // Les héros (ceux du prologue, avec les points de stats que leur donne le scénario de la rue) sont confiés à
-        // l'IA de base pour que le combat se joue seul.
-        var established = ScenarioDefinition.FromJson(Data(Path.Combine("scenarios", "street.json"))).Units
-            .Where(u => Heroes.ContainsKey(u.Unit))
-            .GroupBy(u => u.Unit)
-            .ToDictionary(g => g.Key, g => g.First().Points);
+        // Les héros du prologue sont confiés à l'IA de base pour que le combat se joue seul.
         var units = new List<UnitSetup>();
         var id = 1;
         for (var i = 0; i < heroIds.Length; i++)
-            units.Add((Heroes[heroIds[i]] with { Behavior = Behaviors.Basic })
-                .ToSetup(new UnitId(id++), team: 0, new Cell(0, 2 + i), points: established.GetValueOrDefault(heroIds[i])));
+        {
+            var hero = Content.Heroes!.Unit($"prologue-{heroIds[i]}");
+            units.Add((hero.Definition with { Behavior = Behaviors.Basic }).ToSetup(new UnitId(id++), team: 0, new Cell(0, 2 + i), points: hero.Points));
+        }
         foreach (var (enemy, x, y) in enemies)
-            units.Add(Enemies[enemy].ToSetup(new UnitId(id++), team: 1, new Cell(x, y)));
+            units.Add(Units[enemy].ToSetup(new UnitId(id++), team: 1, new Cell(x, y)));
         // Des civils pris entre les deux camps : ils fuient, et les zones peuvent les blesser.
         foreach (var (x, y) in new[] { (7, 3), (8, 4), (9, 1) })
-            units.Add(Civilians["civilian"].ToSetup(new UnitId(id++), team: 2, new Cell(x, y)));
+            units.Add(Units["civilian"].ToSetup(new UnitId(id++), team: 2, new Cell(x, y)));
 
         var setup = new CombatSetup(Rules, Arena, units, Seed: 2026);
         var sim = new CombatSimulation(setup);

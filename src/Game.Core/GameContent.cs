@@ -1,19 +1,27 @@
-using System.Security.Cryptography;
-using System.Text;
 using Game.Core.Combat;
+using Game.Core.Loading;
+using Game.Core.Progression;
+using Game.Core.Scenarios;
 
 namespace Game.Core;
 
 /// <summary>
-/// Contenu du jeu (dossier <c>data/</c>) : règles, types d'unités, scénarios. Partagé par le client et le serveur, qui
-/// doivent avoir exactement le même pour que leurs simulations restent identiques : <see cref="Version"/> le vérifie.
+/// Contenu du jeu (dossier <c>data/</c>) : règles, compétences, types d'unités, arbres et héros, scénarios. Partagé par
+/// le client et le serveur, qui doivent avoir exactement le même pour que leurs simulations restent identiques :
+/// <see cref="Version"/> le vérifie.
 /// </summary>
 public sealed class GameContent
 {
     public required CombatRules Rules { get; init; }
 
-    /// <summary>Tous les types d'unités (héros, ennemis, civils), par identifiant.</summary>
+    /// <summary>Bibliothèque des compétences, par identifiant : chacune y est décrite une seule fois.</summary>
+    public IReadOnlyDictionary<string, SkillDefinition> Skills { get; init; } = new Dictionary<string, SkillDefinition>();
+
+    /// <summary>Tous les types d'unités (archétypes de héros, ennemis, gadgets, civils), par identifiant.</summary>
     public required IReadOnlyDictionary<string, UnitDefinition> Units { get; init; }
+
+    /// <summary>Arbres de compétences et héros prêts à jouer, ou <c>null</c> si ce contenu n'en a pas.</summary>
+    public HeroCatalog? Heroes { get; init; }
 
     public required IReadOnlyDictionary<string, ScenarioDefinition> Scenarios { get; init; }
 
@@ -24,33 +32,14 @@ public sealed class GameContent
     public static GameContent Load(string dataDirectory)
     {
         ArgumentNullException.ThrowIfNull(dataDirectory);
-        // L'empreinte porte exactement sur les textes chargés (un fichier ignoré ne la change pas).
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        string Read(string relativePath)
-        {
-            var text = File.ReadAllText(Path.Combine(dataDirectory, relativePath));
-            // Fins de ligne normalisées : Git peut les convertir différemment selon la machine (Windows, Raspberry Pi).
-            hash.AppendData(Encoding.UTF8.GetBytes(relativePath.Replace('\\', '/') + "\n" + text.Replace("\r\n", "\n") + "\n"));
-            return text;
-        }
-
-        var rules = CombatRules.FromJson(Read("combat-rules.json"));
-        var units = JsonFiles(dataDirectory, "units")
-            .SelectMany(file => UnitDefinition.ListFromJson(Read(file)))
-            .ToDictionary(u => u.Id);
-        foreach (var unit in units.Values)
-            unit.ValidateAgainst(rules);
-        var scenarios = JsonFiles(dataDirectory, "scenarios")
-            .Select(file => ScenarioDefinition.FromJson(Read(file)))
-            .ToDictionary(s => s.Id);
-        // Chaque scénario doit pouvoir se monter avec ces règles et ces unités (unités connues, points de stats valides).
-        foreach (var scenario in scenarios.Values)
-            scenario.ToSetup(rules, units);
-        return new GameContent
-        {
-            Rules = rules, Units = units, Scenarios = scenarios, Version = Convert.ToHexString(hash.GetHashAndReset())[..16],
-        };
+        return ContentLoader.Load(dataDirectory);
     }
+
+    /// <summary>État initial du combat d'un scénario de ce contenu.</summary>
+    public CombatSetup SetupFor(string scenarioId) =>
+        Scenarios.TryGetValue(scenarioId, out var scenario)
+            ? scenario.ToSetup(Rules, Units, Heroes)
+            : throw new ArgumentException($"Unknown scenario '{scenarioId}'.", nameof(scenarioId));
 
     /// <summary>
     /// Le dossier <c>data/</c> le plus proche en remontant depuis <paramref name="startDirectory"/> (à côté d'un serveur
@@ -66,10 +55,4 @@ public sealed class GameContent
         }
         return null;
     }
-
-    /// <summary>Fichiers JSON d'un sous-dossier, en chemins relatifs, dans un ordre stable.</summary>
-    private static IEnumerable<string> JsonFiles(string dataDirectory, string folder) =>
-        Directory.GetFiles(Path.Combine(dataDirectory, folder), "*.json")
-            .Select(f => Path.Combine(folder, Path.GetFileName(f)))
-            .Order(StringComparer.Ordinal);
 }

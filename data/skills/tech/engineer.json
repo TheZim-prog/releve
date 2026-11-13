@@ -1,0 +1,15 @@
+// Tech, branche Ingénieur : drones et gadgets. Les unités posées sont dans units/gadgets.json.
+[
+  {
+    // Pose une tourelle qui tire seule sur les ennemis à portée (une à la fois).
+    "id": "turret", "name": "Tourelle",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "summon": "turret"
+  },
+  {
+    // Pose une balise qui soigne les alliés autour d'elle, 3 fois au plus (une à la fois).
+    "id": "nano-heal", "name": "Balise de nano-soin",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+    "summon": "nano-beacon"
+  }
+]

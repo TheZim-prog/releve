@@ -75,8 +75,9 @@ public sealed class Unit
         OnDefeat = definition.OnDefeat;
         Gauge = setup.InitialGauge;
         BasicAttack = definition.BasicAttack is null ? null : FindSkill(definition.BasicAttack);
-        OpportunityAttacksPerCycle = definition.OpportunityAttacksPerCycle;
-        OpportunityAttacksLeft = definition.OpportunityAttacksPerCycle;
+        OpportunityAttacksPerCycle = definition.OpportunityAttacksPerCycle
+            + (definition.Passive == PassiveKind.Vigilance ? rules.VigilanceExtraOpportunityAttacks : 0);
+        OpportunityAttacksLeft = OpportunityAttacksPerCycle;
         Behavior = definition.Behavior;
         Passive = definition.Passive;
         _rules = rules;

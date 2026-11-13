@@ -1,57 +1,35 @@
-// Ennemis du prologue (docs/design.md section 3). Comportement de base, sauf le tireur qui garde
-// ses distances et utilise son Tir appuyé ; le caïd fuit sous son seuil de PV.
+// Ennemis du prologue (docs/design.md section 3). Comportement de base, sauf le tireur qui garde ses distances et
+// utilise son Tir appuyé ; le caïd fuit sous son seuil de PV. Leurs compétences sont dans skills/enemies.json.
 [
   {
-    "id": "brawler",
-    "name": "Cogneur",
+    "id": "brawler", "name": "Cogneur",
     "maxHp": 60, "initiative": 90, "mobility": 4,
     "onDefeat": "removed",
-    "basicAttack": "punch",
+    "basicAttack": "brawler-punch",
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
-    "skills": [
-      { "id": "punch", "name": "Coup de poing", "weight": "light", "range": 1, "minDamage": 8, "maxDamage": 12, "cooldownMs": 0 }
-    ]
+    "skills": ["brawler-punch"]
   },
   {
-    "id": "gunner",
-    "name": "Tireur",
+    "id": "gunner", "name": "Tireur",
     "maxHp": 40, "initiative": 90, "mobility": 4,
     "onDefeat": "removed",
-    "basicAttack": "shot",
+    "basicAttack": "gunner-shot",
     "opportunityAttacksPerCycle": 1,
     "behavior": "gunner",
-    "skills": [
-      { "id": "shot", "name": "Tir", "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 0 },
-      {
-        "id": "aimed-burst", "name": "Tir appuyé", // Tir appuyé : ligne chargée, esquivable
-        "weight": "heavy", "range": 1, "minDamage": 16, "maxDamage": 20, "cooldownMs": 10000,
-        "chargeMs": 1000,
-        "zone": { "shape": "line", "size": 6, "throughWalls": false }
-      }
-    ]
+    "skills": ["gunner-shot", "aimed-burst"]
   },
   {
-    "id": "brute",
-    "name": "Brute",
+    "id": "brute", "name": "Brute",
     "maxHp": 140, "initiative": 60, "mobility": 3,
     "onDefeat": "removed",
     "basicAttack": "heavy-blow",
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
-    "skills": [
-      { "id": "heavy-blow", "name": "Gros coup", "weight": "heavy", "range": 1, "minDamage": 18, "maxDamage": 24, "cooldownMs": 0 },
-      {
-        "id": "seismic-strike", "name": "Frappe sismique", // Frappe sismique : zone chargée autour d'elle
-        "weight": "heavy", "range": 0, "minDamage": 25, "maxDamage": 30, "cooldownMs": 14000,
-        "chargeMs": 2000,
-        "zone": { "shape": "square", "size": 1, "throughWalls": false }
-      }
-    ]
+    "skills": ["heavy-blow", "seismic-strike"]
   },
   {
-    "id": "kingpin",
-    "name": "Le caïd",
+    "id": "kingpin", "name": "Le caïd",
     "isBoss": true,
     "maxHp": 220, "initiative": 90, "mobility": 4,
     "fleeAtHpPercent": 30, // sous ce seuil, il court vers le bord de carte et quitte le combat
@@ -59,19 +37,6 @@
     "basicAttack": "power-punch",
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
-    "skills": [
-      { "id": "power-punch", "name": "Coup puissant", "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 20, "cooldownMs": 0 },
-      {
-        "id": "charge", "name": "Charge", // Charge : fonce sur un ennemi aligné, percute la première unité de sa ligne et la déséquilibre
-        "weight": "light", "range": 5, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
-        "selfMove": "rush",
-        "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
-      },
-      {
-        "id": "impact-wave", "name": "Onde d'impact", // Onde d'impact : dégâts autour de lui
-        "weight": "light", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,
-        "zone": { "shape": "square", "size": 1, "throughWalls": false }
-      }
-    ]
+    "skills": ["power-punch", "charge", "impact-wave"]
   }
 ]

@@ -1,0 +1,9 @@
+// Tech, branche Tacticien : coordonner l'équipe.
+[
+  {
+    // Remplit une partie de la jauge d'un allié.
+    "id": "tactical-order", "name": "Ordre tactique",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "gaugeGainPercent": 50
+  }
+]

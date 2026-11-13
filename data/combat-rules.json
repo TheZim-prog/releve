@@ -25,6 +25,9 @@
   "exposedDamageTakenPercent": 125,
   "weakPointExposedMs": 4000,
 
+  // Vigilance (passif du colosse) : attaques d'opportunité en plus à chaque cycle.
+  "vigilanceExtraOpportunityAttacks": 1,
+
   // Emprise (passif du télépathe) : ses états néfastes durent ce % de leur durée normale.
   "gripDurationPercent": 150,
 

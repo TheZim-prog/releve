@@ -1,6 +1,7 @@
 using Game.Core.Combat;
 using Game.Core.Grids;
 using Game.Core.Network;
+using Game.Core.Scenarios;
 using static Game.Core.Tests.Combat.CombatTestKit;
 
 namespace Game.Core.Tests.Network;

@@ -1,0 +1,15 @@
+// Speedster, branche Éclair : frapper et repartir.
+[
+  {
+    // Course en ligne droite qui frappe tout ce qu'elle traverse (alliés compris).
+    "id": "breakthrough", "name": "Percée",
+    "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,
+    "selfMove": "pierce"
+  },
+  {
+    // Sa jauge se remplit beaucoup plus vite pendant quelques secondes.
+    "id": "hyperspeed", "name": "Hypervitesse",
+    "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+    "effects": [ { "status": "hasted", "durationMs": 5000 } ]
+  }
+]

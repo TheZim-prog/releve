@@ -1,0 +1,18 @@
+// Gadgets posés par des compétences (ex. skills/tech/engineer.json) : immobiles, ils agissent seuls avec leur jauge.
+[
+  {
+    "id": "turret", "name": "Tourelle",
+    "maxHp": 30, "initiative": 80, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "basic",
+    "skills": ["turret-shot"]
+  },
+  {
+    "id": "nano-beacon", "name": "Balise de nano-soin",
+    "maxHp": 20, "initiative": 60, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "beacon",
+    "maxActivations": 3,
+    "skills": ["nano-pulse"]
+  }
+]

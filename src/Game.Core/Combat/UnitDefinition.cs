@@ -31,7 +31,7 @@ public sealed record UnitDefinition
     /// </summary>
     public required string? BasicAttack { get; init; }
 
-    /// <summary>Attaques d'opportunité disponibles entre deux activations.</summary>
+    /// <summary>Attaques d'opportunité disponibles entre deux activations (hors passif Vigilance).</summary>
     public required int OpportunityAttacksPerCycle { get; init; }
 
     /// <summary>Comportement d'IA (<see cref="Behaviors"/>), ou <c>null</c> pour une unité jouée (à écrire explicitement).</summary>
@@ -45,8 +45,8 @@ public sealed record UnitDefinition
     }
 
     /// <summary>
-    /// Passif équipé, s'il change une règle (facultatif). Un seul emplacement de passif (docs/design.md 2.3).
-    /// Pour le prototype, le passif du colosse (plus d'attaques d'opportunité) est porté par ses stats.
+    /// Passif équipé (facultatif). Un seul emplacement de passif (docs/design.md 2.3). Pour un héros, c'est sa fiche
+    /// qui le choisit (<see cref="Progression.HeroSheet"/>).
     /// </summary>
     public PassiveKind? Passive { get; init; }
 
