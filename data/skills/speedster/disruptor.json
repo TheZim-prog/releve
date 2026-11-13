@@ -6,5 +6,11 @@
     "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
     "zone": { "shape": "square", "size": 1, "throughWalls": false },
     "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // Rafale de coups sur une cible : dégâts, et elle est déséquilibrée.
+    "id": "harassment", "name": "Harcèlement",
+    "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 12, "cooldownMs": 6000,
+    "effects": [ { "status": "offBalance", "durationMs": 2500 } ]
   }
 ]

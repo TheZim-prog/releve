@@ -1,0 +1,39 @@
+// Scénario d'essai : la même rue et la même bande que le combat libre (street.json), avec les héros d'essai
+// (data/heroes/trial.json), qui équipent les compétences ajoutées au fur et à mesure.
+// Carte : '.' sol, '#' mur, 'o' obstacle bas (muret, voiture : couverture).
+{
+  "id": "trial",
+  "name": "Essai des nouvelles compétences",
+  "seed": 2026,
+  "map": [
+    "..................",
+    "..o.......##......",
+    "..o...........o...",
+    "......###.........",
+    "..............o...",
+    ".........o........",
+    "....##............",
+    "..........###.....",
+    "..o...............",
+    ".................."
+  ],
+  "units": [
+    { "hero": "trial-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "trial-fighter", "team": 0, "x": 1, "y": 4 },
+    { "hero": "trial-speedster", "team": 0, "x": 1, "y": 5 },
+    { "hero": "trial-energetic", "team": 0, "x": 0, "y": 6 },
+    { "hero": "trial-tech", "team": 0, "x": 0, "y": 2 },
+    { "hero": "trial-telepath", "team": 0, "x": 0, "y": 4 },
+
+    { "unit": "brawler", "team": 1, "x": 15, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 15, "y": 5 },
+    { "unit": "brawler", "team": 1, "x": 14, "y": 7 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 1 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 8 },
+    { "unit": "brute", "team": 1, "x": 16, "y": 4 },
+
+    { "unit": "civilian", "team": 2, "x": 8, "y": 2 },
+    { "unit": "civilian", "team": 2, "x": 9, "y": 4 },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 6 }
+  ]
+}

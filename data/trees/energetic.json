@@ -30,22 +30,15 @@
     }
   ],
   "planned": {
-    "electric-arc": "Arc électrique",
-    "controlled-blast": "Tir maîtrisé",
-    "fire-lance": "Lance de feu",
     "chain-lightning": "Chaîne d'éclairs",
     "star": "Astre",
     "recoil-wave": "Onde de recul",
     "propulsion": "Propulsion",
     "comet": "Comète",
-    "melting-point": "Point de fusion",
-    "discharge": "Décharge",
-    "ice-shard": "Éclat de glace",
     "freeze": "Gel",
     "ice-wall": "Mur de glace",
     "ice-pillar": "Pilier de glace",
     "black-ice": "Verglas",
-    "frostbite": "Engelure",
-    "absolute-zero": "Zéro absolu"
+    "frostbite": "Engelure"
   }
 }

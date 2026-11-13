@@ -1,0 +1,15 @@
+// Télépathe, branche Empathe : soutenir les alliés.
+[
+  {
+    // Un allié est accéléré brièvement.
+    "id": "stimulation", "name": "Stimulation",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "effects": [ { "status": "hasted", "durationMs": 1500 } ]
+  },
+  {
+    // Variante de la Stimulation : l'allié devient surpuissant (dégâts augmentés) au lieu d'être accéléré.
+    "id": "focus", "name": "Concentration",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "effects": [ { "status": "empowered", "durationMs": 6000 } ]
+  }
+]

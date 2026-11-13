@@ -30,20 +30,15 @@
     }
   ],
   "planned": {
-    "torpor": "Torpeur",
     "telepathic-strike": "Frappe télépathique",
     "psychic-scream": "Cri psychique",
-    "panic": "Panique",
     "shove": "Poussée",
-    "projectile": "Projectile",
     "telekinetic-throw": "Lancer de décor",
     "vise": "Étau",
     "wrench": "Arrachement",
     "force-wave": "Onde de force",
     "siphon": "Siphon",
     "transfusion": "Transfusion",
-    "stimulation": "Stimulation",
-    "focus": "Concentration",
     "clarity": "Clarté",
     "serenity": "Sérénité",
     "awakening": "Éveil"

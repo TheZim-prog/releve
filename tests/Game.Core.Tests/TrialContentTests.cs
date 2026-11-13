@@ -1,0 +1,212 @@
+using Game.Core.Combat;
+using Game.Core.Grids;
+using Game.Core.Network;
+
+namespace Game.Core.Tests;
+
+/// <summary>
+/// Les compétences des arbres ajoutées au contenu réel. Elles n'ont pas de code à elles : ces tests vérifient que
+/// leurs données font ce que le document de conception décrit (qui elles touchent, quel état elles posent).
+/// Les unités sont montées ici, sans points de stats : rien ne dépend des héros d'essai de data/heroes/trial.json,
+/// qui sont faits pour être modifiés.
+/// </summary>
+public class TrialContentTests
+{
+    private static readonly GameContent Content = GameContent.Load(Path.Combine(AppContext.BaseDirectory, "data"));
+    private static readonly CombatRules Rules = Content.Rules;
+
+    /// <summary>
+    /// Un combat sur un terrain vide. L'unité 1 est le lanceur : un archétype de héros (équipe 0) avec la compétence
+    /// essayée, jauge pleine. Les autres sont des unités du contenu, immobiles et sans IA.
+    /// </summary>
+    private static CombatSimulation Combat(string caster, string skill, (int X, int Y) at, params (string Unit, int Team, int X, int Y)[] others)
+    {
+        var archetype = Content.Units[caster];
+        var hero = archetype with { Skills = archetype.Skills.Append(Content.Skills[skill]).ToList() };
+        var units = new List<UnitSetup> { hero.ToSetup(new UnitId(1), 0, new Cell(at.X, at.Y), Rules.GaugeCapacity) };
+        units.AddRange(others.Select((o, i) =>
+            (Content.Units[o.Unit] with { Behavior = null }).ToSetup(new UnitId(i + 2), o.Team, new Cell(o.X, o.Y))));
+        return new CombatSimulation(new CombatSetup(Rules, new Grid(9, 5), units, Seed: 1));
+    }
+
+    /// <summary>Le lanceur utilise sa compétence ; les événements jusqu'à son effet (attaque chargée comprise).</summary>
+    private static IReadOnlyList<CombatEvent> Use(CombatSimulation sim, string skill, int? target = null, (int X, int Y)? cell = null)
+    {
+        var use = new SkillUse(skill, target is { } t ? new UnitId(t) : null, cell is { } c ? new Cell(c.X, c.Y) : null);
+        sim.Submit(new ActivateCommand(new UnitId(1), null, use));
+        var events = sim.Tick().ToList();
+        Assert.DoesNotContain(events, e => e is CommandRejected);
+        while (sim.FindUnit(new UnitId(1))!.Charge is not null)
+            events.AddRange(sim.Tick());
+        return events;
+    }
+
+    private static int[] Affected(IEnumerable<CombatEvent> events, StatusKind status) =>
+        events.OfType<StatusApplied>().Where(e => e.Status == status).Select(e => e.Unit.Value).Order().ToArray();
+
+    private static int[] Damaged(IEnumerable<CombatEvent> events) =>
+        events.OfType<UnitDamaged>().Select(e => e.Unit.Value).Order().ToArray();
+
+    private static int Ticks(int milliseconds) => Rules.MillisecondsToTicks(milliseconds);
+
+    [Fact]
+    public void TheTrialScenario_PlaysToTheEnd()
+    {
+        // Personne ne joue : tous les héros d'essai sont confiés à l'IA de base.
+        var setup = new CombatLaunch("trial", Array.Empty<HeroAssignment>()).BuildSetup(Content);
+        var sim = new CombatSimulation(setup);
+        var maxTicks = Rules.TicksPerSecond * 60 * 10;
+        while (sim.CurrentTick < maxTicks && sim.TeamsStillFighting().Count > 1)
+            sim.Tick();
+
+        Assert.True(sim.TeamsStillFighting().Count <= 1, "The trial combat is still running.");
+        Assert.Equal(sim.EventLog, CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick).EventLog);
+    }
+
+    [Theory]
+    // Un coup sur une cible : au contact ou à distance, avec ou sans état.
+    [InlineData("colossus", "hammer-blow", 1, StatusKind.OffBalance)]
+    [InlineData("speedster", "harassment", 1, StatusKind.OffBalance)]
+    [InlineData("energetic", "melting-point", 1, null)]
+    [InlineData("energetic", "discharge", 1, StatusKind.Stunned)]
+    [InlineData("energetic", "fire-lance", 6, null)]
+    [InlineData("energetic", "ice-shard", 5, StatusKind.OffBalance)]
+    [InlineData("telepath", "projectile", 5, null)]
+    [InlineData("tech", "designation-shot", 5, StatusKind.Exposed)]
+    [InlineData("tech", "suppression-shot", 5, StatusKind.OffBalance)]
+    [InlineData("tech", "electroshock", 2, StatusKind.Stunned)]
+    public void ATargetedSkill_HitsItsTargetAtItsFullRange_WithItsStatus(string caster, string skillId, int range, StatusKind? status)
+    {
+        var skill = Content.Skills[skillId];
+        var sim = Combat(caster, skillId, (0, 2), ("brute", 1, range, 2));
+
+        var events = Use(sim, skillId, target: 2);
+
+        Assert.Equal(range, skill.Range);
+        Assert.InRange(events.OfType<UnitDamaged>().Single().Amount, skill.MinDamage, skill.MaxDamage);
+        Assert.Equal(status is null ? Array.Empty<StatusKind>() : new[] { status.Value }, events.OfType<StatusApplied>().Select(e => e.Status));
+    }
+
+    [Theory]
+    // Zones qui ne touchent que les ennemis : un allié dans la zone n'a rien.
+    [InlineData("fighter", "sweep", StatusKind.OffBalance, true)]
+    [InlineData("telepath", "torpor", StatusKind.OffBalance, false)]
+    [InlineData("telepath", "panic", StatusKind.Confused, false)]
+    public void AnEnemiesOnlyZone_SparesTheAlliesInIt(string caster, string skillId, StatusKind status, bool dealsDamage)
+    {
+        // Le lanceur en (1,2), un allié (unité 2) et un ennemi (unité 3) à son contact, un ennemi (unité 4) loin.
+        var sim = Combat(caster, skillId, (1, 2), ("fighter", 0, 2, 2), ("brute", 1, 1, 1), ("brute", 1, 8, 4));
+        var onSelf = Content.Skills[skillId].Range == 0;
+
+        var events = Use(sim, skillId, cell: onSelf ? (1, 2) : (1, 1));
+
+        Assert.Equal(new[] { 3 }, Affected(events, status));
+        Assert.Equal(dealsDamage ? new[] { 3 } : Array.Empty<int>(), Damaged(events));
+    }
+
+    [Fact]
+    public void ControlledBlast_IsChargedAndSparesTheAlliesInItsZone()
+    {
+        var sim = Combat("energetic", "controlled-blast", (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 5, 2));
+
+        var events = Use(sim, "controlled-blast", cell: (5, 2));
+
+        Assert.Contains(events, e => e is ChargeStarted);
+        Assert.Equal(new[] { 3 }, Damaged(events));
+    }
+
+    [Theory]
+    // Zones qui touchent tout le monde (règle par défaut), alliés compris, jamais le lanceur.
+    [InlineData("colossus", "quake", 1, 2, StatusKind.Stunned)]        // autour de lui
+    [InlineData("energetic", "absolute-zero", 3, 2, StatusKind.Stunned)] // grande zone chargée, centrée à distance
+    public void ASquareZone_HitsEveryoneInIt_AlliesIncluded(string caster, string skillId, int centerX, int centerY, StatusKind status)
+    {
+        var sim = Combat(caster, skillId, (1, 2),
+            ("fighter", 0, centerX + 1, centerY), ("brute", 1, centerX, centerY - 1), ("brute", 1, 8, 4));
+
+        var events = Use(sim, skillId, cell: (centerX, centerY));
+
+        Assert.Equal(new[] { 2, 3 }, Affected(events, status)); // l'allié et l'ennemi dans la zone, pas l'ennemi au loin
+        Assert.Equal(new[] { 2, 3 }, Damaged(events));
+    }
+
+    [Theory]
+    [InlineData("fighter", "volley", 3, null)]                     // courte ligne
+    [InlineData("energetic", "electric-arc", 6, StatusKind.Stunned)] // longue ligne, court étourdissement
+    public void ALine_HitsEverythingItCrosses_UpToItsLength(string caster, string skillId, int length, StatusKind? status)
+    {
+        // Sur la ligne : un allié juste devant, un ennemi au bout de la ligne, un ennemi une case trop loin.
+        var sim = Combat(caster, skillId, (0, 2), ("fighter", 0, 1, 2), ("brute", 1, length, 2), ("brute", 1, length + 1, 2));
+
+        var events = Use(sim, skillId, cell: (1, 2));
+
+        Assert.Equal(new[] { 2, 3 }, Damaged(events));
+        Assert.Equal(status is null ? Array.Empty<int>() : new[] { 2, 3 }, status is null ? Array.Empty<int>() : Affected(events, status.Value));
+    }
+
+    [Theory]
+    [InlineData("stimulation", StatusKind.Hasted)]
+    [InlineData("focus", StatusKind.Empowered)]
+    public void TheTelepath_StrengthensAnAlly(string skillId, StatusKind status)
+    {
+        var sim = Combat("telepath", skillId, (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 6, 2));
+
+        var events = Use(sim, skillId, target: 2);
+
+        var applied = events.OfType<StatusApplied>().Single();
+        var duration = Content.Skills[skillId].Effects.Single().DurationMs;
+        Assert.Equal((new UnitId(2), status, 1 + Ticks(duration)), (applied.Unit, applied.Status, applied.EndTick));
+    }
+
+    [Fact]
+    public void CollectiveSurge_HastensTheAlliesAround_NotTheSpeedsterNorTheEnemies()
+    {
+        // Un allié à 2 cases (dans la zone), un allié à 5 cases (hors zone), un ennemi au contact.
+        var sim = Combat("speedster", "collective-surge", (2, 2), ("fighter", 0, 4, 2), ("tech", 0, 7, 2), ("brute", 1, 1, 2));
+
+        var events = Use(sim, "collective-surge", cell: (2, 2));
+
+        Assert.Equal(new[] { 2 }, Affected(events, StatusKind.Hasted));
+        Assert.Equal(SkillWeight.Heavy, Content.Skills["collective-surge"].Weight);
+    }
+
+    [Fact]
+    public void DesignationShot_ExposesItsTarget_ForFourSeconds()
+    {
+        var sim = Combat("tech", "designation-shot", (0, 2), ("brute", 1, 4, 2));
+
+        var exposed = Use(sim, "designation-shot", target: 2).OfType<StatusApplied>().Single();
+
+        Assert.Equal((StatusKind.Exposed, 1 + Ticks(4000)), (exposed.Status, exposed.EndTick));
+        Assert.True(sim.FindUnit(new UnitId(2))!.HasStatus(StatusKind.Exposed));
+    }
+
+    [Fact]
+    public void Electroshock_IsStrongerAndLongerAgainstARobot()
+    {
+        var skill = Content.Skills["electroshock"];
+        var tech = Content.Units["tech"];
+        var robot = Content.Units["brute"] with { Id = "robot", IsRobot = true, Behavior = null };
+        var sim = new CombatSimulation(new CombatSetup(Rules, new Grid(5, 1), new[]
+        {
+            (tech with { Skills = tech.Skills.Append(skill).ToList() }).ToSetup(new UnitId(1), 0, new Cell(0, 0), Rules.GaugeCapacity),
+            robot.ToSetup(new UnitId(2), 1, new Cell(2, 0)),
+        }, Seed: 1));
+
+        var events = Use(sim, "electroshock", target: 2);
+
+        var bonus = skill.VsRobots!;
+        Assert.InRange(events.OfType<UnitDamaged>().Single().Amount, skill.MinDamage + bonus.MinDamage, skill.MaxDamage + bonus.MaxDamage);
+        Assert.Equal(1 + Ticks(skill.Effects.Single().DurationMs * bonus.StatusDurationPercent / 100), events.OfType<StatusApplied>().Single().EndTick);
+    }
+
+    [Fact]
+    public void AVariant_SharesTheSlotOfItsSkill()
+    {
+        // Un héros qui a acheté le Coup de marteau peut équiper sa variante, le Séisme, à la place, pas les deux.
+        var sheet = Content.Heroes!.Sheets["prologue-colossus"];
+
+        Assert.Contains(Content.Heroes.Unit(sheet with { Equipped = new[] { "quake" } }).Definition.Skills, s => s.Id == "quake");
+        Assert.Throws<ArgumentException>(() => Content.Heroes.Check(sheet with { Equipped = new[] { "hammer-blow", "quake" } }));
+    }
+}

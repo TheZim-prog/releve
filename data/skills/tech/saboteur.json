@@ -8,5 +8,12 @@
     "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "enemies", "alsoHitsOwnSummons": true },
     "effects": [ { "status": "stunned", "durationMs": 2000 } ],
     "vsRobots": { "statusDurationPercent": 200, "minDamage": 13, "maxDamage": 17 }
+  },
+  {
+    // Dégâts à courte portée et court étourdissement ; plus long et plus fort contre un robot.
+    "id": "electroshock", "name": "Électrochoc",
+    "weight": "light", "range": 2, "minDamage": 10, "maxDamage": 13, "cooldownMs": 10000,
+    "effects": [ { "status": "stunned", "durationMs": 1000 } ],
+    "vsRobots": { "statusDurationPercent": 200, "minDamage": 8, "maxDamage": 11 }
   }
 ]

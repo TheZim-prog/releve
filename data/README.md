@@ -14,8 +14,8 @@ Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`
 | `skills/` | La bibliothèque de compétences : chacune est décrite **une seule fois**, dans le fichier de son archétype et de sa branche. |
 | `units/` | Les types d'unités : archétypes de héros (stats de base), ennemis, gadgets, civils. |
 | `trees/` | Un arbre de compétences par archétype : branches, paliers, variantes, passifs. |
-| `heroes/` | Des héros prêts à jouer (ceux du prologue) : niveau, points de stats, cases achetées, équipement. |
-| `scenarios/` | Les combats : la carte, et les unités et les héros placés dessus. |
+| `heroes/` | Des héros prêts à jouer : ceux du prologue (`prologue.json`) et des héros d'essai (`trial.json`). Niveau, points de stats, cases achetées, équipement. |
+| `scenarios/` | Les combats : la carte, et les unités et les héros placés dessus. Le scénario se choisit dans le menu du jeu. |
 
 ## Qui désigne qui
 
@@ -39,6 +39,11 @@ Les dégâts écrits sont ceux d'une recrue ; la puissance du héros les multipl
 3. un héros peut alors l'équiper.
 
 **Ajouter un passif** : il faut du code (`PassiveKind`), puis retirer `"planned": true` de sa case dans l'arbre.
+
+**Essayer une compétence ou une variante en jeu** : la mettre dans `equipped` chez un héros de `heroes/trial.json`,
+puis lancer le scénario « Essai des nouvelles compétences ». Le jeu relit `data/` à chaque lancement d'un solo ou
+d'une partie hébergée, et F9 le relit sans quitter un combat solo. Ce fichier est fait pour être modifié : aucun test
+ne dépend de ce que ces héros équipent.
 
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et

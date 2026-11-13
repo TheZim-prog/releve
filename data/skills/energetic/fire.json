@@ -12,5 +12,25 @@
     "weight": "heavy", "range": 6, "minDamage": 16, "maxDamage": 20, "cooldownMs": 12000,
     "chargeMs": 1500,
     "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  },
+  {
+    // Variante électrique du Rayon : moins de dégâts, étourdit brièvement ce qu'il traverse.
+    "id": "electric-arc", "name": "Arc électrique",
+    "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 8, "cooldownMs": 8000,
+    "zone": { "shape": "line", "size": 6, "throughWalls": true },
+    "effects": [ { "status": "stunned", "durationMs": 1000 } ]
+  },
+  {
+    // Variante de la Déflagration : ne touche que les ennemis, avec moins de dégâts.
+    // (Elle doit aussi épargner le décor : à faire avec les dégâts collatéraux.)
+    "id": "controlled-blast", "name": "Tir maîtrisé",
+    "weight": "heavy", "range": 6, "minDamage": 11, "maxDamage": 14, "cooldownMs": 12000,
+    "chargeMs": 1500,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" }
+  },
+  {
+    // Très gros dégâts sur une seule cible à distance, longue recharge.
+    "id": "fire-lance", "name": "Lance de feu",
+    "weight": "light", "range": 6, "minDamage": 20, "maxDamage": 26, "cooldownMs": 14000
   }
 ]

@@ -5,5 +5,10 @@
     "id": "telekinesis", "name": "Télékinésie",
     "target": "any", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
     "forcedMove": { "type": "place", "distance": 3 }
+  },
+  {
+    // Lance un débris sur une cible à distance.
+    "id": "projectile", "name": "Projectile",
+    "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 12, "cooldownMs": 5000
   }
 ]

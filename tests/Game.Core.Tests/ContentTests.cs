@@ -142,7 +142,7 @@ public class ContentTests
         }
 
         // Niveau 20 : 19 points de stats chacun, qui les portent des stats de base de l'archétype à celles du prologue.
-        Assert.All(Content.Heroes!.Sheets.Values, hero =>
+        Assert.All(Content.Heroes!.Sheets.Values.Where(h => h.Id.StartsWith("prologue-")), hero =>
         {
             Assert.Equal(20, hero.Level);
             Assert.Equal(19, hero.Points.Hp + hero.Points.Power + hero.Points.Initiative);

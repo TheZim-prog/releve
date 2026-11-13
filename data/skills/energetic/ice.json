@@ -1,0 +1,17 @@
+// Énergétique, branche Glace : le contrôle, peu de dégâts. Le froid ralentit (déséquilibré) ou congèle (étourdi).
+[
+  {
+    // Trait à distance : petits dégâts, la cible est ralentie.
+    "id": "ice-shard", "name": "Éclat de glace",
+    "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 7, "cooldownMs": 6000,
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // Grande zone chargée : tout ce qui s'y trouve au déclenchement est congelé et prend de petits dégâts.
+    "id": "absolute-zero", "name": "Zéro absolu",
+    "weight": "heavy", "range": 5, "minDamage": 6, "maxDamage": 9, "cooldownMs": 25000,
+    "chargeMs": 2000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false },
+    "effects": [ { "status": "stunned", "durationMs": 3000 } ]
+  }
+]

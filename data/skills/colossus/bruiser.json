@@ -14,5 +14,18 @@
     "chargeMs": 1500,
     "zone": { "shape": "line", "size": 4, "throughWalls": false },
     "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // Gros coup sur une seule cible, qui la déséquilibre.
+    "id": "hammer-blow", "name": "Coup de marteau",
+    "weight": "light", "range": 1, "minDamage": 16, "maxDamage": 21, "cooldownMs": 8000,
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // Variante du Coup de marteau : il frappe le sol. Tout le monde autour de lui, moins de dégâts, court étourdissement.
+    "id": "quake", "name": "Séisme",
+    "weight": "light", "range": 0, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "effects": [ { "status": "stunned", "durationMs": 1000 } ]
   }
 ]

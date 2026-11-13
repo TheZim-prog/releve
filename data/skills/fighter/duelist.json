@@ -4,5 +4,12 @@
     "id": "stunning-blow", "name": "Coup étourdissant",
     "weight": "light", "range": 1, "minDamage": 5, "maxDamage": 8, "cooldownMs": 12000,
     "effects": [ { "status": "stunned", "durationMs": 2000 } ]
+  },
+  {
+    // Variante du Coup étourdissant : déséquilibre tous les ennemis à son contact au lieu d'en étourdir un.
+    "id": "sweep", "name": "Balayage",
+    "weight": "light", "range": 0, "minDamage": 3, "maxDamage": 5, "cooldownMs": 12000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
   }
 ]

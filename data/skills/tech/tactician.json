@@ -5,5 +5,17 @@
     "id": "tactical-order", "name": "Ordre tactique",
     "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
     "gaugeGainPercent": 50
+  },
+  {
+    // Dégâts à distance, et la cible devient vulnérable aux dégâts de tous.
+    "id": "designation-shot", "name": "Tir de désignation",
+    "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,
+    "effects": [ { "status": "exposed", "durationMs": 4000 } ]
+  },
+  {
+    // Variante du Tir de désignation : ralentit la cible au lieu de la rendre vulnérable.
+    "id": "suppression-shot", "name": "Tir de suppression",
+    "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
   }
 ]

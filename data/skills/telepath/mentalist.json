@@ -17,5 +17,19 @@
     "id": "domination", "name": "Domination",
     "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 30000, "isMental": true,
     "effects": [ { "status": "dominated", "durationMs": 5000 } ]
+  },
+  {
+    // Variante de la Paralysie : ralentit tous les ennemis d'une petite zone au lieu d'en étourdir un.
+    "id": "torpor", "name": "Torpeur",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
+    "effects": [ { "status": "offBalance", "durationMs": 4000 } ]
+  },
+  {
+    // Variante de la Confusion : tous les ennemis d'une petite zone, moins longtemps.
+    "id": "panic", "name": "Panique",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000, "isMental": true,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
+    "effects": [ { "status": "confused", "durationMs": 2500 } ]
   }
 ]

@@ -5,5 +5,12 @@
     "id": "flash-rescue", "name": "Sauvetage éclair",
     "target": "ally", "weight": "light", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
     "rescueDropRadius": 4
+  },
+  {
+    // Les alliés autour de lui sont accélérés brièvement (pas lui).
+    "id": "collective-surge", "name": "Élan collectif",
+    "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "allies" },
+    "effects": [ { "status": "hasted", "durationMs": 2000 } ]
   }
 ]
