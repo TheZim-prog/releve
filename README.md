@@ -33,8 +33,10 @@ bibliothèques à côté de l'exécutable.
 
 Le jeu s'ouvre sur un menu :
 
-- **Solo** : le combat (scénario `data/scenarios/street.json`) oppose les six héros, tous commandés par le joueur, à
-  une bande de rue, avec des civils au milieu.
+- **Scénario** : celui du solo et de la partie hébergée. « Règlement de comptes dans la rue » oppose les six héros du
+  prologue à une bande de rue, avec des civils au milieu ; « Essai des nouvelles compétences » est le même combat avec
+  des héros qui équipent les compétences ajoutées depuis. Le contenu est décrit dans [data/README.md](data/README.md).
+- **Solo** : le joueur commande tous les héros.
 - **Héberger** : le jeu fait tourner le serveur et affiche les adresses où les amis peuvent le rejoindre (par
   Tailscale). **Rejoindre** : nom, adresse de l'hôte, port (7777 par défaut). Pour un serveur sans écran (Raspberry
   Pi), voir [docs/serveur-dedie.md](docs/serveur-dedie.md).
@@ -81,5 +83,6 @@ Après `--` :
 - `--solo` : combat solo direct ; `--ai-heroes=on` : solo où l'IA joue aussi les héros.
 - `--host` ou `--join=<adresse>`, avec `--name=`, `--port=`, `--pick=<n° du héros>`, `--start=<nb de joueurs>` :
   connexion, choix du héros et lancement automatiques (pour tester à plusieurs instances).
+- `--scenario=<identifiant>` : le scénario du solo et de la partie hébergée (ex. `trial`, le scénario d'essai).
 - `--screenshot=fichier.png` : capture puis quitte, après `--at=<secondes>` (4 par défaut).
 - En combat : `--select=<id>`, `--skill=<n>`, `--hover=x,y`, `--intentions=on`.

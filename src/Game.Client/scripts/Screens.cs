@@ -45,7 +45,7 @@ internal static class Ui
     }
 }
 
-/// <summary>Écran d'accueil : solo, héberger une partie, ou en rejoindre une (nom, adresse, port).</summary>
+/// <summary>Écran d'accueil : le scénario, puis solo, héberger une partie, ou en rejoindre une (nom, adresse, port).</summary>
 public partial class MenuScreen : Control
 {
     private LineEdit _name = null!;
@@ -53,6 +53,10 @@ public partial class MenuScreen : Control
     private LineEdit _port = null!;
     private Label _status = null!;
     private readonly List<Button> _buttons = new();
+    private OptionButton _scenarioPicker = null!;
+
+    /// <summary>Le joueur a choisi un autre scénario (pour le solo et la partie qu'il hébergerait).</summary>
+    public event Action<string>? ScenarioChosen;
 
     public event Action? SoloPressed;
     public event Action<string, int>? HostPressed;
@@ -62,6 +66,11 @@ public partial class MenuScreen : Control
     public string Address { get; set; } = "127.0.0.1";
     public int Port { get; set; } = Protocol.DefaultPort;
 
+    /// <summary>Scénarios proposés (identifiant et nom affiché), et celui qui est choisi.</summary>
+    public IReadOnlyList<(string Id, string Name)> Scenarios { get; set; } = Array.Empty<(string, string)>();
+
+    public string ScenarioId { get; set; } = "";
+
     /// <summary>Version du jeu (code et contenu), affichée en bas : deux joueurs doivent avoir la même pour jouer ensemble.</summary>
     public string GameVersion { get; set; } = "";
 
@@ -70,6 +79,9 @@ public partial class MenuScreen : Control
         var column = Ui.CenteredColumn(this, 420);
         column.AddChild(Ui.Text("Relève", 40, HorizontalAlignment.Center));
         column.AddChild(Ui.Text("Prototype du combat", 16, HorizontalAlignment.Center));
+        column.AddChild(Ui.Text("Scénario (solo et partie hébergée)", 14));
+        _scenarioPicker = ScenarioPicker();
+        column.AddChild(_scenarioPicker);
         _buttons.Add(Ui.Button("Solo (tu commandes toute l'équipe)", () => SoloPressed?.Invoke()));
         column.AddChild(_buttons[^1]);
 
@@ -105,9 +117,28 @@ public partial class MenuScreen : Control
         _status.AddThemeColorOverride("font_color", error ? new Color(1f, 0.5f, 0.45f) : Colors.White);
     }
 
-    /// <summary>Pendant une connexion : boutons désactivés.</summary>
+    private OptionButton ScenarioPicker()
+    {
+        var picker = new OptionButton { CustomMinimumSize = new Vector2(0, 36), FocusMode = FocusModeEnum.None };
+        picker.AddThemeFontSizeOverride("font_size", 16);
+        for (var i = 0; i < Scenarios.Count; i++)
+        {
+            picker.AddItem(Scenarios[i].Name);
+            if (Scenarios[i].Id == ScenarioId)
+                picker.Selected = i;
+        }
+        picker.ItemSelected += index =>
+        {
+            ScenarioId = Scenarios[(int)index].Id;
+            ScenarioChosen?.Invoke(ScenarioId);
+        };
+        return picker;
+    }
+
+    /// <summary>Pendant une connexion : boutons et choix du scénario désactivés.</summary>
     public void SetBusy(bool busy)
     {
+        _scenarioPicker.Disabled = busy;
         foreach (var button in _buttons)
             button.Disabled = busy;
     }

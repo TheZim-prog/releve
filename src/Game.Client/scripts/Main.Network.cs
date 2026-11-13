@@ -11,9 +11,11 @@ public partial class Main
     private void Host(string name, int port)
     {
         Disconnect();
+        if (!ReloadContent())
+            return;
         try
         {
-            _server = new GameServer(_content, ScenarioId, port, line => GD.Print($"[server] {line}"));
+            _server = new GameServer(_content, _scenarioId, port, line => GD.Print($"[server] {line}"));
             _server.Start();
         }
         catch (SocketException e)

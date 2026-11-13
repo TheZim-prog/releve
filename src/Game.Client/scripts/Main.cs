@@ -9,7 +9,8 @@ namespace Game.Client;
 /// héberge, le serveur lui-même (le même que le serveur dédié, dans ce processus). Les messages du serveur sont lus à
 /// chaque image et répartis entre le salon et le combat.
 /// <para>
-/// Outils de développement (arguments après « -- ») : --solo (et --ai-heroes=on) lance directement le combat solo ;
+/// Outils de développement (arguments après « -- ») : --scenario=&lt;id&gt; choisit le scénario (solo et partie
+/// hébergée) ; --solo (et --ai-heroes=on) lance directement le combat solo ;
 /// --host ou --join=adresse, avec --name=, --port=, --pick=&lt;n° du héros&gt; et --start=&lt;nb de joueurs&gt;, enchaînent
 /// connexion, choix du héros et lancement ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
 /// puis quitte.
@@ -17,12 +18,15 @@ namespace Game.Client;
 /// </summary>
 public partial class Main : Node
 {
-    private const string ScenarioId = "street";
+    private const string DefaultScenario = "street";
     private const string SettingsPath = "user://settings.cfg";
     private const double CombatOverDelay = 5;
     private const int MaxRejoinAttempts = 5;
 
     private GameContent _content = null!;
+
+    // Scénario du solo et de la partie hébergée, choisi dans le menu. Dans le salon, c'est celui du serveur qui compte.
+    private string _scenarioId = DefaultScenario;
     private Node? _screen;
     private MenuScreen? _menu;
     private LobbyScreen? _lobbyScreen;
@@ -81,6 +85,14 @@ public partial class Main : Node
             _devPick = pick;
         if (int.TryParse(DevArg("start"), out var start))
             _devStartWith = start;
+        if (DevArg("scenario") is { } scenario)
+        {
+            if (_content.Scenarios.ContainsKey(scenario))
+                _scenarioId = scenario;
+            else
+                GD.PushError($"Unknown scenario '{scenario}' (available: {string.Join(", ", _content.Scenarios.Keys)}).");
+        }
+        KeepAKnownScenario();
 
         var (name, address, port) = LoadSettings();
         name = DevArg("name") ?? name;
@@ -128,7 +140,13 @@ public partial class Main : Node
         var (name, address, port) = LoadSettings();
         // La version affichée : celle du code puis celle du contenu, à comparer entre amis quand le serveur refuse.
         var version = $"{Protocol.CodeVersion[..6]}-{_content.Version[..6]}";
-        var menu = new MenuScreen { PlayerName = name, Address = address, Port = port, GameVersion = version };
+        var menu = new MenuScreen
+        {
+            PlayerName = name, Address = address, Port = port, GameVersion = version,
+            Scenarios = _content.Scenarios.Values.Select(s => (s.Id, s.Name)).OrderBy(s => s.Name).ToList(),
+            ScenarioId = _scenarioId,
+        };
+        menu.ScenarioChosen += id => _scenarioId = id;
         menu.SoloPressed += StartSolo;
         menu.HostPressed += Host;
         menu.JoinPressed += Join;
@@ -139,8 +157,10 @@ public partial class Main : Node
     private void StartSolo()
     {
         Disconnect();
+        if (!ReloadContent())
+            return;
         var view = new CombatView();
-        view.Setup(new SoloCombat(_content, ScenarioId, aiHeroes: DevArg("ai-heroes") == "on"));
+        view.Setup(new SoloCombat(_content, _scenarioId, aiHeroes: DevArg("ai-heroes") == "on"));
         view.LeaveRequested += () => ShowMenu();
         Show(view);
     }
@@ -152,7 +172,13 @@ public partial class Main : Node
         _networkCombat = null;
         if (_playerId is not { } me)
             return;
-        var lobby = new LobbyScreen(CombatLaunch.PlayableHeroes(_content, ScenarioId), me, HostInfo());
+        var scenario = _lobby?.ScenarioId ?? _scenarioId;
+        if (!_content.Scenarios.TryGetValue(scenario, out var played))
+        {
+            ShowMenu($"Le serveur joue un scénario inconnu de ce jeu (« {scenario} »).", error: true);
+            return;
+        }
+        var lobby = new LobbyScreen(CombatLaunch.PlayableHeroes(_content, scenario), me, $"Scénario : {played.Name}\n{HostInfo()}");
         lobby.HeroPicked += hero => _client?.Send(new PickHero(hero));
         lobby.StartPressed += () => _client?.Send(new StartCombatRequest());
         lobby.LeavePressed += () => ShowMenu();
@@ -176,6 +202,35 @@ public partial class Main : Node
             Rejoin("Resynchronisation…");
         };
         Show(view);
+    }
+
+    // --- Contenu ---
+
+    /// <summary>
+    /// Relit le dossier data avant un solo ou une partie hébergée : ce qui a été modifié depuis le lancement du jeu est
+    /// pris en compte. Si le contenu n'est plus valide, retour au menu avec l'erreur (l'ancien contenu est gardé).
+    /// </summary>
+    private bool ReloadContent()
+    {
+        try
+        {
+            _content = GameData.Load();
+        }
+        catch (Exception e)
+        {
+            GD.PushError(e.ToString());
+            ShowMenu($"Le contenu du jeu (dossier data) n'est pas valide : {e.Message}", error: true);
+            return false;
+        }
+        KeepAKnownScenario();
+        return true;
+    }
+
+    /// <summary>Le scénario choisi doit exister dans le contenu chargé ; sinon, le premier disponible.</summary>
+    private void KeepAKnownScenario()
+    {
+        if (!_content.Scenarios.ContainsKey(_scenarioId))
+            _scenarioId = _content.Scenarios.ContainsKey(DefaultScenario) ? DefaultScenario : _content.Scenarios.Keys.Order().First();
     }
 
     // --- Réglages (dernier nom, adresse et port) ---
