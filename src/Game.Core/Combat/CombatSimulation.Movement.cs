@@ -21,7 +21,7 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Déplace l'unité pas à pas ; chaque pas qui sort de la portée d'un ennemi peut déclencher son attaque
     /// d'opportunité (dans l'ordre des unités), sauf si l'unité a le passif qui les ignore.
-    /// Renvoie faux si l'unité est tombée ou étourdie en chemin.
+    /// Renvoie faux si l'unité est tombée, étourdie ou immobilisée en chemin.
     /// </summary>
     private bool MoveAlong(Unit unit, IReadOnlyList<Cell> path)
     {
@@ -54,7 +54,7 @@ public sealed partial class CombatSimulation
                 EndSource(); // chaque attaque d'opportunité est une source à part
                 if (unit.Status != UnitStatus.Active)
                     return false;
-                if (unit.HasStatus(StatusKind.Stunned))
+                if (unit.HasStatus(StatusKind.Stunned) || !unit.CanMove)
                 {
                     if (IsOccupiedByOther(unit, unit.Position))
                         unit.Position = lastFreeCell;

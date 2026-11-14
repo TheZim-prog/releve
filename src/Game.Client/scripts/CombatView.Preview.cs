@@ -40,7 +40,8 @@ public partial class CombatView
                 path = _sim.PathFor(unit.Id, d) ?? [];
                 ghostCell = d;
             }
-            hint = !unit.IsReady ? "Jauge pas pleine : prépare ton ordre, il partira dès qu'elle sera pleine"
+            hint = !unit.CanMove ? "Immobilisé : un déplacement ne partira qu'à la fin de l'état ; les compétences sur place restent possibles"
+                : !unit.IsReady ? "Jauge pas pleine : prépare ton ordre, il partira dès qu'elle sera pleine"
                 : _ghost is null ? "Clique une case pour prévoir un déplacement, ou choisis directement une compétence (1-9)"
                 : "Déplacement prévu : choisis une compétence (1-9), ou Entrée pour te déplacer seulement";
             if (_ghost is not null)

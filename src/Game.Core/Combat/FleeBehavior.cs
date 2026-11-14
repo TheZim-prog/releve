@@ -14,7 +14,7 @@ internal sealed class FleeBehavior : IUnitBehavior
 
     public ActivateCommand? Approach(CombatSimulation sim, Unit unit, Intention intention)
     {
-        if (unit.Mobility == 0)
+        if (unit.Reach == 0)
             return null;
         Occupant OccupantFor(Cell cell) => sim.OccupantFor(unit, cell);
 
@@ -26,7 +26,7 @@ internal sealed class FleeBehavior : IUnitBehavior
         var exit = exits.MinBy(c => c.Value).Key;
         var toExit = Pathfinder.ReachableCells(sim.Grid, exit, int.MaxValue, OccupantFor);
 
-        var best = Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Mobility, OccupantFor).Keys
+        var best = Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Reach, OccupantFor).Keys
             .Where(c => c != unit.Position && toExit.ContainsKey(c))
             .Select(c => (Cell: c, Distance: toExit[c]))
             .DefaultIfEmpty((Cell: unit.Position, Distance: int.MaxValue))

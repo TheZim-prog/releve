@@ -60,6 +60,8 @@ public sealed partial class CombatSimulation
             Heal(target, attacker.HealWith(_random.NextInt(skill.MinHeal, skill.MaxHeal)));
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
+        foreach (var effect in robotBonus?.Effects ?? [])
+            ApplyStatus(target, effect, attacker);
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         return true;

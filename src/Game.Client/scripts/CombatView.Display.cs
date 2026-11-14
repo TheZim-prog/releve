@@ -41,8 +41,8 @@ public partial class CombatView
             var cooldown = unit.CooldownEndTick(skill.Id) - _sim.CurrentTick;
             var damage = skill.DealsDamage ? $", {DamageText(unit, skill)}" : "";
             var weight = skill.Weight == SkillWeight.Heavy ? "lourde" : "légère";
-            var details = cooldown > 0
-                ? $"recharge {cooldown / (double)_data.Rules.TicksPerSecond:0.0} s"
+            var details = unit.StatusBlocking(skill) is { } blocked ? Texts.Rejection(blocked)
+                : cooldown > 0 ? $"recharge {cooldown / (double)_data.Rules.TicksPerSecond:0.0} s"
                 : $"{weight}, portée {skill.Range}{damage}";
             var key = i < 9 ? $"{i + 1}  " : "";
             actions.Add(new ActionButton($"{key}{skill.DisplayName}\n{details}",
@@ -58,11 +58,15 @@ public partial class CombatView
     {
         // Un héros dominé ou confus n'obéit plus : jamais « prêt » pour le joueur.
         var ready = hero.IsReady && IsControllable(hero) && !HasOrder(hero.Id);
+        var statuses = string.Join(", ", hero.StatusEndTicks.Keys.Select(Texts.Status));
         var state = hero.Status == UnitStatus.Downed ? "À TERRE"
             : HasOrder(hero.Id) ? (hero.IsReady ? "ordre donné" : "ordre en attente")
             : ready ? "PRÊT"
             : hero.Charge is not null ? "charge…"
-            : string.Join(", ", hero.StatusEndTicks.Keys.Select(Texts.Status));
+            : "";
+        // Les états restent visibles même prêt : un héros prêt mais immobilisé ou désarmé ne peut pas tout faire.
+        if (hero.Status == UnitStatus.Active && statuses.Length > 0)
+            state = state.Length > 0 ? $"{state} · {statuses}" : statuses;
         var name = _session.ControllerName(hero.Id) is { } controller ? $"{hero.Definition.Name} ({controller})" : hero.Definition.Name;
         return new HeroCard(hero.Id, name, (float)hero.Hp / hero.MaxHp, $"{hero.Hp}/{hero.MaxHp} PV",
             Math.Min(1f, (float)hero.Gauge / _data.Rules.GaugeCapacity), Ready: ready, Selected: hero.Id == _selected, State: state,

@@ -6,7 +6,8 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Applique un état posé par <paramref name="source"/> ; s'il est déjà là, garde la plus longue des deux durées.
     /// Emprise : un état néfaste posé par une unité qui a ce passif dure plus longtemps.
-    /// Étourdi : interrompt la charge. Confus ou dominé : l'unité change de décisions (et de camp, si dominée).
+    /// Étourdi ou désarmé : interrompt la charge. Confus ou dominé : l'unité change de décisions (et de camp, si
+    /// dominée). Désarmé : dure moins longtemps sur un boss.
     /// </summary>
     private void ApplyStatus(Unit target, StatusEffect effect, Unit source, int durationPercent = 100)
     {
@@ -15,6 +16,11 @@ public sealed partial class CombatSimulation
         if (effect.Status.IsHarmful() && source.HasPassive(PassiveKind.Grip))
         {
             durationMs *= Rules.GripDurationPercent;
+            scale *= 100;
+        }
+        if (effect.Status == StatusKind.Disarmed && target.Definition.IsBoss)
+        {
+            durationMs *= Rules.DisarmedOnBossDurationPercent;
             scale *= 100;
         }
         durationMs /= scale;
@@ -27,7 +33,7 @@ public sealed partial class CombatSimulation
 
         switch (effect.Status)
         {
-            case StatusKind.Stunned:
+            case StatusKind.Stunned or StatusKind.Disarmed:
                 InterruptCharge(target);
                 break;
             case StatusKind.Confused:
@@ -41,6 +47,11 @@ public sealed partial class CombatSimulation
                 ChangeTeam(target, source.Team);
                 break;
         }
+
+        // Une intention que l'état rend impossible (compétence interdite) est abandonnée : l'unité en choisira une autre.
+        if (target.Intention?.SkillId is { } intended && target.FindSkill(intended) is { } planned
+            && target.StatusBlocking(planned) is not null)
+            SetIntention(target, null);
     }
 
     private void ExpireStatuses()

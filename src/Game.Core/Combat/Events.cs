@@ -206,6 +206,12 @@ public enum RejectionReason
 
     NotReady,
 
+    /// <summary>L'unité est immobilisée : ni déplacement, ni mouvement spécial, ni sauvetage tant que l'état dure.</summary>
+    Immobilized,
+
+    /// <summary>L'unité est désarmée : son attaque de base seulement, tant que l'état dure.</summary>
+    Disarmed,
+
     /// <summary>Ni déplacement ni action.</summary>
     Empty,
 
@@ -254,7 +260,8 @@ public static class RejectionReasons
     /// en recharge) : un ordre donné à l'avance reste en attente au lieu d'être annulé.
     /// </summary>
     public static bool OnlyNeedsTime(this RejectionReason reason) =>
-        reason is RejectionReason.NotReady or RejectionReason.Stunned or RejectionReason.Charging or RejectionReason.OnCooldown;
+        reason is RejectionReason.NotReady or RejectionReason.Stunned or RejectionReason.Charging or RejectionReason.OnCooldown
+            or RejectionReason.Immobilized or RejectionReason.Disarmed;
 }
 
 /// <summary>Commande telle qu'appliquée, avec son tick : de quoi rejouer le combat à l'identique.</summary>

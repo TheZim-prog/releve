@@ -8,7 +8,7 @@ internal sealed class BeaconBehavior : IUnitBehavior
 
     public ActivateCommand? Execute(CombatSimulation sim, Unit unit, Intention intention)
     {
-        if (HealSkill(unit) is not { } skill || sim.CurrentTick < unit.CooldownEndTick(skill.Id))
+        if (HealSkill(unit) is not { } skill || unit.UnavailableAt(skill, sim.CurrentTick) is not null)
             return null;
         var zone = skill.Zone!.Cells(sim.Grid, unit.Position, unit.Position);
         var someoneWounded = zone is not null && sim.UnitsAffectedBy(unit, skill, zone).Any(u => u.Hp < u.MaxHp);

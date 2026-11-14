@@ -11,5 +11,12 @@
     "weight": "light", "range": 0, "minDamage": 3, "maxDamage": 5, "cooldownMs": 12000,
     "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
     "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // La cible n'a plus que son attaque de base pendant quelques secondes, et sa charge en cours est interrompue.
+    // Sur un boss, l'état dure moins longtemps (combat-rules.json).
+    "id": "disarm", "name": "Désarmement",
+    "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "effects": [ { "status": "disarmed", "durationMs": 4000 } ]
   }
 ]

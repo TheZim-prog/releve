@@ -25,6 +25,9 @@
   "exposedDamageTakenPercent": 125,
   "weakPointExposedMs": 4000,
 
+  // Désarmé : l'état dure ce % de sa durée normale sur un boss.
+  "disarmedOnBossDurationPercent": 50,
+
   // Vigilance (passif du colosse) : attaques d'opportunité en plus à chaque cycle.
   "vigilanceExtraOpportunityAttacks": 1,
 

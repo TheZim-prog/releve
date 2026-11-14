@@ -10,5 +10,17 @@
     // Lance un débris sur une cible à distance.
     "id": "projectile", "name": "Projectile",
     "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 12, "cooldownMs": 5000
+  },
+  {
+    // Dégâts légers, et immobilise une cible à distance.
+    "id": "vise", "name": "Étau",
+    "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 7, "cooldownMs": 10000,
+    "effects": [ { "status": "immobilized", "durationMs": 3000 } ]
+  },
+  {
+    // Variante de l'Étau : désarme la cible au lieu de l'immobiliser.
+    "id": "wrench", "name": "Arrachement",
+    "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 7, "cooldownMs": 10000,
+    "effects": [ { "status": "disarmed", "durationMs": 3000 } ]
   }
 ]

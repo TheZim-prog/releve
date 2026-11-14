@@ -36,6 +36,8 @@ public static class Texts
         StatusKind.Exposed => "vulnérable",
         StatusKind.Confused => "confus",
         StatusKind.Dominated => "dominé",
+        StatusKind.Immobilized => "immobilisé",
+        StatusKind.Disarmed => "désarmé",
         _ => status.ToString(),
     };
 
@@ -47,6 +49,8 @@ public static class Texts
         RejectionReason.Stunned => "étourdi",
         RejectionReason.Charging => "en train de charger",
         RejectionReason.NotReady => "jauge pas pleine",
+        RejectionReason.Immobilized => "immobilisé",
+        RejectionReason.Disarmed => "désarmé",
         RejectionReason.Empty => "rien à faire",
         RejectionReason.TwoActions => "une seule action à la fois",
         RejectionReason.InvalidDestination => "case invalide",

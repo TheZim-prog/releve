@@ -23,6 +23,15 @@ public enum StatusKind
 
     /// <summary>Passe dans le camp de celui qui l'a dominée, et est commandée comme lui (Domination).</summary>
     Dominated,
+
+    /// <summary>
+    /// Ne peut plus se déplacer d'elle-même (ni déplacement, ni mouvement spécial, ni sauvetage), mais peut encore
+    /// agir sur place ; on peut toujours la déplacer de force.
+    /// </summary>
+    Immobilized,
+
+    /// <summary>Ne peut plus utiliser que son attaque de base ; sa charge en cours est interrompue.</summary>
+    Disarmed,
 }
 
 public static class StatusKindExtensions
@@ -33,7 +42,8 @@ public static class StatusKindExtensions
     /// </summary>
     public static bool IsHarmful(this StatusKind status) => status switch
     {
-        StatusKind.Stunned or StatusKind.OffBalance or StatusKind.Exposed or StatusKind.Confused or StatusKind.Dominated => true,
+        StatusKind.Stunned or StatusKind.OffBalance or StatusKind.Exposed or StatusKind.Confused or StatusKind.Dominated
+            or StatusKind.Immobilized or StatusKind.Disarmed => true,
         StatusKind.Hasted or StatusKind.Empowered => false,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Status not classified as harmful or beneficial."),
     };

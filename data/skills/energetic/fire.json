@@ -14,10 +14,10 @@
     "zone": { "shape": "square", "size": 1, "throughWalls": false }
   },
   {
-    // Variante électrique du Rayon : moins de dégâts, étourdit brièvement ce qu'il traverse.
+    // Variante électrique du Rayon : moins de dégâts, étourdit brièvement les ennemis traversés (pas les alliés).
     "id": "electric-arc", "name": "Arc électrique",
     "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 8, "cooldownMs": 8000,
-    "zone": { "shape": "line", "size": 6, "throughWalls": true },
+    "zone": { "shape": "line", "size": 6, "throughWalls": true, "affects": "enemies" },
     "effects": [ { "status": "stunned", "durationMs": 1000 } ]
   },
   {

@@ -26,6 +26,7 @@ internal static class CombatTestKit
         WeakPointExposedMs = 1000, // 20 ticks
         GripDurationPercent = 150,
         VigilanceExtraOpportunityAttacks = 1,
+        DisarmedOnBossDurationPercent = 50,
         IntentionThresholdPercent = 50,
         ReviveHpPercent = 25,
         ReviveWeight = SkillWeight.Light,
@@ -78,6 +79,10 @@ internal static class CombatTestKit
         };
         return definition.ToSetup(new UnitId(id), team, new Cell(x, y), gauge, points);
     }
+
+    /// <summary>Commande d'une unité qui utilise une compétence sans se déplacer, sur une unité ou sur une case.</summary>
+    public static ActivateCommand Use(UnitId unit, string skill, UnitId? target = null, Cell? cell = null) =>
+        new(unit, null, new SkillUse(skill, target, cell));
 
     public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);
 

@@ -148,6 +148,8 @@ public sealed partial class CombatSimulation
         {
             if (destination == unit.Position)
                 return (null, RejectionReason.InvalidDestination);
+            if (!ignoreTiming && !unit.CanMove)
+                return (null, RejectionReason.Immobilized);
             path = PathFor(unit, destination);
             if (path is null)
                 return (null, RejectionReason.Unreachable);
@@ -160,8 +162,8 @@ public sealed partial class CombatSimulation
             var skill = unit.FindSkill(use.SkillId);
             if (skill is null)
                 return (null, RejectionReason.UnknownSkill);
-            if (!ignoreTiming && CurrentTick < unit.CooldownEndTick(skill.Id))
-                return (null, RejectionReason.OnCooldown);
+            if (!ignoreTiming && unit.UnavailableAt(skill, CurrentTick) is { } wait)
+                return (null, wait);
             var (planned, rejection) = PlanAction(unit, position, skill, use);
             if (rejection is not null)
                 return (null, rejection);
@@ -194,8 +196,8 @@ public sealed partial class CombatSimulation
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
         unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue
 
-        // Tombée ou étourdie en chemin par une attaque d'opportunité : le reste du trajet et l'action sont
-        // annulés. Étourdie, elle a quand même bougé : sa jauge repart comme après un déplacement seul.
+        // Tombée, étourdie ou immobilisée en chemin par une attaque d'opportunité : le reste du trajet et l'action
+        // sont annulés. Encore debout, elle a quand même bougé : sa jauge repart comme après un déplacement seul.
         if (path is not null && !MoveAlong(unit, path))
         {
             if (unit.Status == UnitStatus.Active)
@@ -224,8 +226,9 @@ public sealed partial class CombatSimulation
             return;
         }
 
-        // Passée en fuite en chemin (attaque d'opportunité) : elle ne fait plus que courir, l'action est annulée.
-        if (action is null || ControllerOf(unit) == Behaviors.FleeInstance)
+        // Passée en fuite en chemin (attaque d'opportunité) : elle ne fait plus que courir, l'action est annulée. De même
+        // si un état reçu en chemin lui interdit la compétence prévue (désarmée : seule son attaque de base passerait).
+        if (action is null || ControllerOf(unit) == Behaviors.FleeInstance || unit.StatusBlocking(action.Skill) is not null)
         {
             SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
             return;

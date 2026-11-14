@@ -5,5 +5,17 @@
     "id": "projection", "name": "Projection",
     "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 13, "cooldownMs": 10000,
     "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 7, "collisionMaxDamage": 11 }
+  },
+  {
+    // Petit coup au contact qui immobilise la cible (elle peut encore agir sur place).
+    "id": "arm-lock", "name": "Clé",
+    "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 10000,
+    "effects": [ { "status": "immobilized", "durationMs": 3000 } ]
+  },
+  {
+    // Variante de la Clé : un simple coup, sauf contre un robot, à qui il arrache des pièces (gros dégâts, étourdi).
+    "id": "dismantle", "name": "Démontage",
+    "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 10000,
+    "vsRobots": { "statusDurationPercent": 100, "minDamage": 14, "maxDamage": 18, "effects": [ { "status": "stunned", "durationMs": 2000 } ] }
   }
 ]

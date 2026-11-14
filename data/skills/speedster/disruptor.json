@@ -12,5 +12,11 @@
     "id": "harassment", "name": "Harcèlement",
     "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 12, "cooldownMs": 6000,
     "effects": [ { "status": "offBalance", "durationMs": 2500 } ]
+  },
+  {
+    // Variante du Harcèlement : désarme la cible au lieu de la déséquilibrer.
+    "id": "pickpocket", "name": "Vol à la tire",
+    "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 12, "cooldownMs": 6000,
+    "effects": [ { "status": "disarmed", "durationMs": 3000 } ]
   }
 ]

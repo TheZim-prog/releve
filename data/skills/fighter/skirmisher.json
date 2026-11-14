@@ -2,9 +2,9 @@
 [
   { "id": "throwing-blades", "name": "Lames de jet", "weight": "light", "range": 4, "minDamage": 7, "maxDamage": 9, "cooldownMs": 4000 },
   {
-    // Variante des Lames de jet : une courte ligne qui traverse, avec moins de dégâts par cible.
+    // Variante des Lames de jet : une courte ligne qui traverse les ennemis (pas les alliés), moins de dégâts par cible.
     "id": "volley", "name": "Volée",
     "weight": "light", "range": 1, "minDamage": 5, "maxDamage": 7, "cooldownMs": 4000,
-    "zone": { "shape": "line", "size": 3, "throughWalls": false }
+    "zone": { "shape": "line", "size": 3, "throughWalls": false, "affects": "enemies" }
   }
 ]

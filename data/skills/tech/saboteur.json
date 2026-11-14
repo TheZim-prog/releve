@@ -15,5 +15,11 @@
     "weight": "light", "range": 2, "minDamage": 10, "maxDamage": 13, "cooldownMs": 10000,
     "effects": [ { "status": "stunned", "durationMs": 1000 } ],
     "vsRobots": { "statusDurationPercent": 200, "minDamage": 8, "maxDamage": 11 }
+  },
+  {
+    // Variante de l'Électrochoc : immobilise la cible au lieu de l'étourdir, sans bonus contre les robots.
+    "id": "net", "name": "Filet",
+    "weight": "light", "range": 2, "minDamage": 10, "maxDamage": 13, "cooldownMs": 10000,
+    "effects": [ { "status": "immobilized", "durationMs": 3000 } ]
   }
 ]

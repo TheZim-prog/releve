@@ -52,7 +52,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
     {
         if (intention.SkillId is null || unit.FindSkill(intention.SkillId) is not { } skill)
             return null;
-        if (sim.CurrentTick < unit.CooldownEndTick(skill.Id))
+        if (unit.UnavailableAt(skill, sim.CurrentTick) is not null)
             return null;
         if (sim.FindUnit(intention.Target) is not { Status: UnitStatus.Active } target)
             return null;
@@ -61,7 +61,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
 
     public ActivateCommand? Approach(CombatSimulation sim, Unit unit, Intention intention)
     {
-        if (unit.Mobility == 0 || sim.FindUnit(intention.Target) is not { Status: UnitStatus.Active } target)
+        if (unit.Reach == 0 || sim.FindUnit(intention.Target) is not { Status: UnitStatus.Active } target)
             return null;
 
         // Distance à pied jusqu'à la cible (contourne les murs) ; la case atteignable qui la réduit le plus.
@@ -83,7 +83,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
     /// </summary>
     private List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
-            .Where(s => sim.CurrentTick >= unit.CooldownEndTick(s.Id))
+            .Where(s => unit.UnavailableAt(s, sim.CurrentTick) is null)
             .Where(s => s.IsOffensive && (mode == Mode.Gunner || s.Zone?.Shape != ZoneShape.Line) && !s.CreatesDome
                         && s.Summon is null && s.SelfMove is null or SelfMoveType.Rush)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
@@ -95,7 +95,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
     /// </summary>
     private static Unit Nearest(CombatSimulation sim, Unit unit, List<Unit> enemies)
     {
-        if (unit.Mobility == 0)
+        if (unit.Reach == 0)
             return enemies.MinBy(e => e.Position.DistanceTo(unit.Position))!;
         var byWalking = enemies
             .Select(e => (Enemy: e, Distance: WalkingDistances(sim, unit, e).GetValueOrDefault(unit.Position, int.MaxValue)))
@@ -177,7 +177,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
     }
 
     private static IReadOnlyList<Cell> ReachableCells(CombatSimulation sim, Unit unit) =>
-        Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Mobility, cell => sim.OccupantFor(unit, cell)).Keys.ToList();
+        Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Reach, cell => sim.OccupantFor(unit, cell)).Keys.ToList();
 
     /// <summary>Distance à pied de chaque case jusqu'à <paramref name="target"/>, selon les règles de déplacement de l'unité.</summary>
     private static IReadOnlyDictionary<Cell, int> WalkingDistances(CombatSimulation sim, Unit unit, Unit target) =>

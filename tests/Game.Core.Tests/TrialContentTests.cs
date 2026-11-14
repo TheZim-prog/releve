@@ -75,6 +75,14 @@ public class TrialContentTests
     [InlineData("tech", "designation-shot", 5, StatusKind.Exposed)]
     [InlineData("tech", "suppression-shot", 5, StatusKind.OffBalance)]
     [InlineData("tech", "electroshock", 2, StatusKind.Stunned)]
+    // Les deux états ajoutés avec les arbres : immobilisé et désarmé.
+    [InlineData("colossus", "arm-lock", 1, StatusKind.Immobilized)]
+    [InlineData("colossus", "dismantle", 1, null)] // un simple coup contre ce qui n'est pas un robot
+    [InlineData("energetic", "freeze", 5, StatusKind.Immobilized)]
+    [InlineData("telepath", "vise", 5, StatusKind.Immobilized)]
+    [InlineData("telepath", "wrench", 5, StatusKind.Disarmed)]
+    [InlineData("tech", "net", 2, StatusKind.Immobilized)]
+    [InlineData("speedster", "pickpocket", 1, StatusKind.Disarmed)]
     public void ATargetedSkill_HitsItsTargetAtItsFullRange_WithItsStatus(string caster, string skillId, int range, StatusKind? status)
     {
         var skill = Content.Skills[skillId];
@@ -133,15 +141,49 @@ public class TrialContentTests
     [Theory]
     [InlineData("fighter", "volley", 3, null)]                     // courte ligne
     [InlineData("energetic", "electric-arc", 6, StatusKind.Stunned)] // longue ligne, court étourdissement
-    public void ALine_HitsEverythingItCrosses_UpToItsLength(string caster, string skillId, int length, StatusKind? status)
+    public void ALine_HitsTheEnemiesItCrosses_UpToItsLength_NotTheAllies(string caster, string skillId, int length, StatusKind? status)
     {
         // Sur la ligne : un allié juste devant, un ennemi au bout de la ligne, un ennemi une case trop loin.
         var sim = Combat(caster, skillId, (0, 2), ("fighter", 0, 1, 2), ("brute", 1, length, 2), ("brute", 1, length + 1, 2));
 
         var events = Use(sim, skillId, cell: (1, 2));
 
-        Assert.Equal(new[] { 2, 3 }, Damaged(events));
-        Assert.Equal(status is null ? Array.Empty<int>() : new[] { 2, 3 }, status is null ? Array.Empty<int>() : Affected(events, status.Value));
+        Assert.Equal(new[] { 3 }, Damaged(events));
+        Assert.Equal(status is null ? Array.Empty<int>() : new[] { 3 }, status is null ? Array.Empty<int>() : Affected(events, status.Value));
+    }
+
+    [Fact]
+    public void Disarm_LeavesItsTargetWithItsBasicAttackOnly_AndDoesNoDamage()
+    {
+        var sim = Combat("fighter", "disarm", (0, 2), ("gunner", 1, 1, 2));
+
+        var events = Use(sim, "disarm", target: 2);
+
+        Assert.Equal(new[] { 2 }, Affected(events, StatusKind.Disarmed));
+        Assert.Empty(Damaged(events));
+        var gunner = sim.FindUnit(new UnitId(2))!;
+        Assert.Null(gunner.StatusBlocking(gunner.FindSkill("gunner-shot")!));
+        Assert.Equal(RejectionReason.Disarmed, gunner.StatusBlocking(gunner.FindSkill("aimed-burst")!));
+    }
+
+    [Fact]
+    public void Dismantle_IsAPlainHit_ExceptOnARobot()
+    {
+        var skill = Content.Skills["dismantle"];
+        var colossus = Content.Units["colossus"];
+        CombatSimulation Against(bool robot) => new(new CombatSetup(Rules, new Grid(3, 1), new[]
+        {
+            (colossus with { Skills = colossus.Skills.Append(skill).ToList() }).ToSetup(new UnitId(1), 0, new Cell(0, 0), Rules.GaugeCapacity),
+            (Content.Units["brute"] with { Id = "target", IsRobot = robot, Behavior = null }).ToSetup(new UnitId(2), 1, new Cell(1, 0)),
+        }, Seed: 1));
+
+        var onAThug = Use(Against(robot: false), "dismantle", target: 2);
+        var onARobot = Use(Against(robot: true), "dismantle", target: 2);
+
+        Assert.InRange(onAThug.OfType<UnitDamaged>().Single().Amount, skill.MinDamage, skill.MaxDamage);
+        Assert.DoesNotContain(onAThug, e => e is StatusApplied);
+        Assert.True(onARobot.OfType<UnitDamaged>().Single().Amount > skill.MaxDamage);
+        Assert.Equal(new[] { 2 }, Affected(onARobot, StatusKind.Stunned));
     }
 
     [Theory]

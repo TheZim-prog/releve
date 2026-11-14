@@ -180,6 +180,21 @@ public sealed class Unit
 
     public bool HasStatus(StatusKind status) => _statusEndTicks.ContainsKey(status);
 
+    /// <summary>Peut se déplacer d'elle-même (pas immobilisée). La déplacer de force reste possible.</summary>
+    public bool CanMove => !HasStatus(StatusKind.Immobilized);
+
+    /// <summary>Cases qu'elle peut parcourir d'elle-même en ce moment : sa mobilité, ou 0 si elle est immobilisée.</summary>
+    public int Reach => CanMove ? Mobility : 0;
+
+    /// <summary>
+    /// Ce qui lui interdit cette compétence en ce moment, à cause de ses états, ou <c>null</c> : désarmée, elle n'a
+    /// que son attaque de base ; immobilisée, aucune compétence qui la déplace. Il suffit d'attendre la fin de l'état.
+    /// </summary>
+    public RejectionReason? StatusBlocking(SkillDefinition skill) =>
+        HasStatus(StatusKind.Disarmed) && skill != BasicAttack ? RejectionReason.Disarmed
+        : skill.MovesCaster && !CanMove ? RejectionReason.Immobilized
+        : null;
+
     /// <summary>
     /// Reste de la division du remplissage modifié (ralenti, accéléré), exprimé sur <see cref="FillRemainderScale"/>,
     /// reporté au tick suivant pour que la vitesse soit exacte en moyenne, même avec une petite initiative.
@@ -198,6 +213,13 @@ public sealed class Unit
     public PassiveKind? Passive { get; }
 
     public bool HasPassive(PassiveKind passive) => Passive == passive;
+
+    /// <summary>
+    /// Ce qui l'empêche d'utiliser cette compétence au tick donné (un état, sinon sa recharge), ou <c>null</c>. Dans
+    /// tous les cas il suffit d'attendre. Sert à la validation des commandes comme aux décisions de l'IA.
+    /// </summary>
+    public RejectionReason? UnavailableAt(SkillDefinition skill, int tick) =>
+        StatusBlocking(skill) ?? (tick < CooldownEndTick(skill.Id) ? RejectionReason.OnCooldown : null);
 
     /// <summary>Tick à partir duquel la compétence est de nouveau utilisable (0 si jamais utilisée).</summary>
     public int CooldownEndTick(string skillId) => _cooldownEndTicks.GetValueOrDefault(skillId);

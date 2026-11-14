@@ -13,5 +13,11 @@
     "chargeMs": 2000,
     "zone": { "shape": "square", "size": 2, "throughWalls": false },
     "effects": [ { "status": "stunned", "durationMs": 3000 } ]
+  },
+  {
+    // Variante de l'Éclat de glace : immobilise la cible au lieu de la ralentir, avec moins de dégâts.
+    "id": "freeze", "name": "Gel",
+    "weight": "light", "range": 5, "minDamage": 3, "maxDamage": 5, "cooldownMs": 6000,
+    "effects": [ { "status": "immobilized", "durationMs": 2500 } ]
   }
 ]

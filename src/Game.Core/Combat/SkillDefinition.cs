@@ -110,6 +110,9 @@ public sealed record SkillDefinition
 
     public bool IsRescue => RescueDropRadius is not null;
 
+    /// <summary>Le lanceur se déplace en l'utilisant (mouvement spécial, sauvetage) : impossible quand il est immobilisé.</summary>
+    public bool MovesCaster => SelfMove is not null || IsRescue;
+
     /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
     public bool IsMental { get; init; }
 
@@ -271,11 +274,15 @@ public sealed record SkillDefinition
         if (VsRobots is not null && (!IsOffensive || IsMental || CreatesDome || Summon is not null))
             throw new ArgumentException($"Skill '{Id}': a robot bonus belongs to an offensive, non-mental attack.");
         // Un bonus qui ne change rien est une erreur de données : des états à allonger, ou des dégâts.
-        if (VsRobots is not null && !VsRobots.DealsDamage && (VsRobots.StatusDurationPercent == 100 || Effects.Count == 0))
-            throw new ArgumentException($"Skill '{Id}': its robot bonus has no effect (no damage, no status to lengthen).");
+        if (VsRobots is not null && !VsRobots.DealsDamage && VsRobots.Effects.Count == 0
+            && (VsRobots.StatusDurationPercent == 100 || Effects.Count == 0))
+            throw new ArgumentException($"Skill '{Id}': its robot bonus has no effect (no damage, no status of its own or to lengthen).");
+        // Un état que la compétence pose déjà à tout le monde se rallonge (statusDurationPercent), il ne se répète pas.
+        if (VsRobots is not null && VsRobots.Effects.Any(r => Effects.Any(e => e.Status == r.Status)))
+            throw new ArgumentException($"Skill '{Id}': a robot effect repeats a status of the skill (lengthen it instead).");
 
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
-            && !Heals && Summon is null && !IsRescue && VsRobots is not { DealsDamage: true })
+            && !Heals && Summon is null && !IsRescue && VsRobots is not ({ DealsDamage: true } or { Effects.Count: > 0 }))
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }

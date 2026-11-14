@@ -20,6 +20,7 @@ public class CombatRulesTests
           "weakPointExposedMs": 4000,
           "gripDurationPercent": 150,
           "vigilanceExtraOpportunityAttacks": 1,
+          "disarmedOnBossDurationPercent": 50,
           "intentionThresholdPercent": 50,
           "reviveHpPercent": 25,
           "reviveWeight": "light",
