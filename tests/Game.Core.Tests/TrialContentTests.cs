@@ -19,13 +19,20 @@ public class TrialContentTests
     /// Un combat sur un terrain vide. L'unité 1 est le lanceur : un archétype de héros (équipe 0) avec la compétence
     /// essayée, jauge pleine. Les autres sont des unités du contenu, immobiles et sans IA.
     /// </summary>
-    private static CombatSimulation Combat(string caster, string skill, (int X, int Y) at, params (string Unit, int Team, int X, int Y)[] others)
+    private static CombatSimulation Combat(string caster, string skill, (int X, int Y) at, params (string Unit, int Team, int X, int Y)[] others) =>
+        Combat(withAi: false, caster, skill, at, others);
+
+    /// <summary>Le même combat, où les autres unités gardent leur IA (une provocation n'a d'effet que sur une IA).</summary>
+    private static CombatSimulation CombatAgainstAi(string caster, string skill, (int X, int Y) at, params (string Unit, int Team, int X, int Y)[] others) =>
+        Combat(withAi: true, caster, skill, at, others);
+
+    private static CombatSimulation Combat(bool withAi, string caster, string skill, (int X, int Y) at, (string Unit, int Team, int X, int Y)[] others)
     {
         var archetype = Content.Units[caster];
         var hero = archetype with { Skills = archetype.Skills.Append(Content.Skills[skill]).ToList() };
         var units = new List<UnitSetup> { hero.ToSetup(new UnitId(1), 0, new Cell(at.X, at.Y), Rules.GaugeCapacity) };
         units.AddRange(others.Select((o, i) =>
-            (Content.Units[o.Unit] with { Behavior = null }).ToSetup(new UnitId(i + 2), o.Team, new Cell(o.X, o.Y))));
+            (withAi ? Content.Units[o.Unit] : Content.Units[o.Unit] with { Behavior = null }).ToSetup(new UnitId(i + 2), o.Team, new Cell(o.X, o.Y))));
         return new CombatSimulation(new CombatSetup(Rules, new Grid(9, 5), units, Seed: 1));
     }
 
@@ -240,6 +247,29 @@ public class TrialContentTests
         var bonus = skill.VsRobots!;
         Assert.InRange(events.OfType<UnitDamaged>().Single().Amount, skill.MinDamage + bonus.MinDamage, skill.MaxDamage + bonus.MaxDamage);
         Assert.Equal(1 + Ticks(skill.Effects.Single().DurationMs * bonus.StatusDurationPercent / 100), events.OfType<StatusApplied>().Single().EndTick);
+    }
+
+    [Fact]
+    public void Provocation_HitsAndTauntsTheEnemiesAround_ForTheirNextActivation()
+    {
+        // Un allié (unité 2) et un ennemi (unité 3) à 2 cases du colosse, un ennemi (unité 4) trop loin.
+        var sim = CombatAgainstAi("colossus", "provocation", (2, 2), ("fighter", 0, 4, 2), ("brute", 1, 2, 0), ("brute", 1, 7, 2));
+
+        var events = Use(sim, "provocation", cell: (2, 2));
+
+        Assert.Equal(new[] { 3 }, Damaged(events));
+        Assert.Equal(new UnitTaunted(1, new UnitId(3), new UnitId(1), 1), events.OfType<UnitTaunted>().Single());
+    }
+
+    [Fact]
+    public void Challenge_TauntsOneEnemyFromAfar_ForTwoActivations_WithoutDamage()
+    {
+        var sim = CombatAgainstAi("colossus", "challenge", (0, 2), ("brute", 1, 5, 2));
+
+        var events = Use(sim, "challenge", target: 2);
+
+        Assert.Empty(Damaged(events));
+        Assert.Equal(new UnitTaunted(1, new UnitId(2), new UnitId(1), 2), events.OfType<UnitTaunted>().Single());
     }
 
     [Fact]

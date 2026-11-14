@@ -30,6 +30,9 @@ public static class Texts
     /// <summary>Les PV d'une unité, avec ses PV temporaires s'il lui en reste : « 120/160 (+40) ».</summary>
     public static string Hp(Unit unit) => unit.TempHp > 0 ? $"{unit.Hp}/{unit.MaxHp} (+{unit.TempHp})" : $"{unit.Hp}/{unit.MaxHp}";
 
+    /// <summary>Ce qu'affiche une unité provoquée, avec le nombre d'activations qu'il lui reste à subir s'il y en a plusieurs.</summary>
+    public static string Taunted(Unit unit) => unit.TauntActionsLeft > 1 ? $"provoqué ({unit.TauntActionsLeft})" : "provoqué";
+
     public static string Status(StatusKind status) => status switch
     {
         StatusKind.Stunned => "étourdi",
@@ -86,6 +89,8 @@ public static class Texts
             TempHpGained g => $"{N(g.Unit)} gagne {g.Amount} PV temporaires",
             DamageAbsorbed a => $"{N(a.Unit)} encaisse {a.Amount} (PV temporaires : {a.TempHpLeft})",
             TempHpEnded x => $"{N(x.Unit)} perd ses PV temporaires",
+            UnitTaunted t => $"{N(t.Unit)} est provoqué par {N(t.By)}",
+            TauntEnded t => $"{N(t.Unit)} n'est plus provoqué",
             UnitDowned d => $"{N(d.Unit)} est à terre !",
             UnitRemoved r => $"{N(r.Unit)} est hors de combat",
             UnitEscaped x => sim.FindUnit(x.Unit)?.IsCivilian == true ? $"{N(x.Unit)} est évacué" : $"{N(x.Unit)} s'enfuit !",

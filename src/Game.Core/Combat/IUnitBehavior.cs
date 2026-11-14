@@ -6,6 +6,12 @@ namespace Game.Core.Combat;
 /// </summary>
 internal interface IUnitBehavior
 {
+    /// <summary>
+    /// Vrai si ce comportement choisit ses cibles et obéit donc à une provocation (il ne vise alors que
+    /// <see cref="CombatSimulation.TaunterOf"/>) ; faux s'il ne vise personne ou n'écoute rien (fuite, balise, confusion).
+    /// </summary>
+    bool ObeysTaunts { get; }
+
     /// <summary>Nouvelle intention, ou <c>null</c> s'il n'y a plus d'ennemi.</summary>
     Intention? ChooseIntention(CombatSimulation sim, Unit unit);
 

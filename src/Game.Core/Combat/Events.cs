@@ -122,6 +122,12 @@ public sealed record TempHpGained(int Tick, UnitId Unit, int Amount, int EndTick
 /// <summary>Les PV temporaires de l'unité encaissent <paramref name="Amount"/> dégâts ; il lui en reste <paramref name="TempHpLeft"/>.</summary>
 public sealed record DamageAbsorbed(int Tick, UnitId Unit, int Amount, int TempHpLeft) : CombatEvent(Tick);
 
+/// <summary>L'unité est provoquée par <paramref name="By"/> : elle le visera pendant ses <paramref name="Actions"/> prochaines activations.</summary>
+public sealed record UnitTaunted(int Tick, UnitId Unit, UnitId By, int Actions) : CombatEvent(Tick);
+
+/// <summary>L'unité n'est plus provoquée : elle choisit de nouveau ses cibles.</summary>
+public sealed record TauntEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 /// <summary>Les PV temporaires de l'unité ont duré leur temps : ce qu'il en restait disparaît.</summary>
 public sealed record TempHpEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
 

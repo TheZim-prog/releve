@@ -69,6 +69,8 @@ public sealed partial class CombatSimulation
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
         foreach (var effect in robotBonus?.Effects ?? [])
             ApplyStatus(target, effect, attacker);
+        if (skill.TauntActions > 0 && AreOpponents(target, attacker))
+            Taunt(target, attacker, skill.TauntActions);
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         return true;
@@ -199,6 +201,7 @@ public sealed partial class CombatSimulation
     {
         unit.Status = status;
         unit.TempHp = 0;
+        EndTauntsOf(unit);
         foreach (var effect in unit.StatusEndTicks.Keys.ToList())
             EndStatus(unit, effect);
         InterruptCharge(unit);

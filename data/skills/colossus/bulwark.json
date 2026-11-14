@@ -18,5 +18,19 @@
     "id": "aegis", "name": "Égide",
     "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
     "tempHp": { "percentOfCasterHp": 50, "durationMs": 8000 }
+  },
+  {
+    // Coup au sol : petits dégâts aux ennemis autour de lui, qui doivent le viser à leur prochaine activation
+    // (ou s'approcher de lui s'ils ne peuvent pas l'atteindre). Marche sur les boss.
+    "id": "provocation", "name": "Provocation",
+    "weight": "light", "range": 0, "minDamage": 4, "maxDamage": 6, "cooldownMs": 12000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "enemies" },
+    "tauntActions": 1
+  },
+  {
+    // Variante de la Provocation : un seul ennemi, à distance, pour ses deux prochaines activations.
+    "id": "challenge", "name": "Défi",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "tauntActions": 2
   }
 ]

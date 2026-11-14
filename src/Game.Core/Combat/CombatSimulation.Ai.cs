@@ -4,6 +4,63 @@ namespace Game.Core.Combat;
 public sealed partial class CombatSimulation
 {
     /// <summary>
+    /// Provoque <paramref name="target"/> : son IA ne visera que <paramref name="taunter"/> pendant ses prochaines
+    /// activations. Elle abandonne son intention ; une attaque déjà en charge part comme prévu. Sans effet sur une
+    /// unité qui n'obéit pas aux provocations (en fuite, confuse, balise, commandée par un joueur). Une nouvelle
+    /// provocation du même lanceur ne raccourcit pas celle en cours ; celle d'un autre la remplace.
+    /// </summary>
+    private void Taunt(Unit target, Unit taunter, int actions)
+    {
+        if (ControllerOf(target)?.ObeysTaunts != true)
+            return;
+        if (target.TauntedBy == taunter.Id)
+            actions = Math.Max(actions, target.TauntActionsLeft);
+        target.TauntedBy = taunter.Id;
+        target.TauntActionsLeft = actions;
+        _events.Add(new UnitTaunted(CurrentTick, target.Id, taunter.Id, actions));
+        SetIntention(target, null);
+    }
+
+    /// <summary>Celui que l'unité provoquée doit viser, s'il est encore debout et toujours son adversaire.</summary>
+    internal Unit? TaunterOf(Unit unit) =>
+        unit.TauntActionsLeft > 0 && unit.TauntedBy is { } id && FindUnit(id) is { Status: UnitStatus.Active } taunter
+        && AreOpponents(taunter, unit)
+            ? taunter
+            : null;
+
+    /// <summary>
+    /// L'unité vient de s'activer : si elle obéissait à une provocation (attaque ou approche), une activation de moins
+    /// à subir. Une activation où elle n'obéit pas (confuse, dominée par un joueur…) ne compte pas.
+    /// </summary>
+    private void SpendTaunt(Unit unit)
+    {
+        if (TaunterOf(unit) is null || ControllerOf(unit)?.ObeysTaunts != true)
+            return;
+        if (unit.TauntActionsLeft == 1)
+            EndTaunt(unit);
+        else
+            unit.TauntActionsLeft--;
+    }
+
+    /// <summary>La provocation de l'unité prend fin, s'il y en a une.</summary>
+    private void EndTaunt(Unit unit)
+    {
+        if (unit.TauntActionsLeft == 0)
+            return;
+        unit.TauntedBy = null;
+        unit.TauntActionsLeft = 0;
+        _events.Add(new TauntEnded(CurrentTick, unit.Id));
+    }
+
+    /// <summary>L'unité tombe ou quitte le combat : sa provocation prend fin, et celles qu'elle avait lancées aussi.</summary>
+    private void EndTauntsOf(Unit unit)
+    {
+        EndTaunt(unit);
+        foreach (var taunted in _units.Where(u => u.TauntedBy == unit.Id))
+            EndTaunt(taunted);
+    }
+
+    /// <summary>
     /// Qui commande l'unité : <c>null</c> pour un joueur, sinon le comportement d'IA. Une unité confuse agit seule
     /// (elle attaque l'unité la plus proche) ; une unité dominée est commandée comme celle qui la domine (par les
     /// joueurs, ou par l'IA de base) ; une unité en fuite ne fait que courir ; sinon, son propre comportement.
@@ -38,12 +95,13 @@ public sealed partial class CombatSimulation
             return;
         }
 
-        var command = unit.Intention is { } intention ? behavior.Execute(this, unit, intention) : null;
-        if (command is null)
+        var command = (unit.Intention is { } intention ? behavior.Execute(this, unit, intention) : null) ?? Rethink(unit, behavior);
+        // Provoquée, mais elle ne peut ni frapper ni approcher celui qui l'a provoquée : la provocation tombe (sinon elle
+        // resterait figée), et elle choisit librement.
+        if (command is null && behavior.ObeysTaunts && TaunterOf(unit) is not null)
         {
-            SetIntention(unit, behavior.ChooseIntention(this, unit));
-            if (unit.Intention is { } fresh)
-                command = behavior.Execute(this, unit, fresh) ?? behavior.Approach(this, unit, fresh);
+            EndTaunt(unit);
+            command = Rethink(unit, behavior);
         }
         if (command is null)
             return;
@@ -60,6 +118,13 @@ public sealed partial class CombatSimulation
         // En fuite (déjà, ou depuis une attaque d'opportunité en chemin) et arrivée au bord : elle s'enfuit aussitôt.
         if (unit.Status == UnitStatus.Active && unit.CanMove && ControllerOf(unit) == Behaviors.FleeInstance && _grid.IsEdge(unit.Position))
             Escape(unit);
+    }
+
+    /// <summary>Nouvelle intention, et l'activation qui l'exécute ou, à défaut, qui rapproche de sa cible (ou <c>null</c>).</summary>
+    private ActivateCommand? Rethink(Unit unit, IUnitBehavior behavior)
+    {
+        SetIntention(unit, behavior.ChooseIntention(this, unit));
+        return unit.Intention is { } fresh ? behavior.Execute(this, unit, fresh) ?? behavior.Approach(this, unit, fresh) : null;
     }
 
     /// <summary>

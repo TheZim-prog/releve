@@ -102,6 +102,12 @@ public sealed record SkillDefinition
 
     public bool Heals => MaxHeal > 0;
 
+    /// <summary>
+    /// Provocation : chaque ennemi touché doit viser le lanceur pendant ce nombre de ses prochaines activations
+    /// (0 = pas de provocation).
+    /// </summary>
+    public int TauntActions { get; init; }
+
     /// <summary>PV temporaires donnés à chaque cible (soutien), ou <c>null</c>.</summary>
     public TempHpDefinition? TempHp { get; init; }
 
@@ -234,6 +240,10 @@ public sealed record SkillDefinition
         if (supportZone && (DealsDamage || CreatesDome))
             throw new ArgumentException($"Skill '{Id}': an allies-only zone can only heal or give beneficial statuses.");
 
+        // Provocation : sur des ennemis.
+        if (TauntActions is < 0 or > 10 || (TauntActions > 0 && (!IsOffensive || Zone?.Affects == ZoneTargets.All)))
+            throw new ArgumentException($"Skill '{Id}': a taunt lasts 1 to 10 actions and only hits enemies.");
+
         // PV temporaires : un soutien (sur un allié, sur soi, ou une zone réservée aux alliés), jamais une attaque.
         TempHp?.Validate(Id);
         if (TempHp is not null && (IsOffensive || Target == SkillTargeting.Any || IsRescue || Summon is not null))
@@ -305,7 +315,7 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}': a robot effect repeats a status of the skill (lengthen it instead).");
 
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
-            && !Heals && TempHp is null && Summon is null && !IsRescue
+            && !Heals && TempHp is null && TauntActions == 0 && Summon is null && !IsRescue
             && VsRobots is not ({ DealsDamage: true } or { Effects.Count: > 0 }))
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }

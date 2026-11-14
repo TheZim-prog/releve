@@ -18,6 +18,8 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
 
     private bool Confused => mode == Mode.Confused;
 
+    public bool ObeysTaunts => !Confused;
+
     public Intention? ChooseIntention(CombatSimulation sim, Unit unit)
     {
         var enemies = sim.Units
@@ -25,6 +27,9 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
             .ToList();
         if (enemies.Count == 0)
             return null;
+        // Provoquée, elle ne voit plus que celui qui l'a provoquée (sauf confuse : elle frappe au plus près).
+        if (ObeysTaunts && sim.TaunterOf(unit) is { } taunter)
+            enemies = new List<Unit> { taunter };
 
         var skills = UsableSkills(sim, unit);
         var reachable = ReachableCells(sim, unit);

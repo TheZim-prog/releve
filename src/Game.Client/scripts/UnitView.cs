@@ -87,6 +87,8 @@ public partial class UnitView : Node3D
         if (downed)
             details.Add("À TERRE");
         details.AddRange(unit.StatusEndTicks.Keys.Select(Texts.Status));
+        if (unit.TauntActionsLeft > 0)
+            details.Add(Texts.Taunted(unit));
         if (unit.Charge is { } charge)
             details.Add($"charge : {charge.Skill.DisplayName}");
         if (unit.IsFleeing)

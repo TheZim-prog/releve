@@ -8,6 +8,8 @@ namespace Game.Core.Combat;
 /// </summary>
 internal sealed class FleeBehavior : IUnitBehavior
 {
+    public bool ObeysTaunts => false;
+
     public Intention? ChooseIntention(CombatSimulation sim, Unit unit) => new(null, unit.Id);
 
     public ActivateCommand? Execute(CombatSimulation sim, Unit unit, Intention intention) => null;

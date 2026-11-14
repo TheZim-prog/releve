@@ -7,6 +7,8 @@ namespace Game.Core.Combat;
 /// </summary>
 internal sealed class BeaconBehavior : IUnitBehavior
 {
+    public bool ObeysTaunts => false;
+
     /// <summary>Sa zone de soutien, visée sur elle-même.</summary>
     public Intention? ChooseIntention(CombatSimulation sim, Unit unit) =>
         SupportSkill(unit) is { } skill ? new Intention(skill.Id, unit.Id) : null;

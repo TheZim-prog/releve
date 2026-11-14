@@ -192,6 +192,7 @@ public sealed partial class CombatSimulation
     {
         var (unit, path, action, interaction) = plan;
         unit.Intention = null; // l'unité agit : son intention éventuelle est consommée
+        SpendTaunt(unit); // et, provoquée, elle vient d'obéir une fois
         RemoveDome(unit); // et son dôme éventuel tombe (un nouveau peut être posé par cette action)
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
         unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue

@@ -181,6 +181,12 @@ public sealed class Unit
     /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
     public int Activations { get; internal set; }
 
+    /// <summary>Unité qui l'a provoquée : tant que <see cref="TauntActionsLeft"/> n'est pas à 0, son IA ne vise qu'elle.</summary>
+    public UnitId? TauntedBy { get; internal set; }
+
+    /// <summary>Activations pendant lesquelles elle reste provoquée.</summary>
+    public int TauntActionsLeft { get; internal set; }
+
     /// <summary>Intention en cours (unités IA), ou <c>null</c>.</summary>
     public Intention? Intention { get; internal set; }
 
