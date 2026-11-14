@@ -11,5 +11,11 @@
     "id": "nano-heal", "name": "Balise de nano-soin",
     "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
     "summon": "nano-beacon"
+  },
+  {
+    // Variante du Nano-soin : la balise donne des PV temporaires au lieu de soigner.
+    "id": "shield-beacon", "name": "Balise bouclier",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+    "summon": "shield-beacon"
   }
 ]

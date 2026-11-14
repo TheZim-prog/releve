@@ -243,6 +243,54 @@ public class TrialContentTests
     }
 
     [Fact]
+    public void SteelSkin_GivesTheColossusHalfHisCurrentHp_AndAegisGivesThemToAnAdjacentAlly()
+    {
+        var hp = Content.Units["colossus"].MaxHp;
+        var onSelf = Use(Combat("colossus", "steel-skin", (0, 2), ("brute", 1, 6, 2)), "steel-skin");
+        var onAlly = Use(Combat("colossus", "aegis", (0, 2), ("fighter", 0, 1, 2), ("brute", 1, 6, 2)), "aegis", target: 2);
+
+        Assert.Equal((new UnitId(1), hp / 2), (onSelf.OfType<TempHpGained>().Single().Unit, onSelf.OfType<TempHpGained>().Single().Amount));
+        Assert.Equal((new UnitId(2), hp / 2), (onAlly.OfType<TempHpGained>().Single().Unit, onAlly.OfType<TempHpGained>().Single().Amount));
+        Assert.Equal(1, Content.Skills["aegis"].Range); // un allié adjacent
+        Assert.True(Content.Skills["steel-skin"].TempHp!.DurationMs < Content.Skills["steel-skin"].CooldownMs);
+    }
+
+    [Fact]
+    public void TheShieldBeacon_GivesTemporaryHpToTheAlliesAroundIt_ThreeTimes()
+    {
+        var beacon = Content.Skills["shield-beacon"].Summon!;
+
+        Assert.Equal((Behaviors.Beacon, 3, 0), (beacon.Behavior, beacon.MaxActivations, beacon.Mobility));
+        Assert.True(beacon.Skills.Single() is { TempHp: not null, Zone.Affects: ZoneTargets.Allies });
+    }
+
+    [Fact]
+    public void PreciseStrike_IgnoresProtections_AndPincerFlanksInstead()
+    {
+        Assert.True(Content.Skills["precise-strike"].IgnoresProtections);
+        Assert.False(Content.Skills["pincer"].IgnoresProtections);
+        Assert.True(Content.Skills["pincer"].FlankDamagePercent > 100);
+
+        // Le colosse a sa Peau d'acier : la Frappe précise entame quand même ses PV.
+        var colossus = Content.Units["colossus"];
+        var fighter = Content.Units["fighter"];
+        var sim = new CombatSimulation(new CombatSetup(Rules, new Grid(3, 1), new[]
+        {
+            (fighter with { Skills = fighter.Skills.Append(Content.Skills["precise-strike"]).ToList() })
+                .ToSetup(new UnitId(1), 0, new Cell(0, 0), Rules.GaugeCapacity),
+            (colossus with { Skills = colossus.Skills.Append(Content.Skills["steel-skin"]).ToList() })
+                .ToSetup(new UnitId(2), 1, new Cell(1, 0), Rules.GaugeCapacity),
+        }, Seed: 1));
+        sim.Submit(new ActivateCommand(new UnitId(2), null, new SkillUse("steel-skin", null)));
+        sim.Tick();
+
+        var events = Use(sim, "precise-strike", target: 2);
+
+        Assert.Single(events.OfType<UnitDamaged>());
+        Assert.DoesNotContain(events, e => e is DamageAbsorbed);
+    }
+
+    [Fact]
     public void AVariant_SharesTheSlotOfItsSkill()
     {
         // Un héros qui a acheté le Coup de marteau peut équiper sa variante, le Séisme, à la place, pas les deux.

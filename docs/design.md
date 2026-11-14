@@ -54,7 +54,7 @@
 *Rempart*
 - **Palier 1 : Bouclier de zone** (légère ; cf. section 3, kits du prologue). **Variante : Bouclier personnel**, posé sur un seul allié, qu'il suit dans ses déplacements (même règle : une attaque bloquée, tombe à la prochaine action du colosse).
 - **Palier 1 : Provocation** (légère) : un coup au sol, qui fait de petits dégâts aux ennemis autour du colosse (ennemis seulement) ; ils abandonnent leur intention et le visent pour leur prochaine action ; s'ils ne peuvent pas l'atteindre, ils s'en rapprochent. **Marche sur les boss** (elle ne les empêche pas d'agir). **Variante : Défi**, un seul ennemi, à distance, pour ses deux prochaines actions.
-- **Palier 2 : Peau d'acier** (légère, sur lui) : il gagne des **PV temporaires**, qui encaissent les dégâts avant ses vrais PV. Montant : **la moitié de ses PV actuels** au moment du lancement (part en données) ; elle protège donc surtout un colosse encore en forme, ce n'est pas un bouton de panique. Ils disparaissent au bout de quelques secondes (moins que la recharge) ; pas de cumul (relancer remet à neuf) ; les soins ne les remplissent pas ; la Frappe précise du combattant passe à travers. **Variante : Égide**, il donne les PV temporaires à un allié adjacent au lieu de les prendre pour lui (le montant reste la moitié de ses propres PV actuels).
+- **Palier 2 : Peau d'acier** (légère, sur lui) : il gagne des **PV temporaires**, qui encaissent les dégâts avant ses vrais PV. Montant : **la moitié de ses PV actuels** au moment du lancement (part en données) ; elle protège donc surtout un colosse encore en forme, ce n'est pas un bouton de panique. Ils disparaissent au bout de quelques secondes (moins que la recharge) ; pas de cumul (en recevoir de nouveaux remplace ceux qu'on avait, sauf s'il en restait davantage : une protection plus faible n'en détruit pas une meilleure) ; les soins ne les remplissent pas ; la Frappe précise du combattant passe à travers, comme une Exécution réussie. **Variante : Égide**, il donne les PV temporaires à un allié adjacent au lieu de les prendre pour lui (le montant reste la moitié de ses propres PV actuels).
 - **Palier 2, passif : Garde du corps** : il prend à sa place une attaque visant un allié adjacent, une fois par cycle.
 - **Palier 3 : Forteresse** (lourde) : grand dôme autour de lui, qui bloque **toutes** les attaques contre les alliés dessous tant qu'il le tient (durée maximale en données). Pendant ce temps il est immobile et sa jauge reste à 0, comme pour une attaque chargée ; le dôme tombe s'il est étourdi, mis à terre ou déplacé de force. Le dôme **ne protège pas le colosse lui-même**.
 - **Palier 3, passif : Inébranlable** : il ne peut être ni déplacé de force, ni déséquilibré.
@@ -78,7 +78,7 @@
 **Combattant** : trois branches. **Exécuteur** (éliminer une cible précise) ✅ · **Duelliste** (tenir en mêlée : parer, riposter, contrôler) ✅ · **Franc-tireur** (distance et accessoires) ✅.
 
 *Exécuteur*
-- **Palier 1 : Frappe précise** (légère ; cf. section 3). **Variante : Prise en tenaille**, n'ignore plus les protections, mais frappe plus fort si un allié est aussi au contact de la cible.
+- **Palier 1 : Frappe précise** (légère ; cf. section 3). Elle ignore les protections : un dôme ne la bloque pas (et n'est pas consommé), les PV temporaires ne l'encaissent pas. **Variante : Prise en tenaille**, n'ignore plus les protections, mais frappe plus fort si un allié est aussi au contact de la cible (un héros debout, pas un gadget).
 - **Palier 1 : Ruée** (légère) : il fonce sur un ennemi à quelques cases, sans attaque d'opportunité, et le frappe. **Variante : Retraite**, il frappe un ennemi au contact, puis recule de quelques cases sans attaque d'opportunité.
 - **Palier 2 : Acharnement** (légère) : gros coup au contact, dont la recharge est annulée si la cible tombe. **Variante : Coup de grâce**, plus de recharge annulée, mais des dégâts qui montent avec les PV manquants de la cible, boss compris.
 - **Palier 2, passif : Point faible** (cf. section 3).
@@ -183,7 +183,7 @@
 
 *Ingénieur*
 - **Palier 1 : Tourelle** (légère ; cf. section 3). **Variante : Tourelle de suppression**, moins de dégâts, mais ses tirs ralentissent.
-- **Palier 1 : Nano-soin** (légère ; cf. section 3). **Variante : Balise bouclier**, donne des PV temporaires au lieu de soigner.
+- **Palier 1 : Nano-soin** (légère ; cf. section 3). **Variante : Balise bouclier**, donne des PV temporaires au lieu de soigner (elle se déclenche quand un héros allié autour d'elle n'en a pas, pas pour un gadget ; montant multiplié par la puissance du tech, comme un soin).
 - **Palier 2 : Piège** (légère ; partagé avec le combattant, branche Franc-tireur). **Variante : Piège explosif**, comme chez le combattant.
 - **Palier 2, passif : Surcadençage** : ses gadgets agissent plus vite.
 - **Palier 3 : Drone de combat** (lourde) : il déploie un drone mobile, qui se déplace et attaque tout seul.

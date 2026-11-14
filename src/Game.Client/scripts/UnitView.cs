@@ -82,7 +82,7 @@ public partial class UnitView : Node3D
             : new Color(0.3f, 0.7f, 1f);
 
         // Les PV chiffrés seulement pour l'unité survolée ou choisie : sinon les noms de voisins se chevauchent.
-        _title.Text = selected || hovered ? $"{unit.Definition.Name}  {unit.Hp}/{unit.MaxHp}" : unit.Definition.Name;
+        _title.Text = selected || hovered ? $"{unit.Definition.Name}  {Texts.Hp(unit)}" : unit.Definition.Name;
         var details = new List<string>();
         if (downed)
             details.Add("À TERRE");

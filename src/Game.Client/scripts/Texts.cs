@@ -27,6 +27,9 @@ public static class Texts
         _ => $"Refusé ({reason}).",
     };
 
+    /// <summary>Les PV d'une unité, avec ses PV temporaires s'il lui en reste : « 120/160 (+40) ».</summary>
+    public static string Hp(Unit unit) => unit.TempHp > 0 ? $"{unit.Hp}/{unit.MaxHp} (+{unit.TempHp})" : $"{unit.Hp}/{unit.MaxHp}";
+
     public static string Status(StatusKind status) => status switch
     {
         StatusKind.Stunned => "étourdi",
@@ -80,6 +83,9 @@ public static class Texts
             ChargeMissed c => $"{N(c.Unit)} : {S(c.Unit, c.SkillId)} manque sa cible",
             UnitDamaged d => $"{N(d.Unit)} perd {d.Amount} PV ({d.Hp})",
             UnitHealed h => $"{N(h.Unit)} regagne {h.Amount} PV ({h.Hp})",
+            TempHpGained g => $"{N(g.Unit)} gagne {g.Amount} PV temporaires",
+            DamageAbsorbed a => $"{N(a.Unit)} encaisse {a.Amount} (PV temporaires : {a.TempHpLeft})",
+            TempHpEnded x => $"{N(x.Unit)} perd ses PV temporaires",
             UnitDowned d => $"{N(d.Unit)} est à terre !",
             UnitRemoved r => $"{N(r.Unit)} est hors de combat",
             UnitEscaped x => sim.FindUnit(x.Unit)?.IsCivilian == true ? $"{N(x.Unit)} est évacué" : $"{N(x.Unit)} s'enfuit !",

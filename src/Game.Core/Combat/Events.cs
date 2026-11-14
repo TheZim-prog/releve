@@ -116,6 +116,15 @@ public sealed record UnitResisted(int Tick, UnitId Unit) : CombatEvent(Tick);
 /// <summary>L'unité regagne <paramref name="Amount"/> PV ; elle en a maintenant <paramref name="Hp"/>.</summary>
 public sealed record UnitHealed(int Tick, UnitId Unit, int Amount, int Hp) : CombatEvent(Tick);
 
+/// <summary>L'unité reçoit <paramref name="Amount"/> PV temporaires (ils remplacent ceux qu'elle avait), jusqu'au tick <paramref name="EndTick"/>.</summary>
+public sealed record TempHpGained(int Tick, UnitId Unit, int Amount, int EndTick) : CombatEvent(Tick);
+
+/// <summary>Les PV temporaires de l'unité encaissent <paramref name="Amount"/> dégâts ; il lui en reste <paramref name="TempHpLeft"/>.</summary>
+public sealed record DamageAbsorbed(int Tick, UnitId Unit, int Amount, int TempHpLeft) : CombatEvent(Tick);
+
+/// <summary>Les PV temporaires de l'unité ont duré leur temps : ce qu'il en restait disparaît.</summary>
+public sealed record TempHpEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 /// <summary>Le dôme de <paramref name="Owner"/> se lève sur ces cases.</summary>
 public sealed record DomeRaised(int Tick, UnitId Owner, IReadOnlyList<Cell> Cells) : CombatEvent(Tick)
 {

@@ -14,5 +14,14 @@
     "behavior": "beacon",
     "maxActivations": 3,
     "skills": ["nano-pulse"]
+  },
+  {
+    // Se déclenche quand un allié autour d'elle n'a pas de PV temporaires, 3 fois au plus.
+    "id": "shield-beacon", "name": "Balise bouclier",
+    "maxHp": 20, "initiative": 60, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "beacon",
+    "maxActivations": 3,
+    "skills": ["shield-pulse"]
   }
 ]

@@ -2,13 +2,15 @@ using Game.Core.Grids;
 
 namespace Game.Core.Combat;
 
-// Coups : dégâts, exécution, couverture, soins, mise hors de combat, et dômes qui bloquent une source.
+// Coups : dégâts, exécution, couverture, soins, mise hors de combat. Ce qui protège une cible (dômes, PV temporaires)
+// est dans CombatSimulation.Protections.cs.
 public sealed partial class CombatSimulation
 {
     /// <summary>
     /// Effets d'un coup de <paramref name="attacker"/> sur sa cible : dégâts (s'il y en a : exécution si la cible est
     /// assez basse et pas un boss, sinon tirage multiplié par <paramref name="damageFactor"/> et par la vulnérabilité
-    /// de la cible), Point faible de l'attaquant, puis états si la cible est encore debout, puis gain de jauge.
+    /// de la cible), Point faible de l'attaquant, puis soin, PV temporaires et états si la cible est encore debout,
+    /// puis gain de jauge.
     /// <paramref name="fallbackCell"/> : où tombe la cible si elle est à terre sur une case qu'elle partage
     /// (seulement possible en plein déplacement, en traversant un allié).
     /// <paramref name="origin"/> : d'où vient le coup (tireur, centre d'une zone), si la couverture peut jouer ; une
@@ -33,24 +35,27 @@ public sealed partial class CombatSimulation
         if (skill.DealsDamage || robotBonus is { DealsDamage: true })
         {
             int dealt;
+            var piercing = skill.IgnoresProtections;
             if (CanExecute(skill, target))
             {
                 _events.Add(new UnitExecuted(CurrentTick, attacker.Id, target.Id));
                 dealt = target.Hp;
+                piercing = true; // une exécution achève : des PV temporaires ne la retiennent pas
             }
             else
             {
                 var roll = skill.DealsDamage ? _random.NextInt(skill.MinDamage, skill.MaxDamage) : 0;
                 if (robotBonus is { DealsDamage: true })
                     roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
-                dealt = Scaled(roll, damageFactor, target);
+                dealt = Scaled(roll, WithFlankBonus(damageFactor, attacker, skill, target), target);
                 if (origin is { } from && CoverFor(from, target.Position) is { } cover)
                     dealt = AbsorbByCover(target, cover, dealt);
             }
-            Damage(target, dealt, fallbackCell);
+            var lost = Damage(target, dealt, fallbackCell, piercing);
 
-            // Point faible : un coup qui a vraiment fait des dégâts à un ennemi le rend vulnérable.
-            if (dealt > 0 && target.Status == UnitStatus.Active && AreOpponents(target, attacker)
+            // Point faible : un coup qui a vraiment entamé les PV d'un ennemi le rend vulnérable (pas un coup
+            // entièrement encaissé par ses PV temporaires).
+            if (lost > 0 && target.Status == UnitStatus.Active && AreOpponents(target, attacker)
                 && attacker.HasPassive(PassiveKind.WeakPoint))
                 ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs }, attacker);
         }
@@ -58,6 +63,8 @@ public sealed partial class CombatSimulation
             return true;
         if (skill.Heals)
             Heal(target, attacker.HealWith(_random.NextInt(skill.MinHeal, skill.MaxHeal)));
+        if (skill.TempHp is { } tempHp)
+            GrantTempHp(attacker, target, tempHp);
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
         foreach (var effect in robotBonus?.Effects ?? [])
@@ -78,6 +85,19 @@ public sealed partial class CombatSimulation
     {
         var exposedPercent = target.HasStatus(StatusKind.Exposed) ? Rules.ExposedDamageTakenPercent : 100;
         return (int)((long)damage * damageFactor * exposedPercent / 1_000_000);
+    }
+
+    /// <summary>
+    /// Prise en tenaille : le multiplicateur de dégâts, augmenté si la compétence a ce bonus et qu'un allié du lanceur
+    /// (un héros debout, pas un gadget) est lui aussi au contact de la cible.
+    /// </summary>
+    private int WithFlankBonus(int damageFactor, Unit attacker, SkillDefinition skill, Unit target)
+    {
+        if (skill.FlankDamagePercent == 0)
+            return damageFactor;
+        var flanked = _units.Any(u => u != attacker && u.IsStandingCombatant && u.Team == attacker.Team
+                                     && IsInMeleeReach(u, target.Position));
+        return flanked ? (int)((long)damageFactor * skill.FlankDamagePercent / 100) : damageFactor;
     }
 
     /// <summary>Exécution : la cible est au plus au seuil de PV de la compétence, et ce n'est pas un boss.</summary>
@@ -125,7 +145,25 @@ public sealed partial class CombatSimulation
         return damage - absorbed;
     }
 
-    private void Damage(Unit target, int amount, Cell? fallbackCell)
+    /// <summary>
+    /// Inflige des dégâts : les PV temporaires de la cible encaissent d'abord (sauf coup <paramref name="piercing"/>, qui
+    /// ignore les protections), le reste entame ses PV. Renvoie les PV réellement perdus.
+    /// </summary>
+    private int Damage(Unit target, int amount, Cell? fallbackCell, bool piercing = false)
+    {
+        if (!piercing && amount > 0)
+        {
+            amount = AbsorbByTempHp(target, amount);
+            if (amount == 0)
+                return 0; // tout a été encaissé : ses PV ne bougent pas
+        }
+        var before = target.Hp;
+        LoseHp(target, amount, fallbackCell);
+        return before - target.Hp;
+    }
+
+    /// <summary>La cible perd des PV ; à 0, elle est mise hors de combat (à terre ou retirée).</summary>
+    private void LoseHp(Unit target, int amount, Cell? fallbackCell)
     {
         target.Hp = Math.Max(0, target.Hp - amount);
         _events.Add(new UnitDamaged(CurrentTick, target.Id, amount, target.Hp));
@@ -160,6 +198,7 @@ public sealed partial class CombatSimulation
     private void TakeOutOfAction(Unit unit, UnitStatus status)
     {
         unit.Status = status;
+        unit.TempHp = 0;
         foreach (var effect in unit.StatusEndTicks.Keys.ToList())
             EndStatus(unit, effect);
         InterruptCharge(unit);
@@ -193,56 +232,5 @@ public sealed partial class CombatSimulation
             return;
         unit.Hp += healed;
         _events.Add(new UnitHealed(CurrentTick, unit.Id, healed, unit.Hp));
-    }
-
-    /// <summary>Dôme posé par une unité : ses cases, et s'il a déjà bloqué quelque chose pendant la source en cours.</summary>
-    private sealed class Dome(Unit owner, IReadOnlyList<Cell> cells)
-    {
-        public Unit Owner { get; } = owner;
-        public HashSet<Cell> Cells { get; } = cells.ToHashSet();
-        public bool Absorbing { get; set; }
-    }
-
-    /// <summary>Pose le dôme (l'ancien est déjà tombé : poser un dôme est une action du lanceur).</summary>
-    private void RaiseDome(Unit owner, IReadOnlyList<Cell> cells)
-    {
-        _domes.Add(new Dome(owner, cells));
-        _events.Add(new DomeRaised(CurrentTick, owner.Id, cells));
-    }
-
-    private void RemoveDome(Unit owner)
-    {
-        if (_domes.RemoveAll(d => d.Owner == owner) > 0)
-            _events.Add(new DomeEnded(CurrentTick, owner.Id));
-    }
-
-    /// <summary>
-    /// Un coup offensif (compétence visant un ennemi ou une zone) sur <paramref name="target"/> est-il bloqué par
-    /// un dôme de son équipe qui la couvre ? Si oui, le dôme absorbe la source en cours (il tombera à sa fin).
-    /// </summary>
-    private bool IsBlockedByDome(SkillDefinition skill, Unit target)
-    {
-        if (!skill.IsOffensive)
-            return false;
-        // Un dôme protège son équipe et les civils sous lui.
-        var dome = _domes.FirstOrDefault(d => (d.Owner.Team == target.Team || target.IsCivilian) && d.Cells.Contains(target.Position));
-        if (dome is null)
-            return false;
-        dome.Absorbing = true;
-        _events.Add(new HitBlocked(CurrentTick, target.Id, dome.Owner.Id));
-        return true;
-    }
-
-    /// <summary>
-    /// Fin d'une source (compétence ou attaque d'opportunité) : les dômes qui l'ont absorbée disparaissent, ainsi que
-    /// ceux dont le lanceur est tombé pendant cette source (pas avant : l'attaque reste bloquée pour tous).
-    /// Tous les dégâts arrivent pendant une source, donc tout lanceur tombé passe par ici.
-    /// </summary>
-    private void EndSource()
-    {
-        if (_domes.Count == 0)
-            return;
-        foreach (var dome in _domes.Where(d => d.Absorbing || d.Owner.Status != UnitStatus.Active).ToList())
-            RemoveDome(dome.Owner);
     }
 }

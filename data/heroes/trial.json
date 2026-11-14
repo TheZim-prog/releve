@@ -2,11 +2,13 @@
 // mesure (scénario « trial »). Pour essayer une variante, la mettre dans "equipped" à la place de sa compétence.
 [
   {
-    // Cogneur et Lutteur : Coup de marteau (variante : quake) et Clé (variante : dismantle, contre les robots).
+    // Coup de marteau (variante : quake), Clé (variante : dismantle, contre les robots) et Peau d'acier (variante :
+    // aegis, pour un allié adjacent).
     "id": "trial-colossus", "archetype": "colossus", "level": 20,
     "points": { "hp": 12, "power": 5, "initiative": 2 },
-    "learned": ["dome", "leap", "hammer-blow", "throw-scenery", "rage", "shockwave", "projection", "arm-lock", "vigilance"],
-    "equipped": ["hammer-blow", "leap", "arm-lock", "shockwave"],
+    "learned": ["dome", "provocation", "steel-skin", "leap", "hammer-blow", "throw-scenery", "rage", "shockwave", "projection",
+                "arm-lock", "vigilance"],
+    "equipped": ["hammer-blow", "steel-skin", "arm-lock", "shockwave"],
     "passive": "vigilance"
   },
   {
@@ -20,6 +22,7 @@
   },
   {
     // Les variantes Balayage (Coup étourdissant) et Volée (Lames de jet), et le Désarmement.
+    // À essayer aussi : precise-strike, qui ignore les protections, et sa variante pincer.
     "id": "trial-fighter", "archetype": "fighter", "level": 20,
     "points": { "hp": 6, "power": 8, "initiative": 5 },
     "learned": ["stunning-blow", "parry", "disarm", "throwing-blades", "smoke-bomb", "precise-strike", "rush", "relentless", "weakPoint",
@@ -38,6 +41,7 @@
   },
   {
     // Tacticien et Saboteur : Tir de désignation (variante : suppression-shot) et Électrochoc (variante : net).
+    // À essayer aussi : shield-beacon, variante de nano-heal.
     "id": "trial-tech", "archetype": "tech", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
     "learned": ["turret", "nano-heal", "designation-shot", "covering-fire", "tactical-order", "tacticalAnalysis",

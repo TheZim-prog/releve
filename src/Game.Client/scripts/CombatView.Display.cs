@@ -28,7 +28,7 @@ public partial class CombatView
             return;
         }
 
-        var header = $"{unit.Definition.Name} — {unit.Hp}/{unit.MaxHp} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
+        var header = $"{unit.Definition.Name} — {Texts.Hp(unit)} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
                      + (HasOrder(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : "")
                      + (_ghost is not null ? " — déplacement prévu" : "");
         if (unit.StatusEndTicks.Count > 0)
@@ -68,7 +68,7 @@ public partial class CombatView
         if (hero.Status == UnitStatus.Active && statuses.Length > 0)
             state = state.Length > 0 ? $"{state} · {statuses}" : statuses;
         var name = _session.ControllerName(hero.Id) is { } controller ? $"{hero.Definition.Name} ({controller})" : hero.Definition.Name;
-        return new HeroCard(hero.Id, name, (float)hero.Hp / hero.MaxHp, $"{hero.Hp}/{hero.MaxHp} PV",
+        return new HeroCard(hero.Id, name, (float)hero.Hp / hero.MaxHp, $"{Texts.Hp(hero)} PV",
             Math.Min(1f, (float)hero.Gauge / _data.Rules.GaugeCapacity), Ready: ready, Selected: hero.Id == _selected, State: state,
             SkillReadiness: hero.Skills.Select(s => 1f - CooldownLeft(hero, s)).ToList());
     }
@@ -92,7 +92,7 @@ public partial class CombatView
         return skill is null ? $"→ {target}" : $"→ {skill} sur {target}";
     }
 
-    private void Float(UnitId unit, string text, Color color)
+    private void Float(UnitId unit, string text, Color color, float lift = 0)
     {
         if (!_views.TryGetValue(unit, out var view))
             return;
@@ -105,7 +105,7 @@ public partial class CombatView
             OutlineSize = 10,
             NoDepthTest = true,
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            Position = view.Position + new Vector3(0, 1.4f, 0),
+            Position = view.Position + new Vector3(0, 1.4f + lift, 0),
         };
         AddChild(label);
         var tween = CreateTween().SetParallel();

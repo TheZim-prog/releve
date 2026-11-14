@@ -195,7 +195,7 @@ public sealed partial class CombatSimulation
             if (hit is { Status: UnitStatus.Active, IsCivilian: false } && !IsBlockedByDome(skill, hit))
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
-                Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null);
+                Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null, piercing: skill.IgnoresProtections);
             }
         }
     }

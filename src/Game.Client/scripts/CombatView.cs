@@ -34,6 +34,9 @@ public partial class CombatView : Node3D
     private static readonly Color HeroGadget = new(0.6f, 0.95f, 1f);
     private static readonly Color EnemyDefault = new(0.8f, 0.25f, 0.25f);
 
+    // Chiffres flottants de ce qui protège une unité (dôme, PV temporaires).
+    private static readonly Color Protected = new(0.5f, 0.75f, 1f);
+
     // Fantôme et chemin : à peine visibles au simple survol, francs une fois la case choisie (déplacement prévu).
     private static readonly StandardMaterial3D GhostHovered = BoardView.Translucent(new Color(1, 1, 1, 0.18f));
     private static readonly StandardMaterial3D GhostPlaced = BoardView.Translucent(new Color(0.55f, 0.85f, 1f, 0.7f));
@@ -239,8 +242,14 @@ public partial class CombatView : Node3D
             case UnitHealed h:
                 Float(h.Unit, $"+{h.Amount}", new Color(0.4f, 1f, 0.5f));
                 break;
+            case TempHpGained g:
+                Float(g.Unit, $"+{g.Amount}", Protected);
+                break;
+            case DamageAbsorbed a:
+                Float(a.Unit, $"-{a.Amount}", Protected, lift: 0.45f);
+                break;
             case HitBlocked b:
-                Float(b.Unit, "bloqué", new Color(0.5f, 0.75f, 1f));
+                Float(b.Unit, "bloqué", Protected);
                 break;
             case DomeRaised or DomeEnded:
                 TrackDome(e);

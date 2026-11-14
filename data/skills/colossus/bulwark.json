@@ -6,5 +6,17 @@
     "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
     "zone": { "shape": "square", "size": 1, "throughWalls": false },
     "createsDome": true
+  },
+  {
+    // Il gagne des PV temporaires : la moitié de ses PV actuels. À lancer avant d'encaisser, pas après.
+    "id": "steel-skin", "name": "Peau d'acier",
+    "target": "self", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "tempHp": { "percentOfCasterHp": 50, "durationMs": 8000 }
+  },
+  {
+    // Variante de la Peau d'acier : les PV temporaires vont à un allié adjacent (toujours la moitié des PV du colosse).
+    "id": "aegis", "name": "Égide",
+    "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "tempHp": { "percentOfCasterHp": 50, "durationMs": 8000 }
   }
 ]

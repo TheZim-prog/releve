@@ -102,6 +102,18 @@ public sealed record SkillDefinition
 
     public bool Heals => MaxHeal > 0;
 
+    /// <summary>PV temporaires donnés à chaque cible (soutien), ou <c>null</c>.</summary>
+    public TempHpDefinition? TempHp { get; init; }
+
+    /// <summary>Le coup ignore les protections de sa cible : ni dôme ni PV temporaires ne l'arrêtent (ex. Frappe précise).</summary>
+    public bool IgnoresProtections { get; init; }
+
+    /// <summary>
+    /// Prise en tenaille : dégâts en % des dégâts normaux quand un allié du lanceur est lui aussi au contact de la
+    /// cible (0 = pas de bonus).
+    /// </summary>
+    public int FlankDamagePercent { get; init; }
+
     /// <summary>
     /// Sauvetage (ex. Sauvetage éclair) : vise un allié <b>à terre</b> à <see cref="Range"/> cases à pied et une case
     /// libre à ce rayon au plus du lanceur, en vue ; l'allié y est posé, le lanceur finit à côté. <c>null</c> : pas un sauvetage.
@@ -222,6 +234,17 @@ public sealed record SkillDefinition
         if (supportZone && (DealsDamage || CreatesDome))
             throw new ArgumentException($"Skill '{Id}': an allies-only zone can only heal or give beneficial statuses.");
 
+        // PV temporaires : un soutien (sur un allié, sur soi, ou une zone réservée aux alliés), jamais une attaque.
+        TempHp?.Validate(Id);
+        if (TempHp is not null && (IsOffensive || Target == SkillTargeting.Any || IsRescue || Summon is not null))
+            throw new ArgumentException($"Skill '{Id}': temporary HP go to an ally, the caster, or an allies-only zone.");
+        // Ignorer les protections, ou frapper plus fort en tenaille : un coup qui fait des dégâts à un seul ennemi.
+        if ((IgnoresProtections || FlankDamagePercent != 0)
+            && (!IsOffensive || Zone is not null || !DealsDamage || SelfMove is SelfMoveType.Pierce or SelfMoveType.Leap))
+            throw new ArgumentException($"Skill '{Id}': ignoring protections or flanking belongs to a damaging attack on one enemy.");
+        if (FlankDamagePercent != 0 && (FlankDamagePercent is < 100 or > 1000 || Range != 1))
+            throw new ArgumentException($"Skill '{Id}': a flank bonus is between 100 and 1000 %, on an attack at range 1.");
+
         // Invocation : une case visée, rien d'autre ; l'unité posée est une unité IA immobile, sans attaque d'opportunité.
         if (Summon is not null)
         {
@@ -282,7 +305,8 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}': a robot effect repeats a status of the skill (lengthen it instead).");
 
         if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
-            && !Heals && Summon is null && !IsRescue && VsRobots is not ({ DealsDamage: true } or { Effects.Count: > 0 }))
+            && !Heals && TempHp is null && Summon is null && !IsRescue
+            && VsRobots is not ({ DealsDamage: true } or { Effects.Count: > 0 }))
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
     }
 }

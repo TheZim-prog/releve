@@ -11,8 +11,8 @@ public static class Behaviors
     public const string Basic = "basic";
 
     /// <summary>
-    /// Balise de soin (gadget immobile) : jauge pleine, elle lance sa zone de soin autour d'elle, seulement si un allié
-    /// blessé s'y trouve ; sinon elle attend.
+    /// Balise (gadget immobile) : jauge pleine, elle lance sa zone de soutien autour d'elle (soin, PV temporaires),
+    /// seulement si un allié en profiterait ; sinon elle attend.
     /// </summary>
     public const string Beacon = "beacon";
 

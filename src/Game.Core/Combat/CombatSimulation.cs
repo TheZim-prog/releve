@@ -5,7 +5,7 @@ namespace Game.Core.Combat;
 /// <summary>
 /// Simulation d'un combat, à ticks fixes et entièrement déterministe.
 /// <para>
-/// Déroulement d'un tick : les états arrivés à échéance prennent fin ; les attaques chargées arrivées à
+/// Déroulement d'un tick : les états et les PV temporaires arrivés à échéance prennent fin ; les attaques chargées arrivées à
 /// échéance se déclenchent ; les commandes des joueurs soumises depuis le tick précédent sont appliquées
 /// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les ordres à l'avance dont
 /// l'unité peut agir partent, dans l'ordre où ils ont été donnés ; les unités IA prêtes agissent ; les jauges
@@ -87,7 +87,7 @@ public sealed partial class CombatSimulation
     /// debout, sans compter les civils ni les gadgets. Le combat libre se termine quand il n'en reste qu'une.
     /// </summary>
     public IReadOnlySet<int> TeamsStillFighting() =>
-        _units.Where(u => u.Status == UnitStatus.Active && !u.IsCivilian && u.SummonedBy is null)
+        _units.Where(u => u.IsStandingCombatant)
             .Select(u => u.OriginalTeam)
             .ToHashSet();
 
@@ -107,6 +107,7 @@ public sealed partial class CombatSimulation
         var firstEvent = _events.Count;
 
         ExpireStatuses();
+        ExpireTempHp();
         ReleaseCharges();
 
         while (_pending.TryDequeue(out var command))
@@ -183,6 +184,7 @@ public sealed partial class CombatSimulation
             Add(unit.Position.Y);
             Add(unit.Gauge);
             Add(unit.Hp);
+            Add(unit.TempHp);
             Add((int)unit.Status);
             Add(unit.Team);
         }

@@ -128,6 +128,12 @@ public sealed class Unit
     /// <summary>Soin donné par cette unité : le tirage, multiplié par sa puissance.</summary>
     internal int HealWith(int roll) => (int)((long)roll * PowerPercent / 100);
     public int Hp { get; internal set; }
+
+    /// <summary>PV temporaires : ils encaissent les dégâts avant les PV, et disparaissent à <see cref="TempHpEndTick"/>.</summary>
+    public int TempHp { get; internal set; }
+
+    /// <summary>Tick où les PV temporaires restants disparaissent.</summary>
+    public int TempHpEndTick { get; internal set; }
     public IReadOnlyList<SkillDefinition> Skills { get; }
     public DefeatOutcome OnDefeat { get; }
     public UnitStatus Status { get; internal set; } = UnitStatus.Active;
@@ -159,6 +165,9 @@ public sealed class Unit
 
     /// <summary>Mise à l'abri à terre par un coéquipier (Sauvetage éclair) : compte pour la règle de campagne des chutes.</summary>
     public bool WasRescued { get; internal set; }
+
+    /// <summary>Combattant debout : ni à terre, ni civil, ni gadget posé par un autre. C'est ce qui compte pour l'issue du combat.</summary>
+    public bool IsStandingCombatant => Status == UnitStatus.Active && !IsCivilian && SummonedBy is null;
 
     /// <summary>Civil (neutre) : voir <see cref="UnitDefinition.IsCivilian"/>.</summary>
     public bool IsCivilian => Definition.IsCivilian;

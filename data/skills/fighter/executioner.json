@@ -1,10 +1,22 @@
 // Combattant, branche Exécuteur : éliminer une cible précise.
 [
-  { "id": "precise-strike", "name": "Frappe précise", "weight": "light", "range": 1, "minDamage": 18, "maxDamage": 23, "cooldownMs": 8000 },
+  {
+    // Coup puissant qui ignore les protections : ni dôme ni PV temporaires ne l'arrêtent.
+    "id": "precise-strike", "name": "Frappe précise",
+    "weight": "light", "range": 1, "minDamage": 18, "maxDamage": 23, "cooldownMs": 8000,
+    "ignoresProtections": true
+  },
   {
     // Achève une cible sous 30 % de PV (pas un boss), sinon très gros dégâts.
     "id": "execution", "name": "Exécution",
     "weight": "heavy", "range": 1, "minDamage": 24, "maxDamage": 31, "cooldownMs": 20000,
     "executeAtOrBelowPercent": 30
+  },
+  {
+    // Variante de la Frappe précise : n'ignore plus les protections, mais frappe plus fort si un allié est aussi au
+    // contact de la cible.
+    "id": "pincer", "name": "Prise en tenaille",
+    "weight": "light", "range": 1, "minDamage": 18, "maxDamage": 23, "cooldownMs": 8000,
+    "flankDamagePercent": 150
   }
 ]
