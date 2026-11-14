@@ -18,5 +18,13 @@
     "id": "disarm", "name": "Désarmement",
     "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
     "effects": [ { "status": "disarmed", "durationMs": 4000 } ]
+  },
+  {
+    // Variante du Désarmement : au lieu d'être désarmée, la cible perd une partie de sa jauge ; sa charge en cours est
+    // toujours interrompue.
+    "id": "offbeat", "name": "Contretemps",
+    "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "gaugeLossPercent": 30,
+    "interruptsCharge": true
   }
 ]

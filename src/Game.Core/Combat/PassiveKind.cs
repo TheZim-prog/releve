@@ -25,6 +25,24 @@ public enum PassiveKind
     /// (<see cref="CombatRules.VigilanceExtraOpportunityAttacks"/>).
     /// </summary>
     Vigilance,
+
+    /// <summary>Voleur de temps (speedster) : ses coups retirent un peu de jauge à la cible (<see cref="CombatRules.TimeThiefGaugeLossPercent"/>).</summary>
+    TimeThief,
+
+    /// <summary>Sur sa lancée (colosse) : mettre un ennemi hors de combat lui rend de la jauge (<see cref="CombatRules.MomentumGaugeGainPercent"/>).</summary>
+    Momentum,
+
+    /// <summary>Récupération d'énergie (tech) : un peu de jauge pour chaque ennemi qu'il étourdit (<see cref="CombatRules.EnergyRecoveryGaugeGainPercent"/>).</summary>
+    EnergyRecovery,
+
+    /// <summary>Sillage (speedster) : après son action, les alliés à son contact gagnent un peu de jauge (<see cref="CombatRules.SlipstreamGaugeGainPercent"/>).</summary>
+    Slipstream,
+
+    /// <summary>Commandement (tech) : les alliés proches remplissent leur jauge plus vite (<see cref="CombatRules.CommandFillPercent"/>).</summary>
+    Command,
+
+    /// <summary>Champ de brouillage (tech) : les ennemis proches remplissent leur jauge plus lentement (<see cref="CombatRules.JammingFieldFillPercent"/>).</summary>
+    JammingField,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

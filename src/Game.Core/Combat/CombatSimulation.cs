@@ -32,6 +32,9 @@ public sealed partial class CombatSimulation
     private readonly DeterministicRandom _random;
     private readonly List<Dome> _domes = new();
 
+    // Porteurs d'aura debout (Commandement, Champ de brouillage), relevés à chaque tick.
+    private readonly List<Unit> _auraBearers = new();
+
     // PV des obstacles bas déjà abîmés (les autres sont intacts, à LowObstacleHp).
     private readonly Dictionary<Cell, int> _coverHp = new();
 
@@ -126,6 +129,7 @@ public sealed partial class CombatSimulation
                 RunAi(unit, behavior);
         }
 
+        FindAuraBearers();
         foreach (var unit in _units)
         {
             if (unit.Status == UnitStatus.Active && !unit.IsGaugeFull)
@@ -187,6 +191,7 @@ public sealed partial class CombatSimulation
             Add(unit.TempHp);
             Add(unit.TauntActionsLeft);
             Add(unit.TauntedBy?.Value ?? 0);
+            Add(unit.PendingGauge);
             Add((int)unit.Status);
             Add(unit.Team);
         }
@@ -213,6 +218,11 @@ public sealed partial class CombatSimulation
         if (unit.HasStatus(StatusKind.Hasted))
         {
             numerator *= Rules.HastedFillPercent;
+            scale *= 100;
+        }
+        foreach (var percent in AuraFillPercents(unit))
+        {
+            numerator *= percent;
             scale *= 100;
         }
 

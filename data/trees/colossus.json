@@ -17,7 +17,7 @@
       "tiers": [
         { "actives": [ { "skill": "leap", "variant": "crush" }, { "skill": "hammer-blow", "variant": "quake" } ] },
         { "actives": [ { "skill": "throw-scenery", "variant": "barricade" } ], "passives": [ { "id": "rage", "name": "Rage", "planned": true } ] },
-        { "actives": [ { "skill": "shockwave" } ], "passives": [ { "id": "momentum", "name": "Sur sa lancée", "planned": true } ] }
+        { "actives": [ { "skill": "shockwave" } ], "passives": [ { "id": "momentum", "name": "Sur sa lancée" } ] }
       ]
     },
     {

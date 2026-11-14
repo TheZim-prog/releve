@@ -218,6 +218,9 @@ public sealed class Unit
 
     internal int FillRemainderScale { get; set; } = 1;
 
+    /// <summary>Jauge promise par un passif pendant ce qu'elle est en train de faire, donnée dès qu'elle a fini.</summary>
+    internal int PendingGauge { get; set; }
+
     internal void SetStatus(StatusKind status, int endTick) => _statusEndTicks[status] = endTick;
 
     internal void ClearStatus(StatusKind status) => _statusEndTicks.Remove(status);

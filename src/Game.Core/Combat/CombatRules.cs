@@ -45,6 +45,30 @@ public sealed record CombatRules
     /// <summary>Attaques d'opportunité en plus par cycle pour une unité qui a le passif Vigilance.</summary>
     public required int VigilanceExtraOpportunityAttacks { get; init; }
 
+    /// <summary>Jauge perdue par un boss, en % de ce que perdrait une autre unité.</summary>
+    public required int BossGaugeLossPercent { get; init; }
+
+    /// <summary>Voleur de temps : jauge retirée à la cible par chaque coup qui la blesse, en % de la capacité.</summary>
+    public required int TimeThiefGaugeLossPercent { get; init; }
+
+    /// <summary>Sur sa lancée : jauge gagnée en mettant un ennemi hors de combat, en % de la capacité.</summary>
+    public required int MomentumGaugeGainPercent { get; init; }
+
+    /// <summary>Récupération d'énergie : jauge gagnée pour chaque ennemi étourdi, en % de la capacité.</summary>
+    public required int EnergyRecoveryGaugeGainPercent { get; init; }
+
+    /// <summary>Sillage : jauge donnée à chaque allié au contact après une action, en % de la capacité.</summary>
+    public required int SlipstreamGaugeGainPercent { get; init; }
+
+    /// <summary>Portée, en cases, des auras de Commandement et de Champ de brouillage.</summary>
+    public required int AuraRange { get; init; }
+
+    /// <summary>Commandement : vitesse de jauge des alliés proches, en % de la normale (au moins 100).</summary>
+    public required int CommandFillPercent { get; init; }
+
+    /// <summary>Champ de brouillage : vitesse de jauge des ennemis proches, en % de la normale (au plus 100).</summary>
+    public required int JammingFieldFillPercent { get; init; }
+
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
@@ -124,6 +148,16 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(WeakPointExposedMs)} must be positive.");
         if (GripDurationPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(GripDurationPercent)} must be between 100 and 1000.");
+        ValidatePercent(BossGaugeLossPercent, nameof(BossGaugeLossPercent), max: 100);
+        ValidatePercent(TimeThiefGaugeLossPercent, nameof(TimeThiefGaugeLossPercent), max: 100);
+        ValidatePercent(MomentumGaugeGainPercent, nameof(MomentumGaugeGainPercent), max: 100);
+        ValidatePercent(EnergyRecoveryGaugeGainPercent, nameof(EnergyRecoveryGaugeGainPercent), max: 100);
+        ValidatePercent(SlipstreamGaugeGainPercent, nameof(SlipstreamGaugeGainPercent), max: 100);
+        if (AuraRange is < 1 or > 20)
+            throw new ArgumentException($"{nameof(AuraRange)} must be between 1 and 20.");
+        if (CommandFillPercent is < 100 or > 1000)
+            throw new ArgumentException($"{nameof(CommandFillPercent)} must be between 100 and 1000.");
+        ValidatePercent(JammingFieldFillPercent, nameof(JammingFieldFillPercent), max: 100, min: 1);
         ValidatePercent(DisarmedOnBossDurationPercent, nameof(DisarmedOnBossDurationPercent), max: 100, min: 1);
         if (VigilanceExtraOpportunityAttacks is < 1 or > 10)
             throw new ArgumentException($"{nameof(VigilanceExtraOpportunityAttacks)} must be between 1 and 10.");

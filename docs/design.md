@@ -65,7 +65,7 @@
 - **Palier 2 : Lancer de décor** (légère) : il arrache un **obstacle bas à son contact** (voiture, muret) et le lance : dégâts de zone à distance. L'obstacle est détruit (la couverture disparaît, et c'est un dégât collatéral). Impossible sans obstacle sous la main. **Variante : Barricade**, au lieu de lancer l'obstacle, il le pose sur une case proche (une couverture là où l'équipe en a besoin).
 - **Palier 2, passif : Rage** : plus ses PV sont bas, plus il frappe fort.
 - **Palier 3 : Onde de choc** (lourde ; cf. section 3).
-- **Palier 3, passif : Sur sa lancée** : quand il met un ennemi hors de combat, sa jauge se remplit en partie.
+- **Palier 3, passif : Sur sa lancée** : quand il met un ennemi hors de combat, sa jauge se remplit en partie (un ennemi, pas un gadget ; une collision après une Projection compte).
 
 *Lutteur*
 - **Palier 1 : Projection** (légère ; cf. section 3). **Variante : Renversement**, il jette la cible derrière lui au lieu de la pousser devant.
@@ -115,7 +115,7 @@
 - **Palier 1 : Sauvetage éclair** (légère ; cf. section 3). **Variante : Réanimation express**, il court relever un allié à terre à distance, sans le déplacer.
 - **Palier 1 : Dégagement** (légère) : il fonce sur un ennemi à portée, le frappe et le repousse de deux cases (pour libérer un allié menacé). **Variante : Croche-pied**, la cible est immobilisée brièvement au lieu d'être repoussée.
 - **Palier 2 : Transport** (légère) : il emmène un allié adjacent avec lui ; ils arrivent côte à côte, sans attaque d'opportunité. **Variante : Permutation**, il échange sa place avec un allié à portée.
-- **Palier 2, passif : Sillage** : quand il finit son action au contact d'alliés, leur jauge avance un peu.
+- **Palier 2, passif : Sillage** : quand il finit son action au contact d'alliés, leur jauge avance un peu (une action réellement faite, pas un déplacement seul ni une action annulée en chemin ; des héros debout, pas des gadgets).
 - **Palier 3 : Élan collectif** (lourde) : les alliés autour de lui sont accélérés brièvement.
 - **Palier 3, passif : Départ canon** : il commence chaque combat avec la jauge pleine.
 
@@ -195,15 +195,15 @@
 - **Palier 2 : Ordre tactique** (légère ; cf. section 3 ; au palier 2 parce qu'elle est forte). **Variante : Rechargement**, annule les recharges en cours de l'allié au lieu de remplir sa jauge.
 - **Palier 2, passif : Analyse tactique** (cf. section 3).
 - **Palier 3 : Frappe coordonnée** (lourde) : il désigne une cible ; chaque allié qui l'a à portée lui porte aussitôt son attaque de base, gratuitement.
-- **Palier 3, passif : Commandement** : les alliés proches de lui remplissent leur jauge un peu plus vite.
+- **Palier 3, passif : Commandement** : les alliés proches de lui remplissent leur jauge un peu plus vite (portée en cases, sans ligne de vue ; pas lui-même ; pas les gadgets ; deux Commandements ne se cumulent pas).
 
 *Saboteur*
 - **Palier 1 : Électrochoc** (légère) : dégâts à courte portée et court étourdissement, plus long et plus fort contre un robot. **Variante : Filet**, immobilise la cible au lieu de l'étourdir, sans bonus contre les robots.
-- **Palier 1 : Brouillage** (légère) : la cible perd une partie de sa jauge, davantage si c'est un robot. **Variante : Interférences**, une petite zone, avec moins de jauge perdue par cible.
+- **Palier 1 : Brouillage** (légère) : la cible perd une partie de sa jauge, davantage si c'est un robot. Une unité prête qui perd de la jauge ne l'est plus ; un **boss** n'en perd que la moitié (en données ; cela vaut pour toute perte de jauge : Contretemps, Voleur de temps…) ; sans effet sur une unité qui charge une attaque (sa jauge est déjà à zéro). **Variante : Interférences**, une petite zone, avec moins de jauge perdue par cible.
 - **Palier 2 : Piratage** (légère) : il prend le contrôle d'un **robot** ennemi quelques secondes ; sur un autre ennemi, celui-ci est désarmé. **Variante : Virus**, le robot n'est pas commandé par le joueur : il attaque l'unité la plus proche, mais plus longtemps ; sur un autre ennemi, ralenti au lieu de désarmé.
 - **Palier 2, passif : Champ de brouillage** : les ennemis proches de lui remplissent leur jauge un peu plus lentement (le miroir de Commandement).
 - **Palier 3 : Impulsion électromagnétique** (lourde ; cf. section 3).
-- **Palier 3, passif : Récupération d'énergie** : il gagne un peu de jauge pour chaque ennemi qu'il étourdit.
+- **Palier 3, passif : Récupération d'énergie** : il gagne un peu de jauge pour chaque ennemi qu'il étourdit (pas un gadget, et pas pour un ennemi déjà étourdi).
 
 ---
 

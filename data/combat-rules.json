@@ -25,6 +25,23 @@
   "exposedDamageTakenPercent": 125,
   "weakPointExposedMs": 4000,
 
+  // Perte de jauge (Brouillage, Contretemps…) : un boss ne perd que ce % de ce que perdrait une autre unité.
+  "bossGaugeLossPercent": 50,
+
+  // Passifs qui jouent sur la jauge, en % de sa capacité :
+  // Voleur de temps (chaque coup qui blesse en retire à la cible), Sur sa lancée (gain en mettant un ennemi hors de
+  // combat), Récupération d'énergie (gain par ennemi étourdi), Sillage (don aux alliés au contact après une action).
+  "timeThiefGaugeLossPercent": 8,
+  "momentumGaugeGainPercent": 40,
+  "energyRecoveryGaugeGainPercent": 10,
+  "slipstreamGaugeGainPercent": 5,
+
+  // Auras : à cette portée (en cases), Commandement accélère la jauge des alliés et Champ de brouillage ralentit
+  // celle des ennemis, en % de leur vitesse normale.
+  "auraRange": 2,
+  "commandFillPercent": 115,
+  "jammingFieldFillPercent": 85,
+
   // Désarmé : l'état dure ce % de sa durée normale sur un boss.
   "disarmedOnBossDurationPercent": 50,
 

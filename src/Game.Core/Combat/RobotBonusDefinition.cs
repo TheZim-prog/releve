@@ -17,6 +17,9 @@ public sealed record RobotBonusDefinition
 
     public bool DealsDamage => MaxDamage > 0;
 
+    /// <summary>Jauge perdue en plus par un robot, en % de la capacité (0 = aucune).</summary>
+    public int GaugeLossPercent { get; init; }
+
     private readonly IReadOnlyList<StatusEffect> _effects = Array.Empty<StatusEffect>();
 
     /// <summary>
@@ -35,6 +38,8 @@ public sealed record RobotBonusDefinition
             throw new ArgumentException($"Skill '{skillId}' needs a robot status duration between 100 and 1000 %.");
         if (MinDamage < 0 || MaxDamage < MinDamage)
             throw new ArgumentException($"Skill '{skillId}' needs 0 <= robot minDamage <= robot maxDamage.");
+        if (GaugeLossPercent is < 0 or > 100)
+            throw new ArgumentException($"Skill '{skillId}' needs a robot gauge loss between 0 and 100 %.");
         if (Effects is null || Effects.Any(e => e is null))
             throw new ArgumentException($"Skill '{skillId}' has a null robot effect.");
         foreach (var effect in Effects)

@@ -195,7 +195,9 @@ public sealed partial class CombatSimulation
             if (hit is { Status: UnitStatus.Active, IsCivilian: false } && !IsBlockedByDome(skill, hit))
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
-                Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null, piercing: skill.IgnoresProtections);
+                var wereOpponents = AreOpponents(hit, caster);
+                var lost = Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null, piercing: skill.IgnoresProtections);
+                GaugePassivesOnHit(caster, hit, lost, wereOpponents);
             }
         }
     }
@@ -232,6 +234,8 @@ public sealed partial class CombatSimulation
                 _events.Add(new ChargeMissed(CurrentTick, unit.Id, skill.Id, charge.Target!.Value));
 
             SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(skill)));
+            FlushGauge(unit);
+            Slipstream(unit);
             DismissIfExhausted(unit);
         }
     }

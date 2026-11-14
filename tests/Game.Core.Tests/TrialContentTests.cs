@@ -250,6 +250,34 @@ public class TrialContentTests
     }
 
     [Fact]
+    public void Jamming_TakesGaugeFromItsTarget_AndInterferenceFromTheEnemiesOfASmallZone()
+    {
+        var jamming = Combat("tech", "jamming", (0, 2), ("brute", 1, 5, 2));
+        jamming.FindUnit(new UnitId(2))!.Gauge = Rules.GaugeCapacity;
+        var one = Use(jamming, "jamming", target: 2).OfType<GaugeLost>().Single();
+
+        // Un allié (unité 2) et un ennemi (unité 3) dans la zone, un ennemi (unité 4) hors de la zone.
+        var interference = Combat("tech", "interference", (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 5, 2), ("brute", 1, 8, 4));
+        foreach (var unit in interference.Units)
+            unit.Gauge = Rules.GaugeCapacity;
+        var several = Use(interference, "interference", cell: (5, 2)).OfType<GaugeLost>().ToList();
+
+        Assert.Equal(Rules.GaugeAt(Content.Skills["jamming"].GaugeLossPercent), one.Amount);
+        Assert.Equal(new[] { new UnitId(3) }, several.Select(e => e.Unit));
+        Assert.True(several[0].Amount < one.Amount);
+        Assert.True(Content.Skills["jamming"].VsRobots!.GaugeLossPercent > 0);
+    }
+
+    [Fact]
+    public void Offbeat_TakesGaugeAndInterruptsCharges_InsteadOfDisarming()
+    {
+        var offbeat = Content.Skills["offbeat"];
+
+        Assert.True(offbeat is { InterruptsCharge: true, GaugeLossPercent: > 0, Range: 1 });
+        Assert.Empty(offbeat.Effects);
+    }
+
+    [Fact]
     public void Provocation_HitsAndTauntsTheEnemiesAround_ForTheirNextActivation()
     {
         // Un allié (unité 2) et un ennemi (unité 3) à 2 cases du colosse, un ennemi (unité 4) trop loin.

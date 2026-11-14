@@ -17,15 +17,15 @@
       "tiers": [
         { "actives": [ { "skill": "designation-shot", "variant": "suppression-shot" }, { "skill": "covering-fire", "variant": "close-protection" } ] },
         { "actives": [ { "skill": "tactical-order", "variant": "reload" } ], "passives": [ { "id": "tacticalAnalysis", "name": "Analyse tactique", "planned": true } ] },
-        { "actives": [ { "skill": "coordinated-strike" } ], "passives": [ { "id": "command", "name": "Commandement", "planned": true } ] }
+        { "actives": [ { "skill": "coordinated-strike" } ], "passives": [ { "id": "command", "name": "Commandement" } ] }
       ]
     },
     {
       "id": "saboteur", "name": "Saboteur",
       "tiers": [
         { "actives": [ { "skill": "electroshock", "variant": "net" }, { "skill": "jamming", "variant": "interference" } ] },
-        { "actives": [ { "skill": "hacking", "variant": "virus" } ], "passives": [ { "id": "jammingField", "name": "Champ de brouillage", "planned": true } ] },
-        { "actives": [ { "skill": "emp" } ], "passives": [ { "id": "energyRecovery", "name": "Récupération d'énergie", "planned": true } ] }
+        { "actives": [ { "skill": "hacking", "variant": "virus" } ], "passives": [ { "id": "jammingField", "name": "Champ de brouillage" } ] },
+        { "actives": [ { "skill": "emp" } ], "passives": [ { "id": "energyRecovery", "name": "Récupération d'énergie" } ] }
       ]
     }
   ],
@@ -38,8 +38,6 @@
     "close-protection": "Protection rapprochée",
     "reload": "Rechargement",
     "coordinated-strike": "Frappe coordonnée",
-    "jamming": "Brouillage",
-    "interference": "Interférences",
     "hacking": "Piratage",
     "virus": "Virus"
   }

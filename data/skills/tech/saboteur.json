@@ -21,5 +21,19 @@
     "id": "net", "name": "Filet",
     "weight": "light", "range": 2, "minDamage": 10, "maxDamage": 13, "cooldownMs": 10000,
     "effects": [ { "status": "immobilized", "durationMs": 3000 } ]
+  },
+  {
+    // La cible perd une partie de sa jauge, davantage si c'est un robot (moitié moins sur un boss).
+    "id": "jamming", "name": "Brouillage",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "gaugeLossPercent": 30,
+    "vsRobots": { "statusDurationPercent": 100, "gaugeLossPercent": 30 }
+  },
+  {
+    // Variante du Brouillage : une petite zone, avec moins de jauge perdue par cible.
+    "id": "interference", "name": "Interférences",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
+    "gaugeLossPercent": 15
   }
 ]

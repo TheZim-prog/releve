@@ -51,6 +51,7 @@ public sealed partial class CombatSimulation
                 if (origin is { } from && CoverFor(from, target.Position) is { } cover)
                     dealt = AbsorbByCover(target, cover, dealt);
             }
+            var wereOpponents = AreOpponents(target, attacker); // avant le coup : une unité dominée qui tombe retrouve son camp
             var lost = Damage(target, dealt, fallbackCell, piercing);
 
             // Point faible : un coup qui a vraiment entamé les PV d'un ennemi le rend vulnérable (pas un coup
@@ -58,6 +59,7 @@ public sealed partial class CombatSimulation
             if (lost > 0 && target.Status == UnitStatus.Active && AreOpponents(target, attacker)
                 && attacker.HasPassive(PassiveKind.WeakPoint))
                 ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs }, attacker);
+            GaugePassivesOnHit(attacker, target, lost, wereOpponents);
         }
         if (target.Status != UnitStatus.Active)
             return true;
@@ -71,6 +73,13 @@ public sealed partial class CombatSimulation
             ApplyStatus(target, effect, attacker);
         if (skill.TauntActions > 0 && AreOpponents(target, attacker))
             Taunt(target, attacker, skill.TauntActions);
+        if (AreOpponents(target, attacker))
+        {
+            if (skill.InterruptsCharge)
+                InterruptCharge(target);
+            if (skill.GaugeLossPercent + (robotBonus?.GaugeLossPercent ?? 0) is > 0 and var gaugeLoss)
+                LoseGauge(target, gaugeLoss);
+        }
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         return true;

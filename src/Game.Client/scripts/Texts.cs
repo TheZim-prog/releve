@@ -89,6 +89,7 @@ public static class Texts
             TempHpGained g => $"{N(g.Unit)} gagne {g.Amount} PV temporaires",
             DamageAbsorbed a => $"{N(a.Unit)} encaisse {a.Amount} (PV temporaires : {a.TempHpLeft})",
             TempHpEnded x => $"{N(x.Unit)} perd ses PV temporaires",
+            GaugeLost g => $"{N(g.Unit)} perd de la jauge",
             UnitTaunted t => $"{N(t.Unit)} est provoqué par {N(t.By)}",
             TauntEnded t => $"{N(t.Unit)} n'est plus provoqué",
             UnitDowned d => $"{N(d.Unit)} est à terre !",

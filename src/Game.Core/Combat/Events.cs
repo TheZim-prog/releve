@@ -173,6 +173,9 @@ public sealed record UnitCollided(int Tick, UnitId Unit, UnitId? With) : CombatE
 /// <summary>La jauge de l'unité gagne <paramref name="Amount"/> points d'un coup (ex. Ordre tactique) et vaut <paramref name="Gauge"/>.</summary>
 public sealed record GaugeGained(int Tick, UnitId Unit, int Amount, int Gauge) : CombatEvent(Tick);
 
+/// <summary>L'unité perd <paramref name="Amount"/> points de jauge (Brouillage, Contretemps…) ; il lui en reste <paramref name="Gauge"/>.</summary>
+public sealed record GaugeLost(int Tick, UnitId Unit, int Amount, int Gauge) : CombatEvent(Tick);
+
 /// <summary>
 /// L'unité tombe à terre sur <paramref name="Position"/> : elle y reste, sa jauge est gelée.
 /// C'est en général sa case actuelle ; si elle tombe en traversant un allié, la dernière case libre de son trajet.

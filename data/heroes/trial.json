@@ -41,12 +41,13 @@
   },
   {
     // Tacticien et Saboteur : Tir de désignation (variante : suppression-shot) et Électrochoc (variante : net).
-    // À essayer aussi : shield-beacon, variante de nano-heal.
+    // À essayer aussi : shield-beacon, variante de nano-heal. Passif : Champ de brouillage (autres : energyRecovery).
     "id": "trial-tech", "archetype": "tech", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
     "learned": ["turret", "nano-heal", "designation-shot", "covering-fire", "tactical-order", "tacticalAnalysis",
-                "electroshock", "jamming", "hacking", "jammingField", "emp"],
-    "equipped": ["designation-shot", "electroshock", "turret", "emp"]
+                "electroshock", "jamming", "hacking", "jammingField", "emp", "energyRecovery"],
+    "equipped": ["designation-shot", "electroshock", "jamming", "emp"],
+    "passive": "jammingField"
   },
   {
     // Les variantes de zone Torpeur (Paralysie) et Panique (Confusion), Projectile, et l'Étau (variante : wrench).

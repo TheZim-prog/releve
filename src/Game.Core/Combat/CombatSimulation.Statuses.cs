@@ -28,8 +28,13 @@ public sealed partial class CombatSimulation
         if (target.StatusEndTicks.TryGetValue(effect.Status, out var currentEnd))
             endTick = Math.Max(endTick, currentEnd);
 
+        var isNew = !target.HasStatus(effect.Status);
         target.SetStatus(effect.Status, endTick);
         _events.Add(new StatusApplied(CurrentTick, target.Id, effect.Status, endTick));
+        // Récupération d'énergie : pour un ennemi (pas un gadget) qu'il étourdit, pas pour un étourdissement prolongé.
+        if (isNew && effect.Status == StatusKind.Stunned && source.HasPassive(PassiveKind.EnergyRecovery)
+            && AreOpponents(target, source) && target.SummonedBy is null)
+            PromiseGauge(source, Rules.EnergyRecoveryGaugeGainPercent);
 
         switch (effect.Status)
         {
