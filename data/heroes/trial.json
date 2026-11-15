@@ -37,7 +37,8 @@
     "points": { "hp": 3, "power": 13, "initiative": 3 },
     "learned": ["beam", "blast", "fire-lance", "piercing", "ice-shard", "ice-wall", "black-ice", "frost", "absolute-zero",
                 "nova", "propulsion", "melting-point"],
-    "equipped": ["ice-shard", "fire-lance", "melting-point", "absolute-zero"]
+    "equipped": ["ice-shard", "fire-lance", "melting-point", "absolute-zero"],
+    "passive": "piercing"
   },
   {
     // Tacticien et Saboteur : Tir de désignation (variante : suppression-shot) et Électrochoc (variante : net).

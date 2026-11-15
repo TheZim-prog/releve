@@ -36,6 +36,21 @@
   "energyRecoveryGaugeGainPercent": 10,
   "slipstreamGaugeGainPercent": 5,
 
+  // Passifs de dégâts. Bonus et réductions en % de la normale ; durées en millisecondes ; les dégâts de Fournaise et
+  // de Réaction en chaîne sont multipliés par la puissance du héros.
+  "rageMaxDamageBonusPercent": 50,
+  "opportunistDamagePercent": 130,
+  "firstBloodDamagePercent": 150,
+  "aloneAgainstAllDamageTakenPercent": 75,
+  "kineticScreenDamageTakenPercent": 70,
+  "ambusherDamagePercent": 125,
+  "furnaceMinDamage": 3,
+  "furnaceMaxDamage": 5,
+  "chainReactionMinDamage": 8,
+  "chainReactionMaxDamage": 12,
+  "frostDurationMs": 1500,
+  "frostShellDurationMs": 2000,
+
   // Auras : à cette portée (en cases), Commandement accélère la jauge des alliés et Champ de brouillage ralentit
   // celle des ennemis, en % de leur vitesse normale.
   "auraRange": 2,

@@ -20,6 +20,9 @@ public sealed partial class CombatSimulation
     private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damageFactor, Cell? fallbackCell = null,
         Cell? origin = null)
     {
+        // Tombée plus tôt dans la même compétence (une Réaction en chaîne au milieu d'une zone) : elle n'est pas refrappée.
+        if (target.Status != UnitStatus.Active)
+            return false;
         if (IsBlockedByDome(skill, target))
             return false;
         // Immunisée (robot face à un pouvoir mental, prise dans une zone : une cible directe est refusée avant).
@@ -35,24 +38,25 @@ public sealed partial class CombatSimulation
         if (skill.DealsDamage || robotBonus is { DealsDamage: true })
         {
             int dealt;
-            var piercing = skill.IgnoresProtections;
+            var ignoresProtections = skill.IgnoresProtections;
             if (CanExecute(skill, target))
             {
                 _events.Add(new UnitExecuted(CurrentTick, attacker.Id, target.Id));
                 dealt = target.Hp;
-                piercing = true; // une exécution achève : des PV temporaires ne la retiennent pas
+                ignoresProtections = true; // une exécution achève : des PV temporaires ne la retiennent pas
             }
             else
             {
                 var roll = skill.DealsDamage ? _random.NextInt(skill.MinDamage, skill.MaxDamage) : 0;
                 if (robotBonus is { DealsDamage: true })
                     roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
-                dealt = Scaled(roll, WithFlankBonus(damageFactor, attacker, skill, target), target);
-                if (origin is { } from && CoverFor(from, target.Position) is { } cover)
+                var factor = WithDamagePassives(WithFlankBonus(damageFactor, attacker, skill, target), attacker, skill, target);
+                dealt = Scaled(roll, factor, target);
+                if (origin is { } from && !attacker.HasPassive(PassiveKind.Piercing) && CoverFor(from, target.Position) is { } cover)
                     dealt = AbsorbByCover(target, cover, dealt);
             }
             var wereOpponents = AreOpponents(target, attacker); // avant le coup : une unité dominée qui tombe retrouve son camp
-            var lost = Damage(target, dealt, fallbackCell, piercing);
+            var lost = Damage(target, dealt, fallbackCell, ignoresProtections);
 
             // Point faible : un coup qui a vraiment entamé les PV d'un ennemi le rend vulnérable (pas un coup
             // entièrement encaissé par ses PV temporaires).
@@ -60,6 +64,7 @@ public sealed partial class CombatSimulation
                 && attacker.HasPassive(PassiveKind.WeakPoint))
                 ApplyStatus(target, new StatusEffect { Status = StatusKind.Exposed, DurationMs = Rules.WeakPointExposedMs }, attacker);
             GaugePassivesOnHit(attacker, target, lost, wereOpponents);
+            ChainReaction(attacker, target, wereOpponents);
         }
         if (target.Status != UnitStatus.Active)
             return true;
@@ -71,6 +76,7 @@ public sealed partial class CombatSimulation
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
         foreach (var effect in robotBonus?.Effects ?? [])
             ApplyStatus(target, effect, attacker);
+        StatusPassivesOnHit(attacker, skill, target);
         if (skill.TauntActions > 0 && AreOpponents(target, attacker))
             Taunt(target, attacker, skill.TauntActions);
         if (AreOpponents(target, attacker))
@@ -89,13 +95,15 @@ public sealed partial class CombatSimulation
     private static int DamageFactorOf(Unit unit) => unit.DamageFactor;
 
     /// <summary>
-    /// Dégâts finaux : tirage × bonus de l'attaquant (<paramref name="damageFactor"/>) × vulnérabilité de la cible,
+    /// Dégâts finaux : tirage × bonus de l'attaquant (<paramref name="damageFactor"/>) × vulnérabilité de la cible
+    /// × sa réduction Seul contre tous (qui vaut pour tous les dégâts : coups, collisions, passifs de zone),
     /// en une seule division (pas d'arrondi intermédiaire).
     /// </summary>
     private int Scaled(int damage, int damageFactor, Unit target)
     {
         var exposedPercent = target.HasStatus(StatusKind.Exposed) ? Rules.ExposedDamageTakenPercent : 100;
-        return (int)((long)damage * damageFactor * exposedPercent / 1_000_000);
+        var alonePercent = IsAloneAgainstAll(target) ? Rules.AloneAgainstAllDamageTakenPercent : 100;
+        return (int)((long)damage * damageFactor * exposedPercent * alonePercent / 100_000_000);
     }
 
     /// <summary>
@@ -157,12 +165,12 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Inflige des dégâts : les PV temporaires de la cible encaissent d'abord (sauf coup <paramref name="piercing"/>, qui
+    /// Inflige des dégâts : les PV temporaires de la cible encaissent d'abord (sauf coup <paramref name="ignoresProtections"/>, qui
     /// ignore les protections), le reste entame ses PV. Renvoie les PV réellement perdus.
     /// </summary>
-    private int Damage(Unit target, int amount, Cell? fallbackCell, bool piercing = false)
+    private int Damage(Unit target, int amount, Cell? fallbackCell, bool ignoresProtections = false)
     {
-        if (!piercing && amount > 0)
+        if (!ignoresProtections && amount > 0)
         {
             amount = AbsorbByTempHp(target, amount);
             if (amount == 0)

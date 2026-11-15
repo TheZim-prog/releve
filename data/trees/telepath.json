@@ -16,7 +16,7 @@
       "id": "kinetic", "name": "Kinésiste",
       "tiers": [
         { "actives": [ { "skill": "telekinesis", "variant": "shove" }, { "skill": "projectile", "variant": "telekinetic-throw" } ] },
-        { "actives": [ { "skill": "vise", "variant": "wrench" } ], "passives": [ { "id": "kineticScreen", "name": "Écran cinétique", "planned": true } ] },
+        { "actives": [ { "skill": "vise", "variant": "wrench" } ], "passives": [ { "id": "kineticScreen", "name": "Écran cinétique" } ] },
         { "actives": [ { "skill": "force-wave" } ], "passives": [ { "id": "impact", "name": "Impact", "planned": true } ] }
       ]
     },

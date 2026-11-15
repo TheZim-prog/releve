@@ -122,6 +122,9 @@ public sealed record TempHpGained(int Tick, UnitId Unit, int Amount, int EndTick
 /// <summary>Les PV temporaires de l'unité encaissent <paramref name="Amount"/> dégâts ; il lui en reste <paramref name="TempHpLeft"/>.</summary>
 public sealed record DamageAbsorbed(int Tick, UnitId Unit, int Amount, int TempHpLeft) : CombatEvent(Tick);
 
+/// <summary>Réaction en chaîne : un ennemi mis hors de combat par <paramref name="By"/> explose sur <paramref name="Cell"/>.</summary>
+public sealed record ChainExplosion(int Tick, Cell Cell, UnitId By) : CombatEvent(Tick);
+
 /// <summary>L'unité est provoquée par <paramref name="By"/> : elle le visera pendant ses <paramref name="Actions"/> prochaines activations.</summary>
 public sealed record UnitTaunted(int Tick, UnitId Unit, UnitId By, int Actions) : CombatEvent(Tick);
 

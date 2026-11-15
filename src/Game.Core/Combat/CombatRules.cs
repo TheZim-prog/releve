@@ -69,6 +69,42 @@ public sealed record CombatRules
     /// <summary>Champ de brouillage : vitesse de jauge des ennemis proches, en % de la normale (au plus 100).</summary>
     public required int JammingFieldFillPercent { get; init; }
 
+    /// <summary>Rage : bonus de dégâts à 0 PV, en % ; il grandit avec la part de PV perdue.</summary>
+    public required int RageMaxDamageBonusPercent { get; init; }
+
+    /// <summary>Opportuniste : dégâts contre une cible étourdie, déséquilibrée ou immobilisée, en % de la normale.</summary>
+    public required int OpportunistDamagePercent { get; init; }
+
+    /// <summary>Premier sang : dégâts contre un ennemi aux PV intacts, en % de la normale.</summary>
+    public required int FirstBloodDamagePercent { get; init; }
+
+    /// <summary>Seul contre tous : dégâts subis avec au moins deux ennemis au contact, en % de la normale.</summary>
+    public required int AloneAgainstAllDamageTakenPercent { get; init; }
+
+    /// <summary>Écran cinétique : dégâts subis d'un coup venu de loin, en % de la normale.</summary>
+    public required int KineticScreenDamageTakenPercent { get; init; }
+
+    /// <summary>Embusqué : dégâts de ses coups de loin quand il est collé au décor, en % de la normale.</summary>
+    public required int AmbusherDamagePercent { get; init; }
+
+    /// <summary>Fournaise : dégâts (avant la puissance) infligés aux ennemis à son contact après chaque action.</summary>
+    public required int FurnaceMinDamage { get; init; }
+
+    /// <summary>Fournaise : dégâts maximum.</summary>
+    public required int FurnaceMaxDamage { get; init; }
+
+    /// <summary>Réaction en chaîne : dégâts (avant la puissance) de l'explosion d'un ennemi mis hors de combat.</summary>
+    public required int ChainReactionMinDamage { get; init; }
+
+    /// <summary>Réaction en chaîne : dégâts maximum.</summary>
+    public required int ChainReactionMaxDamage { get; init; }
+
+    /// <summary>Givre : durée du ralentissement posé par son attaque de base, en millisecondes.</summary>
+    public required int FrostDurationMs { get; init; }
+
+    /// <summary>Carapace de givre : durée du ralentissement de celui qui le frappe au contact, en millisecondes.</summary>
+    public required int FrostShellDurationMs { get; init; }
+
     /// <summary>Remplissage de la jauge (en %) à partir duquel une unité IA fixe son intention.</summary>
     public required int IntentionThresholdPercent { get; init; }
 
@@ -148,6 +184,7 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(WeakPointExposedMs)} must be positive.");
         if (GripDurationPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(GripDurationPercent)} must be between 100 and 1000.");
+        ValidatePassives();
         ValidatePercent(BossGaugeLossPercent, nameof(BossGaugeLossPercent), max: 100);
         ValidatePercent(TimeThiefGaugeLossPercent, nameof(TimeThiefGaugeLossPercent), max: 100);
         ValidatePercent(MomentumGaugeGainPercent, nameof(MomentumGaugeGainPercent), max: 100);
@@ -164,6 +201,24 @@ public sealed record CombatRules
         ValidatePercent(HpPercentPerStatPoint, nameof(HpPercentPerStatPoint), max: 100); // 0 : le point n'apporte rien
         ValidatePercent(PowerPercentPerStatPoint, nameof(PowerPercentPerStatPoint), max: 100);
         ValidatePercent(InitiativePercentPerStatPoint, nameof(InitiativePercentPerStatPoint), max: 100);
+    }
+
+    /// <summary>Passifs de dégâts : un bonus augmente (au moins 100 %), une réduction réduit (au plus 100 %).</summary>
+    private void ValidatePassives()
+    {
+        ValidatePercent(RageMaxDamageBonusPercent, nameof(RageMaxDamageBonusPercent), max: 1000);
+        foreach (var (value, name) in new[]
+                 {
+                     (OpportunistDamagePercent, nameof(OpportunistDamagePercent)), (FirstBloodDamagePercent, nameof(FirstBloodDamagePercent)),
+                     (AmbusherDamagePercent, nameof(AmbusherDamagePercent)),
+                 })
+            ValidatePercent(value, name, max: 1000, min: 100);
+        ValidatePercent(AloneAgainstAllDamageTakenPercent, nameof(AloneAgainstAllDamageTakenPercent), max: 100, min: 1);
+        ValidatePercent(KineticScreenDamageTakenPercent, nameof(KineticScreenDamageTakenPercent), max: 100, min: 1);
+        if (FurnaceMinDamage < 0 || FurnaceMaxDamage < FurnaceMinDamage || ChainReactionMinDamage < 0 || ChainReactionMaxDamage < ChainReactionMinDamage)
+            throw new ArgumentException("Furnace and chain reaction need 0 <= min damage <= max damage.");
+        if (FrostDurationMs <= 0 || FrostShellDurationMs <= 0)
+            throw new ArgumentException("Frost durations must be positive.");
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

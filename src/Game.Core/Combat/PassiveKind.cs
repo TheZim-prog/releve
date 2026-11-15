@@ -43,6 +43,39 @@ public enum PassiveKind
 
     /// <summary>Champ de brouillage (tech) : les ennemis proches remplissent leur jauge plus lentement (<see cref="CombatRules.JammingFieldFillPercent"/>).</summary>
     JammingField,
+
+    /// <summary>Rage (colosse) : plus ses PV sont bas, plus il frappe fort (<see cref="CombatRules.RageMaxDamageBonusPercent"/>).</summary>
+    Rage,
+
+    /// <summary>Opportuniste (combattant) : plus de dégâts contre une cible étourdie, déséquilibrée ou immobilisée (<see cref="CombatRules.OpportunistDamagePercent"/>).</summary>
+    Opportunist,
+
+    /// <summary>Premier sang (combattant) : plus de dégâts contre un ennemi dont les PV sont intacts (<see cref="CombatRules.FirstBloodDamagePercent"/>).</summary>
+    FirstBlood,
+
+    /// <summary>Seul contre tous (combattant) : moins de dégâts subis quand plusieurs ennemis sont à son contact (<see cref="CombatRules.AloneAgainstAllDamageTakenPercent"/>).</summary>
+    AloneAgainstAll,
+
+    /// <summary>Perforant (énergétique) : ses attaques ignorent la couverture.</summary>
+    Piercing,
+
+    /// <summary>Écran cinétique (télépathe) : moins de dégâts subis des coups venus de loin (<see cref="CombatRules.KineticScreenDamageTakenPercent"/>).</summary>
+    KineticScreen,
+
+    /// <summary>Embusqué (combattant) : collé à un mur ou à un obstacle, ses coups de loin frappent plus fort (<see cref="CombatRules.AmbusherDamagePercent"/>).</summary>
+    Ambusher,
+
+    /// <summary>Fournaise (énergétique) : après chacune de ses actions, les ennemis à son contact prennent de petits dégâts (<see cref="CombatRules.FurnaceMinDamage"/>).</summary>
+    Furnace,
+
+    /// <summary>Réaction en chaîne (énergétique) : un ennemi qu'il met hors de combat explose et blesse ses voisins (<see cref="CombatRules.ChainReactionMinDamage"/>).</summary>
+    ChainReaction,
+
+    /// <summary>Givre (énergétique) : son attaque de base ralentit brièvement la cible (<see cref="CombatRules.FrostDurationMs"/>).</summary>
+    Frost,
+
+    /// <summary>Carapace de givre (énergétique) : un ennemi qui le frappe au contact est ralenti (<see cref="CombatRules.FrostShellDurationMs"/>).</summary>
+    FrostShell,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

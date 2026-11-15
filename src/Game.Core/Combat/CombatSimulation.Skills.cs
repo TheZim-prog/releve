@@ -7,8 +7,8 @@ namespace Game.Core.Combat;
 public sealed partial class CombatSimulation
 {
     /// <summary>
-    /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ;
-    /// un coup ne touche que sa cible, donc la liste ne change pas en cours de route).
+    /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ; une
+    /// unité tombée en cours de route, par une Réaction en chaîne, n'est plus touchée).
     /// <paramref name="damageFactor"/> : multiplicateur de dégâts du lanceur, en dix-millièmes (voir <see cref="DamageFactorOf"/>).
     /// <paramref name="destination"/> : case où une télékinésie pose sa cible ; <paramref name="zoneOrigin"/> : d'où part
     /// une zone ordinaire (pour la couverture ; une attaque ciblée part du lanceur).
@@ -196,8 +196,9 @@ public sealed partial class CombatSimulation
             {
                 var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
                 var wereOpponents = AreOpponents(hit, caster);
-                var lost = Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null, piercing: skill.IgnoresProtections);
+                var lost = Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null, ignoresProtections: skill.IgnoresProtections);
                 GaugePassivesOnHit(caster, hit, lost, wereOpponents);
+                ChainReaction(caster, hit, wereOpponents);
             }
         }
     }
@@ -235,7 +236,7 @@ public sealed partial class CombatSimulation
 
             SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(skill)));
             FlushGauge(unit);
-            Slipstream(unit);
+            AfterAction(unit);
             DismissIfExhausted(unit);
         }
     }

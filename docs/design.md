@@ -63,7 +63,7 @@
 - **Palier 1 : Saut** (légère ; cf. section 3). **Variante : Écrasement**, il atterrit au contact d'un ennemi et ne frappe que lui, plus fort (pas de tir ami).
 - **Palier 1 : Coup de marteau** (légère) : gros coup au contact sur une seule cible, qui la déséquilibre. **Variante : Séisme**, il frappe le sol au lieu d'une cible : zone autour de lui, moins de dégâts, court étourdissement au lieu du déséquilibre.
 - **Palier 2 : Lancer de décor** (légère) : il arrache un **obstacle bas à son contact** (voiture, muret) et le lance : dégâts de zone à distance. L'obstacle est détruit (la couverture disparaît, et c'est un dégât collatéral). Impossible sans obstacle sous la main. **Variante : Barricade**, au lieu de lancer l'obstacle, il le pose sur une case proche (une couverture là où l'équipe en a besoin).
-- **Palier 2, passif : Rage** : plus ses PV sont bas, plus il frappe fort.
+- **Palier 2, passif : Rage** : plus ses PV sont bas, plus il frappe fort (le bonus grandit avec la part de PV perdue, jusqu'à un maximum en données).
 - **Palier 3 : Onde de choc** (lourde ; cf. section 3).
 - **Palier 3, passif : Sur sa lancée** : quand il met un ennemi hors de combat, sa jauge se remplit en partie (un ennemi, pas un gadget ; une collision après une Projection compte).
 
@@ -91,15 +91,15 @@
 - **Palier 2 : Désarmement** (légère) : la cible est **désarmée** quelques secondes (nouvel état : attaque de base seulement) et sa charge en cours est interrompue. Marche sur les **boss**, avec une durée réduite. **Variante : Contretemps**, au lieu d'être désarmée, la cible perd une partie de sa jauge (sa charge en cours est toujours interrompue).
 - **Palier 2, passif : Riposte** : contre-attaque quand il est attaqué au corps à corps, une fois par cycle.
 - **Palier 3 : Maître d'armes** (lourde, sur lui) : il **provoque les ennemis à son contact** (comme la Provocation du colosse : ils le visent pour leur prochaine action), puis, pendant quelques secondes, pare toutes les attaques au corps à corps et riposte à chacune. Les tirs et les zones passent.
-- **Palier 3, passif : Seul contre tous** : il subit moins de dégâts quand plusieurs ennemis sont à son contact.
+- **Palier 3, passif : Seul contre tous** : il subit moins de dégâts quand plusieurs ennemis (au moins deux, gadgets non comptés) sont à son contact ; cela vaut pour tous les dégâts qu'il reçoit.
 
 *Franc-tireur*
 - **Palier 1 : Lames de jet** (légère ; cf. section 3). **Variante : Volée**, une courte ligne qui traverse les ennemis (ennemis seulement), avec moins de dégâts par cible.
 - **Palier 1 : Fumigène** (légère) : écran de fumée sur une zone, qui bloque la vue quelques secondes, pas le passage (le Tourbillon du speedster le dissipe). **Variante : Lacrymogène**, pas d'écran de fumée : les unités dans la zone sont ralenties tant qu'elles y restent.
 - **Palier 2 : Piège** (légère) : posé sur une case ; le premier ennemi qui y entre prend des dégâts et est immobilisé. **Les ennemis ne le voient pas** : l'IA choisit son chemin comme si la case était vide (au joueur de lire les trajets : une porte, une ruelle, devant un allié qui sert d'appât) ; tout ennemi qui entre sur la case le déclenche, de lui-même ou **de force** (Projection, Télékinésie, Dégagement…). Les alliés le voient tous et ne le déclenchent pas. **Un seul piège actif par héros** (en poser un autre remplace l'ancien). *(Plus tard, certains ennemis pourront détecter les pièges.)* **Variante : Piège explosif**, au lieu d'immobiliser, il explose et touche tout le monde autour.
-- **Palier 2, passif : Premier sang** : son premier coup sur un ennemi encore intact fait beaucoup plus de dégâts.
+- **Palier 2, passif : Premier sang** : son premier coup sur un ennemi encore intact fait beaucoup plus de dégâts (« intact » : tous ses PV, et pas de PV temporaires ; un ennemi, pas un allié pris dans une zone).
 - **Palier 3 : Lancer mortel** (lourde, chargée) : très gros dégâts sur une cible à longue portée ; raté si elle sort de sa vue pendant la charge.
-- **Palier 3, passif : Embusqué** : collé à un mur ou à un obstacle, ses attaques à distance frappent plus fort.
+- **Palier 3, passif : Embusqué** : collé à un mur ou à un obstacle, ses attaques à distance frappent plus fort (« à distance » : il n'est pas au contact de sa cible quand il la touche, zones comprises ; un mouvement spécial est toujours un coup au contact).
 
 **Speedster** : trois branches. **Éclair** (frapper et repartir) ✅ · **Sauveteur** (aider l'équipe) ✅ · **Perturbateur** (gêner les ennemis) ✅. Son passif du prologue (Insaisissable) devient un choix parmi six : sans lui, il subit les attaques d'opportunité.
 
@@ -135,7 +135,7 @@
 - **Palier 2 : Lance de feu** (légère) : très gros dégâts sur une seule cible à distance, longue recharge. **Variante : Chaîne d'éclairs**, rebondit sur les ennemis proches (même règle de rebond que la Frappe en chaîne du speedster), avec moins de dégâts par cible et un court étourdissement.
 - **Palier 2, passif : Perforant** : ses attaques ignorent la couverture.
 - **Palier 3 : Astre** (lourde) : il pose une sphère d'énergie qui explose trois fois de suite autour d'elle, puis disparaît (même mécanisme que la balise du tech).
-- **Palier 3, passif : Réaction en chaîne** : un ennemi qu'il met hors de combat explose et blesse les ennemis voisins.
+- **Palier 3, passif : Réaction en chaîne** : un ennemi qu'il met hors de combat explose et blesse les ennemis voisins (ennemis seulement ; un ennemi qui en tombe explose à son tour ; pas pour un gadget ; une collision après une Onde de recul compte ; un dôme n'en protège pas).
 
 *Brasier*
 - **Palier 1 : Nova** (légère ; cf. section 3). **Variante : Onde de recul**, moins de dégâts, mais repousse les ennemis d'une case.
@@ -143,7 +143,7 @@
 - **Palier 2 : Point de fusion** (légère) : énormes dégâts sur une cible au contact. **Variante : Décharge** (électrique), moins de dégâts, étourdit brièvement la cible.
 - **Palier 2, passif : Démesure** (cf. section 3).
 - **Palier 3 : Forme d'énergie pure** (lourde ; cf. section 3).
-- **Palier 3, passif : Fournaise** : à chacune de ses actions, les ennemis à son contact prennent de petits dégâts.
+- **Palier 3, passif : Fournaise** : à chacune de ses actions, les ennemis à son contact prennent de petits dégâts (une action réellement faite, pas un déplacement seul ; un dôme ne les en protège pas).
 
 *Glace*
 - **Palier 1 : Éclat de glace** (légère) : trait à distance, petits dégâts, la cible est ralentie. **Variante : Gel**, immobilise la cible au lieu de la ralentir, avec moins de dégâts.
@@ -151,7 +151,7 @@
 - **Palier 2 : Verglas** (légère) : il gèle une zone au sol quelques secondes ; qui y entre ou y reste est ralenti. **Variante : Engelure**, zone plus petite, mais qui y entre est immobilisé brièvement au lieu d'être ralenti.
 - **Palier 2, passif : Givre** : son attaque de base ralentit brièvement la cible.
 - **Palier 3 : Zéro absolu** (lourde, chargée) : grande zone ; tout ce qui s'y trouve au déclenchement est congelé quelques secondes et prend de petits dégâts.
-- **Palier 3, passif : Carapace de givre** : un ennemi qui le frappe au corps à corps est ralenti.
+- **Palier 3, passif : Carapace de givre** : un ennemi qui le frappe au corps à corps est ralenti (un coup au contact qui fait des dégâts, pas une zone).
 
 **Télépathe** : trois branches. **Mentaliste** (contrôler les esprits) ✅ · **Kinésiste** (déplacer la matière) ✅ · **Empathe** (soutenir les alliés) ✅. Il fait moins de dégâts que les autres, c'est dans l'esprit de l'archétype (à surveiller en jeu). La règle des robots découpe l'arbre : tout le Mentaliste et le Siphon sont des pouvoirs **mentaux**, sans effet sur les robots ; le Kinésiste marche sur tout.
 
@@ -167,7 +167,7 @@
 - **Palier 1 : Télékinésie** (légère ; cf. section 3). **Variante : Poussée**, projette la cible en ligne droite loin de lui, avec dégâts de collision, au lieu de la poser où il veut.
 - **Palier 1 : Projectile** (légère) : il lance un débris sur une cible à distance : dégâts. **Variante : Lancer de décor**, il soulève un obstacle bas à portée et le lance : dégâts de zone, obstacle détruit (comme le colosse, mais à distance).
 - **Palier 2 : Étau** (légère) : dégâts légers, et immobilise une cible à distance. **Variante : Arrachement**, dégâts légers, et désarme la cible au lieu de l'immobiliser.
-- **Palier 2, passif : Écran cinétique** : il subit moins de dégâts des attaques à distance.
+- **Palier 2, passif : Écran cinétique** : il subit moins de dégâts des attaques à distance (même définition que pour l'Embusqué ; zones comprises).
 - **Palier 3 : Onde de force** (lourde) : repousse toutes les unités d'une zone loin de lui, avec dégâts de collision.
 - **Palier 3, passif : Impact** : tout ennemi qu'il déplace de force prend des dégâts à l'arrivée.
 

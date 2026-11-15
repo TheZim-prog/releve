@@ -41,7 +41,7 @@ public class SkillTreeTests
               "branches": [
                 { "id": "a", "name": "A", "tiers": [
                   { "actives": [ { "skill": "a1", "variant": "a1v" } ] },
-                  { "actives": [ { "skill": "a3" } ], "passives": [ { "id": "rage", "name": "Rage", "planned": true } ] }
+                  { "actives": [ { "skill": "a3" } ], "passives": [ { "id": "riposte", "name": "Riposte", "planned": true } ] }
                 ] }
               ],
               "planned": { "a3": "À venir" }
@@ -49,7 +49,7 @@ public class SkillTreeTests
             """);
 
         Assert.Equal("hero", tree.Archetype);
-        Assert.Equal(new[] { "a1", "a3", "rage" }, tree.Nodes().Select(n => n.Id));
+        Assert.Equal(new[] { "a1", "a3", "riposte" }, tree.Nodes().Select(n => n.Id));
         Assert.Equal("À venir", tree.Planned["a3"]);
         Assert.True(tree.Branches[0].Tiers[1].Passives[0].Planned);
     }
@@ -109,8 +109,8 @@ public class SkillTreeTests
             Validate(WithBranchA(WithTier(1, Tier2(new TreePassive { Id = "weakPoint", Name = "Point faible", Planned = true })))));
         // Pas codé, et pas marqué à venir.
         Assert.Throws<ArgumentException>(() =>
-            Validate(WithBranchA(WithTier(1, Tier2(new TreePassive { Id = "rage", Name = "Rage" })))));
-        Validate(WithBranchA(WithTier(1, Tier2(new TreePassive { Id = "rage", Name = "Rage", Planned = true }))));
+            Validate(WithBranchA(WithTier(1, Tier2(new TreePassive { Id = "riposte", Name = "Riposte" })))));
+        Validate(WithBranchA(WithTier(1, Tier2(new TreePassive { Id = "riposte", Name = "Riposte", Planned = true }))));
     }
 
     [Fact]

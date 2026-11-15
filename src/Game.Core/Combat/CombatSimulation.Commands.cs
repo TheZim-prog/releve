@@ -225,7 +225,7 @@ public sealed partial class CombatSimulation
                     throw new InvalidOperationException($"Unknown interaction {interaction.Kind}.");
             }
             SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(Rules.ReviveWeight)));
-            Slipstream(unit);
+            AfterAction(unit);
             return;
         }
 
@@ -253,7 +253,7 @@ public sealed partial class CombatSimulation
 
         Execute(unit, actionSkill, action.Target, action.Zone, DamageFactorOf(unit), action.Destination, action.Origin);
         SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
-        Slipstream(unit);
+        AfterAction(unit);
     }
 
     /// <summary>

@@ -8,8 +8,8 @@
       "id": "fire", "name": "Feu",
       "tiers": [
         { "actives": [ { "skill": "beam", "variant": "electric-arc" }, { "skill": "blast", "variant": "controlled-blast" } ] },
-        { "actives": [ { "skill": "fire-lance", "variant": "chain-lightning" } ], "passives": [ { "id": "piercing", "name": "Perforant", "planned": true } ] },
-        { "actives": [ { "skill": "star" } ], "passives": [ { "id": "chainReaction", "name": "Réaction en chaîne", "planned": true } ] }
+        { "actives": [ { "skill": "fire-lance", "variant": "chain-lightning" } ], "passives": [ { "id": "piercing", "name": "Perforant" } ] },
+        { "actives": [ { "skill": "star" } ], "passives": [ { "id": "chainReaction", "name": "Réaction en chaîne" } ] }
       ]
     },
     {
@@ -17,15 +17,15 @@
       "tiers": [
         { "actives": [ { "skill": "nova", "variant": "recoil-wave" }, { "skill": "propulsion", "variant": "comet" } ] },
         { "actives": [ { "skill": "melting-point", "variant": "discharge" } ], "passives": [ { "id": "excess", "name": "Démesure", "planned": true } ] },
-        { "actives": [ { "skill": "energy-form" } ], "passives": [ { "id": "furnace", "name": "Fournaise", "planned": true } ] }
+        { "actives": [ { "skill": "energy-form" } ], "passives": [ { "id": "furnace", "name": "Fournaise" } ] }
       ]
     },
     {
       "id": "ice", "name": "Glace",
       "tiers": [
         { "actives": [ { "skill": "ice-shard", "variant": "freeze" }, { "skill": "ice-wall", "variant": "ice-pillar" } ] },
-        { "actives": [ { "skill": "black-ice", "variant": "frostbite" } ], "passives": [ { "id": "frost", "name": "Givre", "planned": true } ] },
-        { "actives": [ { "skill": "absolute-zero" } ], "passives": [ { "id": "frostShell", "name": "Carapace de givre", "planned": true } ] }
+        { "actives": [ { "skill": "black-ice", "variant": "frostbite" } ], "passives": [ { "id": "frost", "name": "Givre" } ] },
+        { "actives": [ { "skill": "absolute-zero" } ], "passives": [ { "id": "frostShell", "name": "Carapace de givre" } ] }
       ]
     }
   ],
