@@ -19,7 +19,8 @@
     "points": { "hp": 4, "power": 3, "initiative": 12 },
     "learned": ["whirlwind", "harassment", "flash-rescue", "clearance", "carry", "slipstream", "collective-surge",
                 "breakthrough", "round-trip", "ignoresOpportunityAttacks"],
-    "equipped": ["round-trip", "clearance", "carry", "collective-surge"],
+    // Mur de vent (variante de whirlwind ; remettre whirlwind pour dissiper le Fumigène du combattant).
+    "equipped": ["wind-wall", "round-trip", "clearance", "collective-surge"],
     "passive": "ignoresOpportunityAttacks"
   },
   {
@@ -29,8 +30,9 @@
     "id": "trial-fighter", "archetype": "fighter", "level": 20,
     "points": { "hp": 6, "power": 8, "initiative": 5 },
     "learned": ["stunning-blow", "parry", "disarm", "throwing-blades", "smoke-bomb", "precise-strike", "rush", "relentless", "weakPoint",
-                "execution"],
-    "equipped": ["rush", "sweep", "volley", "execution"],
+                "execution", "trap"],
+    // Fumigène (variante : tear-gas) et Piège (variante : explosive-trap).
+    "equipped": ["smoke-bomb", "trap", "rush", "execution"],
     "passive": "weakPoint"
   },
   {
@@ -41,7 +43,8 @@
     "points": { "hp": 3, "power": 13, "initiative": 3 },
     "learned": ["beam", "blast", "fire-lance", "piercing", "ice-shard", "ice-wall", "black-ice", "frost", "absolute-zero",
                 "nova", "propulsion", "melting-point"],
-    "equipped": ["recoil-wave", "propulsion", "ice-shard", "absolute-zero"],
+    // Mur de glace (variante : ice-pillar) et Verglas (variante : frostbite).
+    "equipped": ["ice-wall", "black-ice", "recoil-wave", "absolute-zero"],
     "passive": "piercing"
   },
   {
@@ -50,8 +53,9 @@
     "id": "trial-tech", "archetype": "tech", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
     "learned": ["turret", "nano-heal", "designation-shot", "covering-fire", "tactical-order", "tacticalAnalysis",
-                "electroshock", "jamming", "hacking", "jammingField", "emp", "energyRecovery"],
-    "equipped": ["designation-shot", "electroshock", "jamming", "emp"],
+                "electroshock", "jamming", "hacking", "jammingField", "emp", "energyRecovery", "trap"],
+    // Le Piège explosif (variante de trap, partagé avec le combattant).
+    "equipped": ["explosive-trap", "designation-shot", "electroshock", "emp"],
     "passive": "jammingField"
   },
   {

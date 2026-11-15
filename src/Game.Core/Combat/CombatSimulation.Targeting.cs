@@ -33,7 +33,7 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Valide la cible d'une compétence utilisée depuis <paramref name="position"/> (case d'arrivée du lanceur).
-    /// Compétence à zone : une case, à portée (0 = sur soi), libre et en vue pour un carré, alignée pour une ligne,
+    /// Compétence à zone : une case, à portée (0 = sur soi), libre et en vue pour un carré ou un mur, alignée pour une ligne,
     /// et une zone non vide. Attaque ciblée : voir <see cref="CheckTarget"/>.
     /// </summary>
     internal (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
@@ -68,10 +68,22 @@ public sealed partial class CombatSimulation
             if (position.DistanceTo(cell) > skill.Range)
                 return (null, RejectionReason.OutOfRange);
             var cells = zone.Cells(_grid, position, cell);
-            if (cells is null || cells.Count == 0)
+            if (cells is null)
                 return (null, RejectionReason.InvalidTarget);
-            if (zone.Shape == ZoneShape.Square && cell != position && !HasLineOfSight(unit, position, cell))
+            cells = StoppedByGround(skill, position, cells);
+            if (cells.Count == 0)
+                return (null, RejectionReason.InvalidTarget);
+            if (zone.Shape != ZoneShape.Line && cell != position && !HasLineOfSight(unit, position, cell, skill))
                 return (null, RejectionReason.NoLineOfSight);
+            // Un piège se pose sur une case sans unité ; un obstacle se dresse sur les cases libres, dont la case visée.
+            if (skill.Ground is { IsTrap: true } && !CanRaiseOn(unit, position, cell))
+                return (null, RejectionReason.InvalidDestination);
+            if (skill.Raises is not null)
+            {
+                if (!CanRaiseOn(unit, position, cell))
+                    return (null, RejectionReason.InvalidDestination);
+                cells = cells.Where(c => CanRaiseOn(unit, position, c)).ToList();
+            }
             return (new PlannedAction(skill, null, cells, Origin: zone.Shape == ZoneShape.Square ? cell : position), null);
         }
 
@@ -163,7 +175,7 @@ public sealed partial class CombatSimulation
             return RejectionReason.InvalidTarget;
         if (!IsWithinRange(from, target.Position, skill.Range))
             return RejectionReason.OutOfRange;
-        if (!HasLineOfSight(unit, from, target.Position))
+        if (!HasLineOfSight(unit, from, target.Position, skill))
             return RejectionReason.NoLineOfSight;
         return null;
     }

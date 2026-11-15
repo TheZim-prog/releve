@@ -6,5 +6,40 @@
     "id": "volley", "name": "Volée",
     "weight": "light", "range": 1, "minDamage": 5, "maxDamage": 7, "cooldownMs": 4000,
     "zone": { "shape": "line", "size": 3, "throughWalls": false, "affects": "enemies" }
+  },
+  {
+    // Écran de fumée sur une zone, 6 s : aucune ligne de vue n'y passe (au contact, on se voit toujours).
+    "id": "smoke-bomb", "name": "Fumigène",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "ground": { "durationMs": 6000, "blocksSight": true }
+  },
+  {
+    // Variante du Fumigène : pas d'écran ; qui est dans le gaz est ralenti tant qu'il y reste.
+    "id": "tear-gas", "name": "Lacrymogène",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "ground": { "durationMs": 6000, "renews": true, "effects": [ { "status": "offBalance", "durationMs": 1000 } ] }
+  },
+  {
+    // Posé sur une case libre : le premier ennemi qui y entre prend des dégâts et est immobilisé. Un seul à la fois.
+    // (Aussi dans l'arbre du tech, branche Ingénieur.)
+    "id": "trap", "name": "Piège",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 0, "throughWalls": false },
+    "ground": {
+      "isTrap": true, "affects": "enemies", "minDamage": 10, "maxDamage": 14,
+      "effects": [ { "status": "immobilized", "durationMs": 3000 } ]
+    }
+  },
+  {
+    // Variante du Piège : il explose et blesse tout le monde autour (alliés compris), sans immobiliser.
+    "id": "explosive-trap", "name": "Piège explosif",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 0, "throughWalls": false },
+    "ground": {
+      "isTrap": true, "affects": "enemies", "minDamage": 12, "maxDamage": 16,
+      "blast": { "shape": "square", "size": 1, "throughWalls": false }
+    }
   }
 ]

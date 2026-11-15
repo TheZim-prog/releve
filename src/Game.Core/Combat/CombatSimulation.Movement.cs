@@ -20,7 +20,8 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Déplace l'unité pas à pas ; chaque pas qui sort de la portée d'un ennemi peut déclencher son attaque
-    /// d'opportunité (dans l'ordre des unités), sauf si l'unité a le passif qui les ignore.
+    /// d'opportunité (dans l'ordre des unités), sauf si l'unité a le passif qui les ignore ; chaque case où elle entre
+    /// peut cacher un piège ou un sol gelé.
     /// Renvoie faux si l'unité est tombée, étourdie ou immobilisée en chemin.
     /// </summary>
     private bool MoveAlong(Unit unit, IReadOnlyList<Cell> path)
@@ -39,6 +40,20 @@ public sealed partial class CombatSimulation
             segment = new List<Cell>();
         }
 
+        // Tombée, ou arrêtée net (étourdie, immobilisée) : elle recule sur sa dernière case libre si elle partageait la sienne.
+        // Immobilisée en posant le pied sur sa destination (<paramref name="arrived"/>), elle est arrivée : son action suit.
+        bool IsHalted(bool arrived = false)
+        {
+            if (unit.Status != UnitStatus.Active)
+                return true;
+            if (!unit.HasStatus(StatusKind.Stunned) && (unit.CanMove || arrived))
+                return false;
+            if (IsOccupiedByOther(unit, unit.Position))
+                unit.Position = lastFreeCell;
+            _events.Add(new UnitStopped(CurrentTick, unit.Id, unit.Position));
+            return true;
+        }
+
         foreach (var next in path)
         {
             foreach (var enemy in canBePunished ? _units : Enumerable.Empty<Unit>())
@@ -53,21 +68,25 @@ public sealed partial class CombatSimulation
                 ResolveHit(enemy, attack, unit, DamageFactorOf(enemy), lastFreeCell);
                 EndSource(); // chaque attaque d'opportunité est une source à part
                 FlushGauge(enemy);
-                if (unit.Status != UnitStatus.Active)
+                if (IsHalted())
                     return false;
-                if (unit.HasStatus(StatusKind.Stunned) || !unit.CanMove)
-                {
-                    if (IsOccupiedByOther(unit, unit.Position))
-                        unit.Position = lastFreeCell;
-                    _events.Add(new UnitStopped(CurrentTick, unit.Id, unit.Position));
-                    return false;
-                }
             }
 
+            var from = unit.Position;
             unit.Position = next;
             segment.Add(next);
             if (!IsOccupiedByOther(unit, next))
                 lastFreeCell = next;
+
+            // Un piège ou un sol gelé sur cette case : une source à part, comme une attaque d'opportunité.
+            if (GroundAwaits(unit, from, next))
+            {
+                FlushSegment();
+                EnterGround(unit, from, next, lastFreeCell);
+                EndSource();
+                if (IsHalted(arrived: next == path[^1]))
+                    return false;
+            }
         }
 
         FlushSegment();
@@ -129,13 +148,15 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Vue de <paramref name="from"/> (case d'arrivée de l'attaquant) vers <paramref name="to"/>.
     /// Au contact : pas de coupe d'angle par un mur, mais seul le décor compte (règle du corps à corps).
-    /// Au-delà : ligne de vue, bloquée par les murs et les ennemis debout de l'attaquant.
-    /// Les obstacles bas ne gênent jamais la vue.
+    /// Au-delà : ligne de vue, bloquée par les murs, les ennemis debout de l'attaquant et les zones au sol qui la
+    /// coupent (fumée ; pare-tirs pour le tir <paramref name="skill"/>). Les obstacles bas ne gênent jamais la vue.
     /// </summary>
-    private bool HasLineOfSight(Unit attacker, Cell from, Cell to)
+    private bool HasLineOfSight(Unit attacker, Cell from, Cell to, SkillDefinition? skill = null)
     {
         if (from.IsAdjacentTo(to))
             return LineOfSight.IsClear(_grid, from, to);
+        if (GroundBlocksLine(from, to, skill))
+            return false;
         return LineOfSight.IsClear(_grid, from, to, cell => BlocksSightOf(attacker, cell));
     }
 

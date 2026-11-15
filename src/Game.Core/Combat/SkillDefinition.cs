@@ -159,6 +159,24 @@ public sealed record SkillDefinition
     /// </summary>
     public int ExecuteAtOrBelowPercent { get; init; }
 
+    /// <summary>Zone laissée au sol sur les cases de la compétence (fumée, pare-tirs, verglas, piège), ou <c>null</c>.</summary>
+    public GroundZoneDefinition? Ground { get; init; }
+
+    /// <summary>Obstacle dressé pour un temps sur chaque case libre de la zone (ex. Mur de glace), ou <c>null</c>.</summary>
+    public RaisedObstacleDefinition? Raises { get; init; }
+
+    /// <summary>La zone dissipe les écrans de fumée qu'elle touche (ex. Tourbillon).</summary>
+    public bool ClearsSmoke { get; init; }
+
+    /// <summary>
+    /// La compétence fait quelque chose aux unités qu'elle touche (dégâts, soin, état, jauge, déplacement…). Faux pour
+    /// celles qui n'agissent que sur le terrain (fumée, mur de glace) : elles ne « touchent » personne.
+    /// </summary>
+    public bool HasHitEffect =>
+        DealsDamage || Effects.Count > 0 || GaugeGainPercent > 0 || ForcedMove is not null || Heals || TempHp is not null
+        || TauntActions > 0 || GaugeLossPercent > 0 || InterruptsCharge
+        || VsRobots is { DealsDamage: true } or { Effects.Count: > 0 } or { GaugeLossPercent: > 0 };
+
     /// <summary>Nom affiché (facultatif ; à défaut, l'identifiant).</summary>
     public string? Name { get; init; }
 
@@ -180,7 +198,7 @@ public sealed record SkillDefinition
             throw new ArgumentException("Skill id is required.");
         if (!Enum.IsDefined(Weight))
             throw new ArgumentException($"Skill '{Id}' has an unknown weight.");
-        // Un carré peut être centré sur le lanceur (portée 0) ; une ligne part vers une case voisine au moins ;
+        // Un carré peut être centré sur le lanceur (portée 0) ; une ligne ou un mur visent une case voisine au moins ;
         // une compétence sur soi a une portée 0 ; une compétence ciblée vise une autre unité.
         var validRange = Target == SkillTargeting.Self ? Range == 0 : Range >= (Zone?.Shape == ZoneShape.Square ? 0 : 1);
         if (!validRange)
@@ -345,10 +363,19 @@ public sealed record SkillDefinition
         if (VsRobots is not null && VsRobots.Effects.Any(r => Effects.Any(e => e.Status == r.Status)))
             throw new ArgumentException($"Skill '{Id}': a robot effect repeats a status of the skill (lengthen it instead).");
 
-        if (!DealsDamage && Effects.Count == 0 && GaugeGainPercent == 0 && ForcedMove is null && !CreatesDome
-            && !Heals && TempHp is null && TauntActions == 0 && GaugeLossPercent == 0 && !InterruptsCharge
-            && Summon is null && !IsRescue
-            && VsRobots is not ({ DealsDamage: true } or { Effects.Count: > 0 } or { GaugeLossPercent: > 0 }))
-            throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain or forced move).");
+        // Sur le terrain : une zone au sol, un obstacle dressé, la fumée dissipée. Toujours sur les cases d'une zone.
+        Ground?.Validate(Id);
+        Raises?.Validate(Id);
+        if ((Ground is not null || Raises is not null || ClearsSmoke)
+            && (Zone is null || !IsOffensive || SelfMove is not null || CreatesDome))
+            throw new ArgumentException($"Skill '{Id}': what a skill leaves on the ground needs a zone, without self move or dome.");
+        // Un piège : une seule case, posée tout de suite (une case choisie pendant une charge pourrait se remplir).
+        if (Ground is { IsTrap: true } && (Zone is not { Shape: ZoneShape.Square, Size: 0 } || IsCharged || Range < 1))
+            throw new ArgumentException($"Skill '{Id}': a trap is laid at once on a single cell in range.");
+        if (Raises is not null && (HasHitEffect || Ground is not null || ClearsSmoke || IsCharged || Range < 1))
+            throw new ArgumentException($"Skill '{Id}': raising obstacles is instant, in range, and does nothing else.");
+
+        if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null)
+            throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain, forced move or ground effect).");
     }
 }

@@ -198,6 +198,29 @@ public sealed partial class CombatSimulation
         return (new PlannedAction(skill, target, null, end), null);
     }
 
+    /// <summary>Après son mouvement, le lanceur peut-il encore frapper : debout, et pas étourdi par le sol où il arrive ?</summary>
+    private static bool CanStillAct(Unit caster) => caster.Status == UnitStatus.Active && !caster.HasStatus(StatusKind.Stunned);
+
+    /// <summary>
+    /// Les cases d'une Charge, en ligne droite jusqu'à <paramref name="destination"/>, coupées à la première case libre
+    /// dont le sol arrête le lanceur (piège, sol qui fige).
+    /// </summary>
+    private List<Cell> ChargeCourse(Unit caster, Cell start, Cell destination)
+    {
+        var step = start.DirectionTo(destination)!.Value;
+        var course = new List<Cell>();
+        for (var cell = start; cell != destination;)
+        {
+            var next = new Cell(cell.X + step.X, cell.Y + step.Y);
+            course.Add(next);
+            // Par-dessus une unité à terre ou un civil, il ne touche pas le sol.
+            if (IsFreeFor(caster, next) && GroundHalts(caster, cell, next))
+                break;
+            cell = next;
+        }
+        return course;
+    }
+
     /// <summary>
     /// Mouvement spécial planifié par <see cref="PlanSelfMove"/> (sans attaque d'opportunité) :
     /// Percée = course puis coups sur tout ce qui a été traversé ; Saut = atterrissage puis zone ;
@@ -220,6 +243,8 @@ public sealed partial class CombatSimulation
                                             && crossed.Contains(u.Position)
                                             && (!options.EnemiesOnly || AreOpponents(u, caster))).ToList();
                 Displace(caster, destination);
+                if (!CanStillAct(caster))
+                    break; // tombé ou figé par le sol à l'arrivée
                 foreach (var unit in hit)
                     ResolveHit(caster, skill, unit, damageFactor);
                 break;
@@ -227,6 +252,8 @@ public sealed partial class CombatSimulation
             case SelfMoveType.Leap:
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, cells));
                 Displace(caster, destination);
+                if (!CanStillAct(caster))
+                    break;
                 foreach (var unit in UnitsAffectedBy(caster, skill, cells!))
                     ResolveHit(caster, skill, unit, damageFactor, origin: options.ZoneAtStart ? start : destination); // d'où part l'onde
                 break;
@@ -234,8 +261,14 @@ public sealed partial class CombatSimulation
                 // Même ordre que les autres : la compétence, la course, puis le coup (s'il a percuté quelqu'un).
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, struck?.Id));
                 if (destination != start)
-                    Displace(caster, destination);
-                if (struck is not null)
+                {
+                    // Il court au sol : un piège ou un sol qui fige sur sa ligne l'arrête, et il ne percute plus personne.
+                    var course = ChargeCourse(caster, start, destination);
+                    if (course[^1] != destination)
+                        struck = null;
+                    Displace(caster, course[^1], course);
+                }
+                if (struck is not null && CanStillAct(caster))
                     ResolveHit(caster, skill, struck, damageFactor);
                 break;
             case SelfMoveType.Dash or SelfMoveType.Pounce:
@@ -246,6 +279,8 @@ public sealed partial class CombatSimulation
                     : WalkableWithin(caster, start, skill.Range).GetValueOrDefault(destination, start.DistanceTo(destination));
                 if (destination != start)
                     Displace(caster, destination);
+                if (!CanStillAct(caster))
+                    break;
                 var factor = (int)((long)damageFactor * (100 + options.DamagePercentPerCell * steps) / 100);
                 var landed = ResolveHit(caster, skill, struck, factor);
                 if (landed && struck.Status == UnitStatus.Active && skill.ForcedMove is { } move)

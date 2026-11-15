@@ -31,10 +31,6 @@
   ],
   "planned": {
     "chain-lightning": "Chaîne d'éclairs",
-    "star": "Astre",
-    "ice-wall": "Mur de glace",
-    "ice-pillar": "Pilier de glace",
-    "black-ice": "Verglas",
-    "frostbite": "Engelure"
+    "star": "Astre"
   }
 }

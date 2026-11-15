@@ -84,12 +84,13 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
     /// <summary>
     /// Attaques hors recharge, de la plus forte à la plus faible (dégâts moyens ; à égalité, ordre des données).
     /// Ce comportement n'utilise ni les compétences de soutien (sur un allié ou sur soi, zones de soin), ni les dômes,
-    /// ni les invocations, ni la Percée ou le Saut (la Charge, oui) ; les zones en ligne, seulement en mode tireur.
+    /// ni les invocations, ni la Percée ou le Saut (la Charge, oui), ni ce qui n'agit que sur le terrain (fumée, mur de
+    /// glace) ; les zones en ligne, seulement en mode tireur.
     /// </summary>
     private List<SkillDefinition> UsableSkills(CombatSimulation sim, Unit unit) =>
         unit.Skills
             .Where(s => unit.UnavailableAt(s, sim.CurrentTick) is null)
-            .Where(s => s.IsOffensive && (mode == Mode.Gunner || s.Zone?.Shape != ZoneShape.Line) && !s.CreatesDome
+            .Where(s => s.IsOffensive && s.HasHitEffect && (mode == Mode.Gunner || s.Zone?.Shape != ZoneShape.Line) && !s.CreatesDome
                         && s.Summon is null && s.SelfMove is null or SelfMoveType.Charge)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();

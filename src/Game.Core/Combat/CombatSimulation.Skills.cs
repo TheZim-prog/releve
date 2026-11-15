@@ -44,12 +44,21 @@ public sealed partial class CombatSimulation
             {
                 RaiseDome(caster, zone);
             }
-            else
+            else if (skill.Raises is { } obstacle)
+            {
+                RaiseObstacles(obstacle, zone);
+            }
+            else if (skill.HasHitEffect)
             {
                 var hit = UnitsAffectedBy(caster, skill, zone).Where(u => ResolveHit(caster, skill, u, damageFactor, origin: zoneOrigin)).ToList();
                 if (skill.ForcedMove is { } push)
                     PushFromZone(caster, skill, hit, push, damageFactor, zoneOrigin ?? caster.Position);
             }
+            // Ce que la zone laisse sur le terrain, après ses coups : la fumée dissipée, puis sa propre zone au sol.
+            if (skill.ClearsSmoke)
+                ClearSmoke(zone);
+            if (skill.Ground is not null)
+                LayGround(caster, skill, zone);
         }
         EndSource();
     }

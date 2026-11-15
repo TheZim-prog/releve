@@ -12,6 +12,7 @@ public partial class CombatView
         _board.SetLayer("charges", _sim.Units.Where(u => u.Charge?.Zone is not null).SelectMany(u => u.Charge!.Zone!),
             new Color(1f, 0.15f, 0.1f, 0.45f), 0.01f);
         _board.SetLayer("domes", _domes.Values.SelectMany(c => c), new Color(0.3f, 0.6f, 1f, 0.35f), 0.015f);
+        ShowGroundZones();
 
         var unit = Selected is { Status: UnitStatus.Active } selected ? selected : null;
         var from = _ghost ?? unit?.Position;
@@ -177,6 +178,21 @@ public partial class CombatView
         var damage = aiming.Skill is { DealsDamage: true } s ? $" ({DamageText(unit, s)} dégâts)" : "";
         var when = waiting ? "clic : partira dès que possible" : "clic pour lancer";
         return (aim, target, $"{prefix}{damage} : {when}", new Color(0.6f, 1f, 0.6f));
+    }
+
+    /// <summary>
+    /// Zones au sol en cours, un calque par sorte : fumée (grise), pare-tirs (blanc bleuté), sol qui pose un état
+    /// (bleu glace), piège (orange ; les joueurs sont du même camp, ils le voient tous).
+    /// </summary>
+    private void ShowGroundZones()
+    {
+        IEnumerable<Cell> Of(Func<GroundZoneDefinition, bool> kind) =>
+            _sim.GroundZones.Where(z => kind(z.Definition)).SelectMany(z => z.Cells);
+
+        _board.SetLayer("ground-smoke", Of(g => g.BlocksSight), new Color(0.75f, 0.75f, 0.75f, 0.6f), 0.012f);
+        _board.SetLayer("ground-wind", Of(g => g.BlocksShots), new Color(0.8f, 1f, 1f, 0.4f), 0.012f);
+        _board.SetLayer("ground-status", Of(g => !g.IsTrap && g.Effects.Count > 0), new Color(0.45f, 0.8f, 1f, 0.45f), 0.012f);
+        _board.SetLayer("ground-trap", Of(g => g.IsTrap), new Color(1f, 0.6f, 0.1f, 0.7f), 0.012f);
     }
 
     private IEnumerable<Cell> Cells(Func<Cell, bool> predicate)

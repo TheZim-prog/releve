@@ -19,5 +19,33 @@
     "id": "freeze", "name": "Gel",
     "weight": "light", "range": 5, "minDamage": 3, "maxDamage": 5, "cooldownMs": 6000,
     "effects": [ { "status": "immobilized", "durationMs": 2500 } ]
+  },
+  {
+    // Trois blocs de glace en travers, 10 s : des obstacles bas (passage bloqué, couverture), fragiles.
+    "id": "ice-wall", "name": "Mur de glace",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,
+    "zone": { "shape": "wall", "size": 1, "throughWalls": false },
+    "raises": { "terrain": "lowObstacle", "hp": 20, "durationMs": 10000 }
+  },
+  {
+    // Variante du Mur de glace : un seul bloc, haut comme un mur (il bloque aussi la vue), qui tient plus longtemps.
+    "id": "ice-pillar", "name": "Pilier de glace",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,
+    "zone": { "shape": "square", "size": 0, "throughWalls": false },
+    "raises": { "terrain": "wall", "durationMs": 15000 }
+  },
+  {
+    // Gèle une grande zone 6 s : qui y entre ou y reste est ralenti.
+    "id": "black-ice", "name": "Verglas",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false },
+    "ground": { "durationMs": 6000, "renews": true, "effects": [ { "status": "offBalance", "durationMs": 1000 } ] }
+  },
+  {
+    // Variante du Verglas : zone plus petite ; qui y entre (ou s'y trouve quand elle apparaît) est immobilisé brièvement.
+    "id": "frostbite", "name": "Engelure",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "ground": { "durationMs": 6000, "effects": [ { "status": "immobilized", "durationMs": 2000 } ] }
   }
 ]

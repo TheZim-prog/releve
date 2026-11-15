@@ -5,7 +5,8 @@ namespace Game.Core.Combat;
 /// <summary>
 /// Simulation d'un combat, à ticks fixes et entièrement déterministe.
 /// <para>
-/// Déroulement d'un tick : les états et les PV temporaires arrivés à échéance prennent fin ; les attaques chargées arrivées à
+/// Déroulement d'un tick : les états, les PV temporaires, les zones au sol et les obstacles dressés arrivés à
+/// échéance prennent fin (une zone qui renouvelle ses états les repose) ; les attaques chargées arrivées à
 /// échéance se déclenchent ; les commandes des joueurs soumises depuis le tick précédent sont appliquées
 /// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les ordres à l'avance dont
 /// l'unité peut agir partent, dans l'ordre où ils ont été donnés ; les unités IA prêtes agissent ; les jauges
@@ -111,6 +112,8 @@ public sealed partial class CombatSimulation
 
         ExpireStatuses();
         ExpireTempHp();
+        ExpireGround();
+        RenewGroundEffects();
         ReleaseCharges();
 
         while (_pending.TryDequeue(out var command))
@@ -165,7 +168,7 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Empreinte de l'état (tick, unités, générateur aléatoire, nombre d'événements et d'ordres) : deux simulations qui
+    /// Empreinte de l'état (tick, unités, générateur aléatoire, nombre d'événements et d'ordres, zones au sol, obstacles dressés) : deux simulations qui
     /// devraient être identiques (serveur et client) le sont si leurs empreintes concordent à chaque tick.
     /// </summary>
     public ulong Checksum()
@@ -181,6 +184,15 @@ public sealed partial class CombatSimulation
         Add((long)_random.State);
         Add(_events.Count);
         Add(_orders.Count);
+        Add(_lastGroundZoneId);
+        foreach (var zone in _groundZones)
+            Add(zone.Id);
+        foreach (var (cell, endTick) in _raisedObstacles)
+        {
+            Add(cell.X);
+            Add(cell.Y);
+            Add(endTick);
+        }
         foreach (var unit in _units)
         {
             Add(unit.Id.Value);

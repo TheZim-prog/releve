@@ -62,6 +62,7 @@ public sealed partial class CombatSimulation
         var position = start;
         var collided = false;
         Unit? obstacle = null;
+        var crossed = new List<Cell>();
         for (var i = 0; i < move.Distance; i++)
         {
             var next = new Cell(position.X + step.X, position.Y + step.Y);
@@ -77,11 +78,15 @@ public sealed partial class CombatSimulation
                 obstacle = other;
                 break;
             }
+            crossed.Add(next);
             position = next;
+            // Un piège ou un sol qui fige sur cette case : la course s'arrête là (sans collision).
+            if (GroundHalts(target, crossed.Count > 1 ? crossed[^2] : target.Position, next))
+                break;
         }
 
         if (position != start)
-            Displace(target, position);
+            Displace(target, position, crossed);
         if (!collided)
             return;
 
@@ -117,10 +122,18 @@ public sealed partial class CombatSimulation
     /// </summary>
     private void SecondaryDamage(Unit caster, SkillDefinition skill, Unit hit, int minDamage, int maxDamage, int damageFactor)
     {
-        if (IsBlockedByDome(skill, hit, harmful: true))
-            return;
+        if (!IsBlockedByDome(skill, hit, harmful: true))
+            UnblockedSecondaryDamage(caster, skill, hit, minDamage, maxDamage, damageFactor, fallbackCell: null);
+    }
+
+    /// <summary>
+    /// Les mêmes dégâts, une fois le dôme passé. <paramref name="fallbackCell"/> : où tombe la victime si elle partage sa case.
+    /// </summary>
+    private void UnblockedSecondaryDamage(Unit caster, SkillDefinition skill, Unit hit, int minDamage, int maxDamage,
+        int damageFactor, Cell? fallbackCell)
+    {
         var wereOpponents = AreOpponents(hit, caster);
-        var lost = Damage(hit, Scaled(_random.NextInt(minDamage, maxDamage), damageFactor, hit), fallbackCell: null,
+        var lost = Damage(hit, Scaled(_random.NextInt(minDamage, maxDamage), damageFactor, hit), fallbackCell,
             ignoresProtections: skill.IgnoresProtections);
         GaugePassivesOnHit(caster, hit, lost, wereOpponents);
         ChainReaction(caster, hit, wereOpponents);
@@ -134,12 +147,23 @@ public sealed partial class CombatSimulation
         Displace(target, mine);
     }
 
-    /// <summary>Déplacement forcé (sans chemin ni attaque d'opportunité) ; il interrompt une charge en cours.</summary>
-    private void Displace(Unit unit, Cell to)
+    /// <summary>
+    /// Déplacement forcé (sans chemin ni attaque d'opportunité) ; il interrompt une charge en cours, et une unité debout
+    /// qui arrive ainsi sur un piège ou un sol gelé y entre comme à pied. <paramref name="course"/> : les cases qu'elle
+    /// parcourt au sol pour y arriver, arrivée comprise (poussée, Charge) ; sans elle, seule l'arrivée compte (elle est
+    /// posée, elle saute ou elle file).
+    /// </summary>
+    private void Displace(Unit unit, Cell to, IReadOnlyList<Cell>? course = null)
     {
         var from = unit.Position;
         unit.Position = to;
         _events.Add(new UnitDisplaced(CurrentTick, unit.Id, from, to));
         InterruptCharge(unit);
+        var previous = from;
+        foreach (var cell in course ?? new[] { to })
+        {
+            EnterGround(unit, previous, cell, fallbackCell: null);
+            previous = cell;
+        }
     }
 }

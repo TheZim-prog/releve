@@ -158,7 +158,7 @@ public sealed partial class CombatSimulation
         if (hp == 0)
         {
             _grid.SetTerrain(cover, Terrain.Floor);
-            _coverHp.Remove(cover);
+            ForgetRaisedObstacle(cover);
             _events.Add(new CoverDestroyed(CurrentTick, cover));
         }
         return damage - absorbed;

@@ -257,6 +257,12 @@ public partial class CombatView : Node3D
             case CoverDestroyed c:
                 _board.RemoveObstacle(c.Cell);
                 break;
+            case ObstacleRaised r:
+                _board.AddObstacle(r.Cell, r.Terrain);
+                break;
+            case ObstacleMelted m:
+                _board.RemoveObstacle(m.Cell);
+                break;
         }
     }
 

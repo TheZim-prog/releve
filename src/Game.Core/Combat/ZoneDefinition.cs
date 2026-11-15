@@ -12,6 +12,12 @@ public enum ZoneShape
     /// (alignée : même ligne, même colonne ou diagonale).
     /// </summary>
     Line,
+
+    /// <summary>
+    /// Mur : une rangée de cases centrée sur la case visée, en travers de la direction lanceur → case visée (la plus
+    /// proche des 8), sur <see cref="ZoneDefinition.Size"/> cases de chaque côté (1 = trois cases).
+    /// </summary>
+    Wall,
 }
 
 /// <summary>Qui une zone touche, en plus de ne jamais toucher son lanceur.</summary>
@@ -58,13 +64,14 @@ public sealed record ZoneDefinition
 
     /// <summary>
     /// Cases de la zone lancée depuis <paramref name="caster"/> vers <paramref name="target"/>, dans un ordre fixe,
-    /// ou <c>null</c> si la case visée ne convient pas : un mur pour un carré, une case non alignée ou celle
+    /// ou <c>null</c> si la case visée ne convient pas : un mur pour un carré ou un mur, une case non alignée ou celle
     /// du lanceur pour une ligne. La liste peut être vide (ligne bloquée dès le premier pas).
     /// </summary>
     public IReadOnlyList<Cell>? Cells(Grid grid, Cell caster, Cell target) => Shape switch
     {
         ZoneShape.Square => SquareCells(grid, target),
         ZoneShape.Line => LineCells(grid, caster, target),
+        ZoneShape.Wall => WallCells(grid, caster, target),
         _ => throw new InvalidOperationException($"Unknown zone shape {Shape}."),
     };
 
@@ -81,6 +88,29 @@ public sealed record ZoneDefinition
                 if (grid.IsWalkable(cell) && (ThroughWalls || LineOfSight.IsClear(grid, center, cell)))
                     cells.Add(cell);
             }
+        return cells;
+    }
+
+    /// <summary>
+    /// La case visée d'abord, puis ses voisines de plus en plus loin, d'un côté puis de l'autre : celles qui sont du sol
+    /// et, sauf à travers les murs, visibles depuis la case visée (le mur ne continue pas derrière un vrai mur).
+    /// </summary>
+    private IReadOnlyList<Cell>? WallCells(Grid grid, Cell caster, Cell center)
+    {
+        if (grid.IsBlocked(center) || caster.NearestDirectionTo(center) is not { } facing)
+            return null;
+
+        var cells = new List<Cell> { center };
+        for (var i = 1; i <= Size; i++)
+        {
+            foreach (var side in new[] { 1, -1 })
+            {
+                // En travers : la direction tournée d'un quart de tour.
+                var cell = new Cell(center.X - facing.Y * i * side, center.Y + facing.X * i * side);
+                if (grid.IsWalkable(cell) && (ThroughWalls || LineOfSight.IsClear(grid, center, cell)))
+                    cells.Add(cell);
+            }
+        }
         return cells;
     }
 

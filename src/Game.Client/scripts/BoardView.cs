@@ -13,6 +13,7 @@ public partial class BoardView : Node3D
     private static readonly Color FloorB = new(0.29f, 0.30f, 0.33f);
     private static readonly Color WallColor = new(0.55f, 0.52f, 0.48f);
     private static readonly Color ObstacleColor = new(0.45f, 0.36f, 0.25f);
+    private static readonly Color IceColor = new(0.7f, 0.9f, 1f);
 
     private static readonly PlaneMesh LayerTile = new() { Size = new Vector2(0.9f, 0.9f) };
 
@@ -46,7 +47,17 @@ public partial class BoardView : Node3D
             }
     }
 
-    /// <summary>Un obstacle bas détruit disparaît (la case devient du sol).</summary>
+    /// <summary>Un obstacle dressé en plein combat (bloc de glace) : bas, ou haut comme un mur.</summary>
+    public void AddObstacle(Cell cell, Terrain terrain)
+    {
+        RemoveObstacle(cell);
+        var height = terrain == Terrain.Wall ? 0.9f : 0.35f;
+        var obstacle = Box(new Vector3(0.85f, height, 0.85f), ToWorld(cell, height / 2), IceColor);
+        AddChild(obstacle);
+        _obstacles[cell] = obstacle;
+    }
+
+    /// <summary>Un obstacle détruit ou fondu disparaît (la case devient du sol).</summary>
     public void RemoveObstacle(Cell cell)
     {
         if (_obstacles.Remove(cell, out var obstacle))

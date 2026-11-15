@@ -105,6 +105,7 @@ public static class Texts
             HitBlocked b => $"Le dôme protège {N(b.Unit)}",
             HitCovered c => $"{N(c.Unit)} est à couvert (−{c.Absorbed})",
             CoverDestroyed => "Un obstacle est détruit",
+            TrapTriggered t => $"{N(t.Unit)} déclenche le piège de {N(t.Owner)}",
             UnitResisted r => $"{N(r.Unit)} résiste",
             UnitSummoned s => $"{N(s.Owner)} pose : {N(s.Unit)}",
             TeamChanged t => $"{N(t.Unit)} change de camp",
