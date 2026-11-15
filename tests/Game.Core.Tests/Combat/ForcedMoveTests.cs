@@ -231,7 +231,12 @@ public class ForcedMoveTests
     }
 
     [Theory]
-    [InlineData("""{ "id": "x", "weight": "light", "range": 2, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "forcedMove": { "type": "push", "distance": 2 } }""")]
+    [InlineData("""{ "id": "x", "weight": "light", "range": 2, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "forcedMove": { "type": "throw", "distance": 2 } }""")]
+    [InlineData("""{ "id": "x", "target": "ally", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "forcedMove": { "type": "swap", "distance": 2 } }""")]
+    [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "forcedMove": { "type": "swap" } }""")]
+    [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "forcedMove": { "type": "push", "distance": 2, "impactMinDamage": 1, "impactMaxDamage": 2 } }""")]
+    [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "zone": { "shape": "square", "size": 1, "throughWalls": false }, "forcedMove": { "type": "push", "distance": 1 } }""")]
+    [InlineData("""{ "id": "x", "target": "any", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "zone": { "shape": "square", "size": 1, "throughWalls": false }, "forcedMove": { "type": "place", "distance": 2 } }""")]
     [InlineData("""{ "id": "x", "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "forcedMove": { "type": "push", "distance": 2 } }""")]
     [InlineData("""{ "id": "x", "target": "any", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "chargeMs": 500, "forcedMove": { "type": "place", "distance": 2 } }""")]
     [InlineData("""{ "id": "x", "target": "any", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "forcedMove": { "type": "place", "distance": 2 } }""")]

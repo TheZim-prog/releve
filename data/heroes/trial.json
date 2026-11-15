@@ -2,42 +2,46 @@
 // mesure (scénario « trial »). Pour essayer une variante, la mettre dans "equipped" à la place de sa compétence.
 [
   {
-    // Coup de marteau (variante : quake), Peau d'acier (variante : aegis, pour un allié adjacent) et Provocation
-    // (variante : challenge, un seul ennemi à distance). À essayer aussi : arm-lock (variante : dismantle).
+    // Lutteur et Cogneur en mouvement : Écrasement (variante de leap), Renversement (variante de projection) et
+    // Catapulte (variante : cannonball, l'allié lancé blesse autour de lui).
+    // À essayer aussi : hammer-blow (variante : quake), steel-skin (aegis), provocation (challenge), arm-lock (dismantle).
     "id": "trial-colossus", "archetype": "colossus", "level": 20,
     "points": { "hp": 12, "power": 5, "initiative": 2 },
     "learned": ["dome", "provocation", "steel-skin", "leap", "hammer-blow", "throw-scenery", "rage", "shockwave", "projection",
-                "arm-lock", "vigilance"],
-    "equipped": ["hammer-blow", "steel-skin", "provocation", "shockwave"],
+                "arm-lock", "catapult", "vigilance"],
+    "equipped": ["crush", "reversal", "catapult", "shockwave"],
     "passive": "vigilance"
   },
   {
-    // Perturbateur et Sauveteur : Harcèlement (variante : pickpocket, qui désarme) et Élan collectif.
+    // Éclair et Sauveteur : Aller-retour (variante : running-strike), Dégagement (variante : trip) et Transport
+    // (variante : swap). À essayer aussi : slalom (variante de breakthrough), harassment (variante : pickpocket).
     "id": "trial-speedster", "archetype": "speedster", "level": 20,
     "points": { "hp": 4, "power": 3, "initiative": 12 },
     "learned": ["whirlwind", "harassment", "flash-rescue", "clearance", "carry", "slipstream", "collective-surge",
                 "breakthrough", "round-trip", "ignoresOpportunityAttacks"],
-    "equipped": ["harassment", "breakthrough", "whirlwind", "collective-surge"],
+    "equipped": ["round-trip", "clearance", "carry", "collective-surge"],
     "passive": "ignoresOpportunityAttacks"
   },
   {
-    // Les variantes Balayage (Coup étourdissant) et Volée (Lames de jet), et le Désarmement.
+    // La Ruée (variante : retreat), les variantes Balayage (Coup étourdissant) et Volée (Lames de jet).
+    // À essayer aussi : disarm.
     // À essayer aussi : precise-strike, qui ignore les protections, et sa variante pincer.
     "id": "trial-fighter", "archetype": "fighter", "level": 20,
     "points": { "hp": 6, "power": 8, "initiative": 5 },
     "learned": ["stunning-blow", "parry", "disarm", "throwing-blades", "smoke-bomb", "precise-strike", "rush", "relentless", "weakPoint",
                 "execution"],
-    "equipped": ["sweep", "volley", "disarm", "execution"],
+    "equipped": ["rush", "sweep", "volley", "execution"],
     "passive": "weakPoint"
   },
   {
-    // Feu, Glace et Brasier : Lance de feu, Éclat de glace, Zéro absolu, Point de fusion.
+    // Brasier et Glace : Onde de recul (variante de nova), Propulsion (variante : comet), Éclat de glace, Zéro absolu.
+    // À essayer aussi : fire-lance, melting-point.
     // Variantes à essayer : electric-arc (beam), controlled-blast (blast), discharge (melting-point), freeze (ice-shard).
     "id": "trial-energetic", "archetype": "energetic", "level": 20,
     "points": { "hp": 3, "power": 13, "initiative": 3 },
     "learned": ["beam", "blast", "fire-lance", "piercing", "ice-shard", "ice-wall", "black-ice", "frost", "absolute-zero",
                 "nova", "propulsion", "melting-point"],
-    "equipped": ["ice-shard", "fire-lance", "melting-point", "absolute-zero"],
+    "equipped": ["recoil-wave", "propulsion", "ice-shard", "absolute-zero"],
     "passive": "piercing"
   },
   {
@@ -51,13 +55,14 @@
     "passive": "jammingField"
   },
   {
-    // Les variantes de zone Torpeur (Paralysie) et Panique (Confusion), Projectile, et l'Étau (variante : wrench).
+    // Poussée (variante de telekinesis), les variantes de zone Torpeur (Paralysie) et Panique (Confusion), et l'Étau
+    // (variante : wrench). À essayer aussi : projectile.
     // À essayer aussi : stimulation (variante : focus), déjà achetée.
     "id": "trial-telepath", "archetype": "telepath", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
     "learned": ["paralysis", "telepathic-strike", "confusion", "grip", "domination", "telekinesis", "projectile", "vise", "siphon",
                 "stimulation"],
-    "equipped": ["torpor", "panic", "projectile", "vise"],
+    "equipped": ["torpor", "panic", "shove", "vise"],
     "passive": "grip"
   }
 ]

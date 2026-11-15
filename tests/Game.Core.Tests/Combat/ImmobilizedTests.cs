@@ -21,7 +21,7 @@ public class ImmobilizedTests
     private static readonly SkillDefinition Dash = Strike with { Id = "dash", Range = 3, SelfMove = SelfMoveType.Pierce };
 
     /// <summary>Une charge, plus forte que le coup de base : l'IA la préfère quand elle peut l'utiliser.</summary>
-    private static readonly SkillDefinition Rush = Strike with { Id = "rush", Range = 5, MinDamage = 20, MaxDamage = 20, SelfMove = SelfMoveType.Rush };
+    private static readonly SkillDefinition Rush = Strike with { Id = "rush", Range = 5, MinDamage = 20, MaxDamage = 20, SelfMove = SelfMoveType.Charge };
 
     private static UnitSetup HeroAt(int x, int y, params SkillDefinition[] skills) =>
         Unit(1, team: 0, x, y, gauge: Capacity, initiative: Capacity, skills: skills.Length > 0 ? skills : new[] { Lock });

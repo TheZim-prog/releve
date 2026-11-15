@@ -2,8 +2,8 @@ using Game.Core.Grids;
 
 namespace Game.Core.Combat;
 
-// Effet des compétences une fois validées : zones, mouvements spéciaux, sauvetage, invocations, déplacements
-// forcés, attaques chargées.
+// Effet des compétences une fois validées : cible ou zone, sauvetage, invocations, attaques chargées. (Mouvements
+// spéciaux : CombatSimulation.SelfMoves.cs ; déplacements forcés : CombatSimulation.ForcedMoves.cs.)
 public sealed partial class CombatSimulation
 {
     /// <summary>
@@ -35,12 +35,7 @@ public sealed partial class CombatSimulation
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
             var landed = ResolveHit(caster, skill, target, damageFactor, origin: caster.Position);
             if (landed && target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
-            {
-                if (move.Type == ForcedMoveType.Push)
-                    Push(caster, skill, target, move, damageFactor);
-                else
-                    Displace(target, destination!.Value);
-            }
+                ApplyForcedMove(caster, skill, target, move, damageFactor, destination);
         }
         else
         {
@@ -51,50 +46,12 @@ public sealed partial class CombatSimulation
             }
             else
             {
-                foreach (var unit in UnitsAffectedBy(caster, skill, zone))
-                    ResolveHit(caster, skill, unit, damageFactor, origin: zoneOrigin);
+                var hit = UnitsAffectedBy(caster, skill, zone).Where(u => ResolveHit(caster, skill, u, damageFactor, origin: zoneOrigin)).ToList();
+                if (skill.ForcedMove is { } push)
+                    PushFromZone(caster, skill, hit, push, damageFactor, zoneOrigin ?? caster.Position);
             }
         }
         EndSource();
-    }
-
-    /// <summary>
-    /// Mouvement spécial planifié par <see cref="PlanSelfMove"/> (sans attaque d'opportunité) :
-    /// Percée = course puis coups sur tout ce qui a été traversé ; Saut = atterrissage puis zone ;
-    /// Charge = course jusqu'à l'unité percutée, puis le coup (aucun si le décor l'a arrêtée).
-    /// </summary>
-    private void ExecuteSelfMove(Unit caster, SkillDefinition skill, SelfMoveType selfMove, Unit? struck,
-        IReadOnlyList<Cell>? cells, Cell destination, int damageFactor)
-    {
-        switch (selfMove)
-        {
-            case SelfMoveType.Pierce:
-            {
-                var course = cells!;
-                _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, course));
-                var crossed = course.Take(course.Count - 1).ToHashSet();
-                var hit = _units.Where(u => u != caster && u.Status == UnitStatus.Active && !u.IsCivilian
-                                            && crossed.Contains(u.Position)).ToList();
-                Displace(caster, destination);
-                foreach (var unit in hit)
-                    ResolveHit(caster, skill, unit, damageFactor);
-                break;
-            }
-            case SelfMoveType.Leap:
-                _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, cells));
-                Displace(caster, destination);
-                foreach (var unit in UnitsAffectedBy(caster, skill, cells!))
-                    ResolveHit(caster, skill, unit, damageFactor, origin: destination); // l'onde part de l'atterrissage
-                break;
-            case SelfMoveType.Rush:
-                // Même ordre que les autres : la compétence, la course, puis le coup (s'il a percuté quelqu'un).
-                _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, struck?.Id));
-                if (destination != caster.Position)
-                    Displace(caster, destination);
-                if (struck is not null)
-                    ResolveHit(caster, skill, struck, damageFactor);
-                break;
-        }
     }
 
     /// <summary>
@@ -115,14 +72,20 @@ public sealed partial class CombatSimulation
             .ToList();
     }
 
-    /// <summary>Sauvetage (sans attaque d'opportunité) : l'allié est posé sur le dépôt, puis le lanceur à côté.</summary>
+    /// <summary>
+    /// Sauvetage ou transport (sans attaque d'opportunité) : l'allié est posé sur le dépôt, puis le lanceur à côté.
+    /// Seul un allié ramassé à terre est marqué « sauvé ».
+    /// </summary>
     private void Rescue(Unit rescuer, SkillDefinition skill, Unit ally, Cell drop)
     {
         var end = RescuerEnd(rescuer, ally, rescuer.Position, drop, skill.RescueDropRadius!.Value)!.Value;
         _events.Add(new SkillUsed(CurrentTick, rescuer.Id, skill.Id, ally.Id));
-        _events.Add(new UnitRescued(CurrentTick, ally.Id, rescuer.Id));
-        if (!ally.IsCivilian) // la marque compte pour la règle de campagne des chutes des héros
-            ally.WasRescued = true;
+        if (!skill.CarriesStandingAlly)
+        {
+            _events.Add(new UnitRescued(CurrentTick, ally.Id, rescuer.Id));
+            if (!ally.IsCivilian) // la marque compte pour la règle de campagne des chutes des héros
+                ally.WasRescued = true;
+        }
         Displace(ally, drop);
         if (rescuer.Position != end)
             Displace(rescuer, end);
@@ -143,73 +106,6 @@ public sealed partial class CombatSimulation
         var unit = new Unit(definition.ToSetup(id, owner.Team, cell), Rules, owner.PowerPercent) { SummonedBy = owner.Id };
         _units.Add(unit);
         _events.Add(new UnitSummoned(CurrentTick, id, definition.Id, owner.Id, owner.Team, cell));
-    }
-
-    /// <summary>
-    /// Projection : pousse <paramref name="target"/> en ligne droite, depuis <paramref name="origin"/>, sur la distance
-    /// prévue. Elle s'arrête avant une unité, ou avant un mur, le bord ou une diagonale bloquée (même règle de coupe
-    /// d'angle qu'un déplacement de la cible) ; une collision fait des dégâts à la cible et à l'unité percutée si
-    /// elle est debout.
-    /// </summary>
-    private void Push(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor)
-    {
-        var origin = caster.Position;
-        var step = (X: Math.Sign(target.Position.X - origin.X), Y: Math.Sign(target.Position.Y - origin.Y));
-        if (step == (0, 0))
-            return;
-
-        var position = target.Position;
-        var collided = false;
-        Unit? obstacle = null;
-        for (var i = 0; i < move.Distance; i++)
-        {
-            var next = new Cell(position.X + step.X, position.Y + step.Y);
-            // Le décor (ou un coin bouché) arrête d'abord : on ne percute pas une unité à travers un coin de mur.
-            if (!CanStepIgnoringDestination(target, position, next, downedBlockCorners: true))
-            {
-                collided = true;
-                break;
-            }
-            if (UnitAt(next) is { } other && other != target)
-            {
-                collided = true;
-                obstacle = other;
-                break;
-            }
-            position = next;
-        }
-
-        if (position != target.Position)
-            Displace(target, position);
-        if (!collided)
-            return;
-
-        _events.Add(new UnitCollided(CurrentTick, target.Id, obstacle?.Id));
-        if (move.CollisionMaxDamage == 0)
-            return;
-        foreach (var hit in new[] { target, obstacle })
-        {
-            // La cible (projetée sous un dôme de son équipe) ou l'unité percutée peuvent être protégées :
-            // la collision fait partie de la même source.
-            // Un civil percuté n'est pas blessé (seules les zones les touchent).
-            if (hit is { Status: UnitStatus.Active, IsCivilian: false } && !IsBlockedByDome(skill, hit))
-            {
-                var damage = _random.NextInt(move.CollisionMinDamage, move.CollisionMaxDamage);
-                var wereOpponents = AreOpponents(hit, caster);
-                var lost = Damage(hit, Scaled(damage, damageFactor, hit), fallbackCell: null, ignoresProtections: skill.IgnoresProtections);
-                GaugePassivesOnHit(caster, hit, lost, wereOpponents);
-                ChainReaction(caster, hit, wereOpponents);
-            }
-        }
-    }
-
-    /// <summary>Déplacement forcé (sans chemin ni attaque d'opportunité) ; il interrompt une charge en cours.</summary>
-    private void Displace(Unit unit, Cell to)
-    {
-        var from = unit.Position;
-        unit.Position = to;
-        _events.Add(new UnitDisplaced(CurrentTick, unit.Id, from, to));
-        InterruptCharge(unit);
     }
 
     /// <summary>

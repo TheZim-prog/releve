@@ -32,12 +32,8 @@
   "planned": {
     "personal-shield": "Bouclier personnel",
     "fortress": "Forteresse",
-    "crush": "Écrasement",
     "throw-scenery": "Lancer de décor",
     "barricade": "Barricade",
-    "reversal": "Renversement",
-    "catapult": "Catapulte",
-    "cannonball": "Boulet",
     "spin-throw": "Tourniquet"
   }
 }

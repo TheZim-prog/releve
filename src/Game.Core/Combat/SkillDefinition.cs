@@ -7,22 +7,6 @@ public enum SkillWeight
     Heavy,
 }
 
-/// <summary>Mouvement spécial du lanceur pendant sa compétence (sans attaque d'opportunité).</summary>
-public enum SelfMoveType
-{
-    /// <summary>
-    /// Percée : vise une case alignée ; course en ligne droite sur <see cref="SkillDefinition.Range"/> cases à travers
-    /// les unités (pas les murs ni les obstacles bas), arrêt sur la dernière case libre, et frappe tout ce qui est traversé.
-    /// </summary>
-    Pierce,
-
-    /// <summary>Saut : vise une case libre à portée, par-dessus unités et obstacles bas (pas les murs) ; la zone frappe autour de l'atterrissage.</summary>
-    Leap,
-
-    /// <summary>Charge : vise un ennemi aligné à portée ; fonce et s'arrête contre la première unité de la ligne, qui prend le coup.</summary>
-    Rush,
-}
-
 /// <summary>Qui une compétence sans zone peut viser.</summary>
 public enum SkillTargeting
 {
@@ -134,14 +118,28 @@ public sealed record SkillDefinition
 
     public bool IsRescue => RescueDropRadius is not null;
 
-    /// <summary>Le lanceur se déplace en l'utilisant (mouvement spécial, sauvetage) : impossible quand il est immobilisé.</summary>
-    public bool MovesCaster => SelfMove is not null || IsRescue;
+    /// <summary>
+    /// Transport : le « sauvetage » emmène un allié <b>debout</b> (pas à terre, pas un civil), sans rien changer à ses
+    /// chutes ; mêmes règles de dépôt.
+    /// </summary>
+    public bool CarriesStandingAlly { get; init; }
+
+    /// <summary>
+    /// Le lanceur se déplace en l'utilisant (mouvement spécial, sauvetage, permutation) : impossible quand il est immobilisé.
+    /// </summary>
+    public bool MovesCaster => SelfMove is not null || IsRescue || ForcedMove?.Type == ForcedMoveType.Swap;
 
     /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
     public bool IsMental { get; init; }
 
-    /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge), ou <c>null</c>.</summary>
+    /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge, Ruée…), ou <c>null</c>.</summary>
     public SelfMoveType? SelfMove { get; init; }
+
+    /// <summary>Réglages du mouvement spécial (facultatifs).</summary>
+    public SelfMoveOptions? SelfMoveOptions { get; init; }
+
+    /// <summary>Les réglages du mouvement spécial, ou ceux par défaut.</summary>
+    internal SelfMoveOptions MoveOptions => SelfMoveOptions ?? Combat.SelfMoveOptions.None;
 
     /// <summary>
     /// Invocation (ex. tourelle, balise) : la compétence vise une case libre à portée et en vue, et y pose une unité
@@ -216,13 +214,19 @@ public sealed record SkillDefinition
         // Déplacements forcés : une projection vise un ennemi ; une télékinésie n'est pas chargée (la cible bougerait
         // avant le déclenchement) ; une compétence sur « n'importe qui » ne fait que déplacer.
         ForcedMove?.Validate(Id);
-        if (ForcedMove is not null && Zone is not null)
-            throw new ArgumentException($"Skill '{Id}': a forced move needs a single target, not a zone.");
-        // Au contact, la direction lanceur → cible est l'une des 8 directions : la poussée va bien en ligne droite.
-        if (ForcedMove?.Type == ForcedMoveType.Push && (Target != SkillTargeting.Enemy || Range != 1))
-            throw new ArgumentException($"Skill '{Id}': a push targets an adjacent enemy (range 1).");
-        if (ForcedMove?.Type == ForcedMoveType.Place && IsCharged)
-            throw new ArgumentException($"Skill '{Id}': a placement cannot be charged.");
+        // Seule une projection va avec une zone, centrée sur le lanceur : chaque unité touchée est repoussée loin de lui.
+        if (ForcedMove is not null && Zone is not null
+            && (ForcedMove.Type != ForcedMoveType.Push || !IsOffensive || Zone.Shape != ZoneShape.Square || Range != 0))
+            throw new ArgumentException($"Skill '{Id}': only a push goes with a zone, an offensive square around the caster (range 0).");
+        if (ForcedMove is { IsLinear: true } && Target != SkillTargeting.Enemy)
+            throw new ArgumentException($"Skill '{Id}': a push or a throw targets an enemy.");
+        // Un renversement passe la cible par-dessus le lanceur : elle est à son contact.
+        if (ForcedMove?.Type == ForcedMoveType.Throw && (Range != 1 || SelfMove is not null))
+            throw new ArgumentException($"Skill '{Id}': a throw targets an adjacent enemy (range 1), without a self move.");
+        if (ForcedMove?.Type is ForcedMoveType.Place or ForcedMoveType.Swap && IsCharged)
+            throw new ArgumentException($"Skill '{Id}': a placement or a swap cannot be charged.");
+        if (ForcedMove?.Type == ForcedMoveType.Swap && Target != SkillTargeting.Ally)
+            throw new ArgumentException($"Skill '{Id}': a swap targets an ally.");
         if (Target == SkillTargeting.Any && (ForcedMove?.Type != ForcedMoveType.Place || Effects.Count > 0 || GaugeGainPercent > 0))
             throw new ArgumentException($"Skill '{Id}' targets anyone: it can only place its target.");
 
@@ -298,18 +302,35 @@ public sealed record SkillDefinition
         {
             if (!Enum.IsDefined(selfMove))
                 throw new ArgumentException($"Skill '{Id}' has an unknown self move.");
-            if (Target != SkillTargeting.Enemy || IsCharged || ForcedMove is not null || Summon is not null || CreatesDome
+            if (Target != SkillTargeting.Enemy || IsCharged || Summon is not null || CreatesDome
                 || Heals || GaugeGainPercent > 0 || Range < 1)
-                throw new ArgumentException($"Skill '{Id}': a self move is an instant attack in range, without other moves or support.");
+                throw new ArgumentException($"Skill '{Id}': a self move is an instant attack in range, without summon or support.");
+            // Seuls une ruée ou un bond, qui finissent au contact de leur cible, peuvent ensuite la repousser.
+            if (ForcedMove is not null
+                && (ForcedMove.Type != ForcedMoveType.Push || selfMove is not (SelfMoveType.Dash or SelfMoveType.Pounce)))
+                throw new ArgumentException($"Skill '{Id}': only a dash or a pounce can also push its target.");
+            // La cible repoussée pourrait finir sur la case où il doit revenir.
+            if (ForcedMove is not null && MoveOptions.ReturnsToStart)
+                throw new ArgumentException($"Skill '{Id}': a dash that returns to its start does not push its target.");
             if ((selfMove == SelfMoveType.Leap) != (Zone?.Shape == ZoneShape.Square)
                 || (selfMove != SelfMoveType.Leap && Zone is not null))
-                throw new ArgumentException($"Skill '{Id}': a leap needs a square zone, a pierce or a rush none.");
+                throw new ArgumentException($"Skill '{Id}': a leap needs a square zone, the other self moves none.");
+            // Le coup d'un repli est un coup au contact.
+            if (selfMove == SelfMoveType.Retreat && Range != 1)
+                throw new ArgumentException($"Skill '{Id}': a retreat strikes an adjacent enemy (range 1).");
+            MoveOptions.Validate(Id, selfMove);
+        }
+        else if (SelfMoveOptions is not null)
+        {
+            throw new ArgumentException($"Skill '{Id}' has self move options but no self move.");
         }
 
         // Sauvetage : sur un allié (à terre), rien d'autre (zone, charge et dégâts sont déjà exclus pour un allié).
         if (IsRescue && (Target != SkillTargeting.Ally || RescueDropRadius < 1 || Heals || Effects.Count > 0
                          || GaugeGainPercent > 0 || ForcedMove is not null || SelfMove is not null || Summon is not null || CreatesDome))
             throw new ArgumentException($"Skill '{Id}': a rescue targets a downed ally, drops it within a radius of at least 1, and does nothing else.");
+        if (CarriesStandingAlly && !IsRescue)
+            throw new ArgumentException($"Skill '{Id}': carrying a standing ally needs a drop radius (rescueDropRadius).");
 
         // Contre les robots : un coup offensif (un robot n'est jamais un allié visé par du soutien), pas mental (ils y
         // sont insensibles).

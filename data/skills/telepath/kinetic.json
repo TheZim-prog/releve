@@ -22,5 +22,11 @@
     "id": "wrench", "name": "Arrachement",
     "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 7, "cooldownMs": 10000,
     "effects": [ { "status": "disarmed", "durationMs": 3000 } ]
+  },
+  {
+    // Variante de la Télékinésie : projette un ennemi en ligne droite loin de lui ; dégâts s'il percute quelque chose.
+    "id": "shove", "name": "Poussée",
+    "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 9, "collisionMaxDamage": 13 }
   }
 ]

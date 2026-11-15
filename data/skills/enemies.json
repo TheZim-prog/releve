@@ -22,7 +22,7 @@
     // Fonce sur un ennemi aligné, percute la première unité de sa ligne et la déséquilibre.
     "id": "charge", "name": "Charge",
     "weight": "light", "range": 5, "minDamage": 14, "maxDamage": 18, "cooldownMs": 12000,
-    "selfMove": "rush",
+    "selfMove": "charge",
     "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
   },
   {

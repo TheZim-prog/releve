@@ -11,5 +11,23 @@
     "id": "hyperspeed", "name": "Hypervitesse",
     "target": "self", "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
     "effects": [ { "status": "hasted", "durationMs": 5000 } ]
+  },
+  {
+    // Variante de la Percée : ne touche que les ennemis, moins fort.
+    "id": "slalom", "name": "Slalom",
+    "weight": "light", "range": 5, "minDamage": 6, "maxDamage": 8, "cooldownMs": 8000,
+    "selfMove": "pierce", "selfMoveOptions": { "enemiesOnly": true }
+  },
+  {
+    // Court frapper un ennemi (5 pas) et revient à sa case de départ, sans attaque d'opportunité.
+    "id": "round-trip", "name": "Aller-retour",
+    "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 12, "cooldownMs": 6000,
+    "selfMove": "dash", "selfMoveOptions": { "returnsToStart": true }
+  },
+  {
+    // Variante de l'Aller-retour : il reste au contact, et frappe plus fort à chaque case courue (+20 % par case).
+    "id": "running-strike", "name": "Coup d'élan",
+    "weight": "light", "range": 6, "minDamage": 6, "maxDamage": 8, "cooldownMs": 6000,
+    "selfMove": "dash", "selfMoveOptions": { "damagePercentPerCell": 20 }
   }
 ]

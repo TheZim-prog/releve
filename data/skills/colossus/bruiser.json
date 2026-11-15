@@ -27,5 +27,11 @@
     "weight": "light", "range": 0, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,
     "zone": { "shape": "square", "size": 1, "throughWalls": false },
     "effects": [ { "status": "stunned", "durationMs": 1000 } ]
+  },
+  {
+    // Variante du Saut : atterrit au contact d'un ennemi et ne frappe que lui, plus fort.
+    "id": "crush", "name": "Écrasement",
+    "weight": "light", "range": 4, "minDamage": 17, "maxDamage": 21, "cooldownMs": 12000,
+    "selfMove": "pounce"
   }
 ]

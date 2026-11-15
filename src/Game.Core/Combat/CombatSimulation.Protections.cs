@@ -71,11 +71,12 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Un coup offensif (compétence visant un ennemi ou une zone) sur <paramref name="target"/> est-il bloqué par
     /// un dôme de son équipe qui la couvre ? Si oui, le dôme absorbe la source en cours (il tombera à sa fin). Un coup
-    /// qui ignore les protections passe sans l'entamer.
+    /// qui ignore les protections passe sans l'entamer. <paramref name="harmful"/> : des dégâts que fait une
+    /// compétence de soutien (l'impact d'un allié lancé), bloqués comme un coup offensif.
     /// </summary>
-    private bool IsBlockedByDome(SkillDefinition skill, Unit target)
+    private bool IsBlockedByDome(SkillDefinition skill, Unit target, bool harmful = false)
     {
-        if (!skill.IsOffensive || skill.IgnoresProtections)
+        if (!(skill.IsOffensive || harmful) || skill.IgnoresProtections)
             return false;
         // Un dôme protège son équipe et les civils sous lui.
         var dome = _domes.FirstOrDefault(d => (d.Owner.Team == target.Team || target.IsCivilian) && d.Cells.Contains(target.Position));

@@ -173,7 +173,7 @@ public class CivilianTests
     [Fact]
     public void ChargesAndPiercesPassThroughCivilians_WithoutHurtingThem()
     {
-        var rush = Strike with { Id = "rush", Range = 5, SelfMove = SelfMoveType.Rush };
+        var rush = Strike with { Id = "rush", Range = 5, SelfMove = SelfMoveType.Charge };
         var pierce = Strike with { Id = "pierce", Range = 5, SelfMove = SelfMoveType.Pierce };
 
         var charging = Simulation(new Grid(8, 1), HeroAt(0, 0, rush), Civilian(2, 0), Unit(2, team: 1, 4, 0));
@@ -213,7 +213,7 @@ public class CivilianTests
     public void ARushBlockedJustBeforeItsTarget_StopsWithoutStriking()
     {
         // Deux civils devant l'ennemi : le colosse s'arrête avant eux, loin de l'ennemi, sans le frapper.
-        var rush = Strike with { Id = "rush", Range = 5, SelfMove = SelfMoveType.Rush };
+        var rush = Strike with { Id = "rush", Range = 5, SelfMove = SelfMoveType.Charge };
         var sim = Simulation(new Grid(8, 1), HeroAt(0, 0, rush), Civilian(2, 0), Civilian(3, 0) with { Id = new UnitId(6) },
             Unit(2, team: 1, 4, 0));
 

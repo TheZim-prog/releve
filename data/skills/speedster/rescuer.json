@@ -12,5 +12,31 @@
     "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
     "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "allies" },
     "effects": [ { "status": "hasted", "durationMs": 2000 } ]
+  },
+  {
+    // Court jusqu'à un ennemi (4 pas), le frappe et le repousse de deux cases.
+    "id": "clearance", "name": "Dégagement",
+    "weight": "light", "range": 4, "minDamage": 6, "maxDamage": 9, "cooldownMs": 10000,
+    "selfMove": "dash",
+    "forcedMove": { "type": "push", "distance": 2, "collisionMinDamage": 4, "collisionMaxDamage": 6 }
+  },
+  {
+    // Variante du Dégagement : la cible n'est pas repoussée, mais immobilisée brièvement.
+    "id": "trip", "name": "Croche-pied",
+    "weight": "light", "range": 4, "minDamage": 6, "maxDamage": 9, "cooldownMs": 10000,
+    "selfMove": "dash",
+    "effects": [ { "status": "immobilized", "durationMs": 2500 } ]
+  },
+  {
+    // Emmène un allié debout au contact et le pose sur une case en vue (rayon 4) ; il finit à côté de lui.
+    "id": "carry", "name": "Transport",
+    "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "rescueDropRadius": 4, "carriesStandingAlly": true
+  },
+  {
+    // Variante du Transport : échange sa place avec un allié en vue.
+    "id": "swap", "name": "Permutation",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "forcedMove": { "type": "swap" }
   }
 ]

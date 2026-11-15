@@ -90,7 +90,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
         unit.Skills
             .Where(s => unit.UnavailableAt(s, sim.CurrentTick) is null)
             .Where(s => s.IsOffensive && (mode == Mode.Gunner || s.Zone?.Shape != ZoneShape.Line) && !s.CreatesDome
-                        && s.Summon is null && s.SelfMove is null or SelfMoveType.Rush)
+                        && s.Summon is null && s.SelfMove is null or SelfMoveType.Charge)
             .OrderByDescending(s => s.MinDamage + s.MaxDamage)
             .ToList();
 
@@ -168,7 +168,7 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
         var action = sim.PlanAction(unit, cell, skill, use).Action;
         // Une charge peut percuter quelqu'un d'autre en chemin (ou personne) : on ne garde que celles qui
         // atteignent la cible.
-        if (action is null || (skill.SelfMove == SelfMoveType.Rush && action.Target != target))
+        if (action is null || (skill.SelfMove == SelfMoveType.Charge && action.Target != target))
             return null;
         // Une zone doit vraiment toucher la cible (selon qui elle touche) ; hors confusion, sans prendre d'allié
         // (ni ses propres gadgets, pour une IEM).

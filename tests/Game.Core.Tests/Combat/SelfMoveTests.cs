@@ -24,7 +24,7 @@ public class SelfMoveTests
     private static readonly SkillDefinition Charge = new()
     {
         Id = "charge", Weight = SkillWeight.Light, Range = 5, MinDamage = 14, MaxDamage = 14, CooldownMs = 0,
-        SelfMove = SelfMoveType.Rush,
+        SelfMove = SelfMoveType.Charge,
         Effects = new[] { new StatusEffect { Status = StatusKind.OffBalance, DurationMs = 1000 } },
     };
 
@@ -227,8 +227,8 @@ public class SelfMoveTests
     [Theory]
     [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "selfMove": "leap" }""")]
     [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "selfMove": "pierce", "zone": { "shape": "square", "size": 1, "throughWalls": false } }""")]
-    [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "chargeMs": 500, "selfMove": "rush" }""")]
-    [InlineData("""{ "id": "x", "target": "ally", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "minHeal": 5, "maxHeal": 5, "cooldownMs": 0, "selfMove": "rush" }""")]
+    [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "chargeMs": 500, "selfMove": "charge" }""")]
+    [InlineData("""{ "id": "x", "target": "ally", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "minHeal": 5, "maxHeal": 5, "cooldownMs": 0, "selfMove": "charge" }""")]
     public void InvalidSelfMoves_AreRejectedAtLoad(string skill)
     {
         Assert.Throws<ArgumentException>(() => SkillDefinition.ListFromJson($"[{skill}]"));

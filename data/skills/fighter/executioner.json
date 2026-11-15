@@ -18,5 +18,17 @@
     "id": "pincer", "name": "Prise en tenaille",
     "weight": "light", "range": 1, "minDamage": 18, "maxDamage": 23, "cooldownMs": 8000,
     "flankDamagePercent": 150
+  },
+  {
+    // Court jusqu'à un ennemi (4 pas, sans attaque d'opportunité) et le frappe.
+    "id": "rush", "name": "Ruée",
+    "weight": "light", "range": 4, "minDamage": 10, "maxDamage": 13, "cooldownMs": 8000,
+    "selfMove": "dash"
+  },
+  {
+    // Variante de la Ruée : frappe un ennemi au contact, puis s'éloigne (3 pas, sans attaque d'opportunité).
+    "id": "retreat", "name": "Retraite",
+    "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 12, "cooldownMs": 8000,
+    "selfMove": "retreat", "selfMoveOptions": { "retreatDistance": 3 }
   }
 ]

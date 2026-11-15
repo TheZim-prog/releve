@@ -52,11 +52,14 @@ public partial class CombatView
             if (aiming.Skill is { } skill && aiming.Kind != AimKind.Self)
             {
                 // Portée de l'étape en cours : la cible, puis, en deux temps, la case (autour de la cible pour une
-                // télékinésie, du lanceur pour le dépôt d'un sauvetage).
+                // télékinésie, du lanceur pour le dépôt d'un sauvetage ou le repli d'une Retraite).
                 var (center, radius) = aiming.FirstTarget is { } first && _sim.FindUnit(first) is { } chosen
                     ? skill.ForcedMove is { } move ? (chosen.Position, move.Distance) : (origin, skill.RescueDropRadius ?? skill.Range)
                     : (origin, skill.Range);
-                range = Cells(c => c.DistanceTo(center) <= radius && c != center);
+                // Le repli d'une Retraite se fait à pied : les cases où le héros peut vraiment aller.
+                range = aiming.FirstTarget is not null && skill.SelfMoveOptions is { RetreatDistance: > 0 } retreat
+                    ? _sim.WalkableCells(unit.Id, origin, retreat.RetreatDistance).Keys.Where(c => c != origin)
+                    : Cells(c => c.DistanceTo(center) <= radius && c != center);
             }
             (aim, target, hint, hintColor) = AimPreview(unit, aiming, origin);
         }

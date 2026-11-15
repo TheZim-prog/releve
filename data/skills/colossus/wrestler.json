@@ -17,5 +17,23 @@
     "id": "dismantle", "name": "Démontage",
     "weight": "light", "range": 1, "minDamage": 6, "maxDamage": 9, "cooldownMs": 10000,
     "vsRobots": { "statusDurationPercent": 100, "minDamage": 14, "maxDamage": 18, "effects": [ { "status": "stunned", "durationMs": 2000 } ] }
+  },
+  {
+    // Variante de la Projection : la cible est jetée derrière lui.
+    "id": "reversal", "name": "Renversement",
+    "weight": "light", "range": 1, "minDamage": 9, "maxDamage": 13, "cooldownMs": 10000,
+    "forcedMove": { "type": "throw", "distance": 3, "collisionMinDamage": 7, "collisionMaxDamage": 11 }
+  },
+  {
+    // Lance un allié debout au contact sur une case libre (5 cases au plus) ; l'allié garde sa jauge.
+    "id": "catapult", "name": "Catapulte",
+    "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "forcedMove": { "type": "place", "distance": 5 }
+  },
+  {
+    // Variante de la Catapulte : moins loin, mais l'allié blesse les ennemis autour de son atterrissage.
+    "id": "cannonball", "name": "Boulet",
+    "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "forcedMove": { "type": "place", "distance": 3, "impactMinDamage": 10, "impactMaxDamage": 14 }
   }
 ]

@@ -26,5 +26,23 @@ public readonly record struct Cell(int X, int Y)
         return aligned && this != other ? (Math.Sign(dx), Math.Sign(dy)) : null;
     }
 
+    /// <summary>
+    /// Celle des 8 directions qui pointe le mieux vers <paramref name="other"/>, alignée ou non (pour pousser une unité
+    /// « loin de soi ») ; <c>null</c> si c'est la même case. Droite quand un axe domine nettement (plus de 12/5 de
+    /// l'autre, soit un angle de moins de 22,5° environ), diagonale sinon.
+    /// </summary>
+    public (int X, int Y)? NearestDirectionTo(Cell other)
+    {
+        int dx = other.X - X, dy = other.Y - Y;
+        if (this == other)
+            return null;
+        int ax = Math.Abs(dx), ay = Math.Abs(dy);
+        if (5 * ax > 12 * ay)
+            return (Math.Sign(dx), 0);
+        if (5 * ay > 12 * ax)
+            return (0, Math.Sign(dy));
+        return (Math.Sign(dx), Math.Sign(dy));
+    }
+
     public override string ToString() => $"({X},{Y})";
 }

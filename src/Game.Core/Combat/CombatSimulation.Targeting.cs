@@ -95,6 +95,9 @@ public sealed partial class CombatSimulation
             return (null, RejectionReason.NoEffect);
         if (IsImmune(skill, target))
             return (null, RejectionReason.NoEffect);
+        // Un gadget ne se lance pas et ne change pas de place : le déplacement d'un allié vaut pour un équipier.
+        if (skill.Target == SkillTargeting.Ally && skill.ForcedMove is not null && target.SummonedBy is not null)
+            return (null, RejectionReason.InvalidTarget);
         // On ne domine pas un allié (une unité confuse pourrait le viser).
         if (target.Team == unit.Team && skill.Effects.Any(e => e.Status == StatusKind.Dominated))
             return (null, RejectionReason.InvalidTarget);
@@ -146,7 +149,7 @@ public sealed partial class CombatSimulation
         destination != target.Position
         && destination != casterPosition
         && target.Position.DistanceTo(destination) <= distance
-        && (UnitAt(destination) is null || UnitAt(destination) == caster)
+        && IsFreeFor(caster, destination)
         && LineOfSight.IsClear(_grid, target.Position, destination);
 
     /// <summary>
@@ -166,109 +169,19 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Mouvements spéciaux, depuis <paramref name="position"/>. <see cref="PlannedAction.Destination"/> : où finit le
-    /// lanceur. Percée : <see cref="PlannedAction.Zone"/> = la course (arrivée comprise). Saut : la zone autour de
-    /// l'atterrissage. Charge : <see cref="PlannedAction.Target"/> = l'unité percutée.
-    /// </summary>
-    private (PlannedAction? Action, RejectionReason? Reason) PlanSelfMove(
-        Unit unit, Cell position, SkillDefinition skill, SkillUse use, SelfMoveType selfMove)
-    {
-        switch (selfMove)
-        {
-            case SelfMoveType.Pierce:
-            {
-                if (use.Cell is not { } aim || use.Target is not null || position.DirectionTo(aim) is not { } step)
-                    return (null, RejectionReason.InvalidTarget);
-                // Course à travers les unités (les civils traversés ne sont pas touchés), arrêtée par les murs et les
-                // obstacles bas (sans coupe d'angle par le décor).
-                var course = new List<Cell>();
-                var previous = position;
-                for (var i = 0; i < skill.Range; i++)
-                {
-                    var next = new Cell(previous.X + step.X, previous.Y + step.Y);
-                    if (!_grid.CanStep(previous, next))
-                        break;
-                    course.Add(next);
-                    previous = next;
-                }
-                // Arrivée : la dernière case libre de la course.
-                var end = course.FindLastIndex(c => UnitAt(c) is not { } occupant || occupant == unit);
-                if (end < 0)
-                    return (null, RejectionReason.Unreachable);
-                return (new PlannedAction(skill, null, course.GetRange(0, end + 1), course[end]), null);
-            }
-
-            case SelfMoveType.Leap:
-            {
-                if (use.Cell is not { } landing || use.Target is not null)
-                    return (null, RejectionReason.InvalidTarget);
-                if (!IsWithinRange(position, landing, skill.Range))
-                    return (null, RejectionReason.OutOfRange);
-                if (!_grid.IsWalkable(landing) || (UnitAt(landing) is { } occupant && occupant != unit))
-                    return (null, RejectionReason.InvalidDestination);
-                // Par-dessus les unités et les obstacles bas, pas les murs.
-                if (!LineOfSight.IsClear(_grid, position, landing))
-                    return (null, RejectionReason.NoLineOfSight);
-                var zone = skill.Zone!.Cells(_grid, landing, landing);
-                return zone is null
-                    ? (null, RejectionReason.InvalidTarget)
-                    : (new PlannedAction(skill, null, zone, landing), null);
-            }
-
-            case SelfMoveType.Rush:
-            {
-                if (use.Target is not { } targetId || use.Cell is not null || FindUnit(targetId) is not { } target
-                    || target.Status != UnitStatus.Active || !IsRightSide(unit, target, skill)
-                    || position.DirectionTo(target.Position) is not { } step)
-                    return (null, RejectionReason.InvalidTarget);
-                if (!IsWithinRange(position, target.Position, skill.Range))
-                    return (null, RejectionReason.OutOfRange);
-
-                // Fonce jusqu'à la première unité debout de la ligne, par-dessus les unités à terre et les civils ; le
-                // décor (ou un coin bouché) l'arrête sans qu'il touche personne. Il finit sur la dernière case libre de
-                // sa course ; si elle n'est pas au contact de l'unité (une case occupée juste devant), il ne la frappe pas.
-                Unit? struck = null;
-                var lastFree = position;
-                var previous = position;
-                for (var i = 0; i < skill.Range; i++)
-                {
-                    var next = new Cell(previous.X + step.X, previous.Y + step.Y);
-                    if (!CanStepIgnoringDestination(unit, previous, next, downedBlockCorners: false))
-                        break;
-                    if (UnitAt(next) is { } other && other != unit)
-                    {
-                        if (other.Status == UnitStatus.Active && !other.IsCivilian)
-                        {
-                            if (lastFree == previous)
-                                struck = other;
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        lastFree = next;
-                    }
-                    previous = next;
-                }
-                return (new PlannedAction(skill, struck, null, lastFree), null);
-            }
-
-            default:
-                throw new InvalidOperationException($"Unknown self move {selfMove}.");
-        }
-    }
-
-    /// <summary>
-    /// Sauvetage, depuis <paramref name="position"/> : un allié <b>à terre</b> (ou un civil debout) à <see cref="SkillDefinition.Range"/> pas au
+    /// Sauvetage, depuis <paramref name="position"/> : un allié <b>à terre</b> (ou un civil debout ; pour un transport,
+    /// un allié <b>debout</b>, pas un gadget) à <see cref="SkillDefinition.Range"/> pas au
     /// plus, à pied (chemin réel jusqu'à son contact, sans coupe d'angle) ; une case de dépôt libre, autre que celle du
     /// lanceur, au plus à <see cref="SkillDefinition.RescueDropRadius"/> et en vue ; et une case d'arrivée pour le lanceur
     /// (<see cref="RescuerEnd"/>).
     /// </summary>
     private (PlannedAction? Action, RejectionReason? Reason) PlanRescue(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
     {
-        // Un allié à terre, ou un civil (debout : à 0 PV, il est perdu).
+        // Un allié à terre, ou un civil (debout : à 0 PV, il est perdu) ; pour un transport, un allié debout.
         if (use.Target is not { } allyId || use.Cell is not { } drop || FindUnit(allyId) is not { } ally || ally == unit
-            || !(ally.IsCivilian ? ally.Status == UnitStatus.Active : ally.Team == unit.Team && ally.Status == UnitStatus.Downed))
+            || !(skill.CarriesStandingAlly ? ally.IsStandingCombatant && ally.Team == unit.Team
+                : ally.IsCivilian ? ally.Status == UnitStatus.Active
+                : ally.Team == unit.Team && ally.Status == UnitStatus.Downed))
             return (null, RejectionReason.InvalidTarget);
 
         // Range pas jusqu'à l'allié : Range - 1 jusqu'à une case à son contact, puis le dernier pas sur lui.

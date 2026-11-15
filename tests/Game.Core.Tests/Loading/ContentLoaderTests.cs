@@ -96,16 +96,16 @@ public sealed class ContentLoaderTests : IDisposable
     public void ASkillAddedToTheLibrary_MustLeaveThePlannedListOfItsTree()
     {
         CopyOfTheRealData();
-        // « catapult » est codée (ici : un coup quelconque), mais l'arbre du colosse la dit encore « à venir ».
+        // « fortress » est codée (ici : un coup quelconque), mais l'arbre du colosse la dit encore « à venir ».
         Rewrite("skills/colossus/wrestler.json", "\n]", """
             ,
-              { "id": "catapult", "name": "Catapulte", "weight": "light", "range": 1, "minDamage": 3, "maxDamage": 4, "cooldownMs": 0 }
+              { "id": "fortress", "name": "Forteresse", "weight": "heavy", "range": 1, "minDamage": 3, "maxDamage": 4, "cooldownMs": 0 }
             ]
             """);
 
-        Assert.Contains("catapult", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
+        Assert.Contains("fortress", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
 
-        Rewrite("trees/colossus.json", "    \"catapult\": \"Catapulte\",\n", "");
-        Assert.True(GameContent.Load(_directory).Skills.ContainsKey("catapult"));
+        Rewrite("trees/colossus.json", "    \"fortress\": \"Forteresse\",\n", "");
+        Assert.True(GameContent.Load(_directory).Skills.ContainsKey("fortress"));
     }
 }

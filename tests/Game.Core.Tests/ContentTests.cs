@@ -59,7 +59,7 @@ public class ContentTests
         Assert.True(Skills["flash-rescue"].IsRescue);
         Assert.All(new[] { "paralysis", "confusion", "domination" }, id => Assert.True(Skills[id].IsMental));
         Assert.Equal(SelfMoveType.Leap, Skills["leap"].SelfMove);
-        Assert.Equal(SelfMoveType.Rush, Skills["charge"].SelfMove);
+        Assert.Equal(SelfMoveType.Charge, Skills["charge"].SelfMove);
         Assert.Equal(ForcedMoveType.Place, Skills["telekinesis"].ForcedMove!.Type);
         Assert.Equal(SkillTargeting.Self, Skills["energy-form"].Target);
         Assert.Equal(SkillTargeting.Ally, Skills["tactical-order"].Target);

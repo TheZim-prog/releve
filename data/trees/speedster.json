@@ -30,16 +30,9 @@
     }
   ],
   "planned": {
-    "slalom": "Slalom",
-    "round-trip": "Aller-retour",
-    "running-strike": "Coup d'élan",
     "chain-strike": "Frappe en chaîne",
     "ricochet": "Ricochet",
     "express-revive": "Réanimation express",
-    "clearance": "Dégagement",
-    "trip": "Croche-pied",
-    "carry": "Transport",
-    "swap": "Permutation",
     "wind-wall": "Mur de vent",
     "afterimage": "Image rémanente",
     "rigged-decoy": "Leurre piégé",

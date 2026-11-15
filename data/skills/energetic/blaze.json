@@ -23,5 +23,26 @@
     "id": "discharge", "name": "Décharge",
     "weight": "light", "range": 1, "minDamage": 13, "maxDamage": 17, "cooldownMs": 12000,
     "effects": [ { "status": "stunned", "durationMs": 1500 } ]
+  },
+  {
+    // Variante de la Nova : moins de dégâts, mais tout ce qu'elle touche est repoussé d'une case.
+    "id": "recoil-wave", "name": "Onde de recul",
+    "weight": "light", "range": 0, "minDamage": 5, "maxDamage": 7, "cooldownMs": 8000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "forcedMove": { "type": "push", "distance": 1, "collisionMinDamage": 4, "collisionMaxDamage": 6 }
+  },
+  {
+    // Se propulse sur une case libre ; l'explosion frappe autour de sa case de départ.
+    "id": "propulsion", "name": "Propulsion",
+    "weight": "light", "range": 4, "minDamage": 9, "maxDamage": 12, "cooldownMs": 10000,
+    "selfMove": "leap", "selfMoveOptions": { "zoneAtStart": true },
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
+  },
+  {
+    // Variante de la Propulsion : l'explosion a lieu à l'arrivée.
+    "id": "comet", "name": "Comète",
+    "weight": "light", "range": 4, "minDamage": 9, "maxDamage": 12, "cooldownMs": 10000,
+    "selfMove": "leap",
+    "zone": { "shape": "square", "size": 1, "throughWalls": false }
   }
 ]

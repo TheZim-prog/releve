@@ -12,10 +12,10 @@ public enum AimKind
     /// <summary>Une case (zone, Percée, Saut, gadget).</summary>
     Cell,
 
-    /// <summary>Une unité (attaque ciblée, soutien, Charge, relever).</summary>
+    /// <summary>Une unité (attaque ciblée, soutien, Charge, Ruée, Bond, permutation, relever).</summary>
     Unit,
 
-    /// <summary>Une unité, puis une case (télékinésie, sauvetage).</summary>
+    /// <summary>Une unité, puis une case (télékinésie, lancer d'un allié, sauvetage, transport, Retraite).</summary>
     UnitThenCell,
 }
 
@@ -29,8 +29,8 @@ public sealed record Aiming(SkillDefinition? Skill, InteractionKind? Interaction
     {
         null => AimKind.Unit, // relever
         { Target: SkillTargeting.Self } => AimKind.Self,
-        { IsRescue: true } or { ForcedMove.Type: ForcedMoveType.Place } => AimKind.UnitThenCell,
-        { SelfMove: SelfMoveType.Rush } => AimKind.Unit,
+        { IsRescue: true } or { ForcedMove.Type: ForcedMoveType.Place } or { SelfMove: SelfMoveType.Retreat } => AimKind.UnitThenCell,
+        { SelfMove: SelfMoveType.Charge or SelfMoveType.Dash or SelfMoveType.Pounce } => AimKind.Unit,
         { SelfMove: not null } or { Summon: not null } or { Zone: not null } => AimKind.Cell,
         _ => AimKind.Unit,
     };

@@ -1,61 +1,17 @@
 using Game.Core.Combat;
 using Game.Core.Grids;
 using Game.Core.Network;
+using static Game.Core.Tests.ContentTestKit;
 
 namespace Game.Core.Tests;
 
 /// <summary>
 /// Les compétences des arbres ajoutées au contenu réel. Elles n'ont pas de code à elles : ces tests vérifient que
 /// leurs données font ce que le document de conception décrit (qui elles touchent, quel état elles posent).
-/// Les unités sont montées ici, sans points de stats : rien ne dépend des héros d'essai de data/heroes/trial.json,
-/// qui sont faits pour être modifiés.
+/// (Celles qui déplacent quelqu'un : <see cref="MoveContentTests"/>.)
 /// </summary>
 public class TrialContentTests
 {
-    private static readonly GameContent Content = GameContent.Load(Path.Combine(AppContext.BaseDirectory, "data"));
-    private static readonly CombatRules Rules = Content.Rules;
-
-    /// <summary>
-    /// Un combat sur un terrain vide. L'unité 1 est le lanceur : un archétype de héros (équipe 0) avec la compétence
-    /// essayée, jauge pleine. Les autres sont des unités du contenu, immobiles et sans IA.
-    /// </summary>
-    private static CombatSimulation Combat(string caster, string skill, (int X, int Y) at, params (string Unit, int Team, int X, int Y)[] others) =>
-        Combat(withAi: false, caster, skill, at, others);
-
-    /// <summary>Le même combat, où les autres unités gardent leur IA (une provocation n'a d'effet que sur une IA).</summary>
-    private static CombatSimulation CombatAgainstAi(string caster, string skill, (int X, int Y) at, params (string Unit, int Team, int X, int Y)[] others) =>
-        Combat(withAi: true, caster, skill, at, others);
-
-    private static CombatSimulation Combat(bool withAi, string caster, string skill, (int X, int Y) at, (string Unit, int Team, int X, int Y)[] others)
-    {
-        var archetype = Content.Units[caster];
-        var hero = archetype with { Skills = archetype.Skills.Append(Content.Skills[skill]).ToList() };
-        var units = new List<UnitSetup> { hero.ToSetup(new UnitId(1), 0, new Cell(at.X, at.Y), Rules.GaugeCapacity) };
-        units.AddRange(others.Select((o, i) =>
-            (withAi ? Content.Units[o.Unit] : Content.Units[o.Unit] with { Behavior = null }).ToSetup(new UnitId(i + 2), o.Team, new Cell(o.X, o.Y))));
-        return new CombatSimulation(new CombatSetup(Rules, new Grid(9, 5), units, Seed: 1));
-    }
-
-    /// <summary>Le lanceur utilise sa compétence ; les événements jusqu'à son effet (attaque chargée comprise).</summary>
-    private static IReadOnlyList<CombatEvent> Use(CombatSimulation sim, string skill, int? target = null, (int X, int Y)? cell = null)
-    {
-        var use = new SkillUse(skill, target is { } t ? new UnitId(t) : null, cell is { } c ? new Cell(c.X, c.Y) : null);
-        sim.Submit(new ActivateCommand(new UnitId(1), null, use));
-        var events = sim.Tick().ToList();
-        Assert.DoesNotContain(events, e => e is CommandRejected);
-        while (sim.FindUnit(new UnitId(1))!.Charge is not null)
-            events.AddRange(sim.Tick());
-        return events;
-    }
-
-    private static int[] Affected(IEnumerable<CombatEvent> events, StatusKind status) =>
-        events.OfType<StatusApplied>().Where(e => e.Status == status).Select(e => e.Unit.Value).Order().ToArray();
-
-    private static int[] Damaged(IEnumerable<CombatEvent> events) =>
-        events.OfType<UnitDamaged>().Select(e => e.Unit.Value).Order().ToArray();
-
-    private static int Ticks(int milliseconds) => Rules.MillisecondsToTicks(milliseconds);
-
     [Fact]
     public void TheTrialScenario_PlaysToTheEnd()
     {
@@ -93,7 +49,7 @@ public class TrialContentTests
     public void ATargetedSkill_HitsItsTargetAtItsFullRange_WithItsStatus(string caster, string skillId, int range, StatusKind? status)
     {
         var skill = Content.Skills[skillId];
-        var sim = Combat(caster, skillId, (0, 2), ("brute", 1, range, 2));
+        var sim = Fight(caster, skillId, (0, 2), ("brute", 1, range, 2));
 
         var events = Use(sim, skillId, target: 2);
 
@@ -110,7 +66,7 @@ public class TrialContentTests
     public void AnEnemiesOnlyZone_SparesTheAlliesInIt(string caster, string skillId, StatusKind status, bool dealsDamage)
     {
         // Le lanceur en (1,2), un allié (unité 2) et un ennemi (unité 3) à son contact, un ennemi (unité 4) loin.
-        var sim = Combat(caster, skillId, (1, 2), ("fighter", 0, 2, 2), ("brute", 1, 1, 1), ("brute", 1, 8, 4));
+        var sim = Fight(caster, skillId, (1, 2), ("fighter", 0, 2, 2), ("brute", 1, 1, 1), ("brute", 1, 8, 4));
         var onSelf = Content.Skills[skillId].Range == 0;
 
         var events = Use(sim, skillId, cell: onSelf ? (1, 2) : (1, 1));
@@ -122,7 +78,7 @@ public class TrialContentTests
     [Fact]
     public void ControlledBlast_IsChargedAndSparesTheAlliesInItsZone()
     {
-        var sim = Combat("energetic", "controlled-blast", (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 5, 2));
+        var sim = Fight("energetic", "controlled-blast", (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 5, 2));
 
         var events = Use(sim, "controlled-blast", cell: (5, 2));
 
@@ -136,7 +92,7 @@ public class TrialContentTests
     [InlineData("energetic", "absolute-zero", 3, 2, StatusKind.Stunned)] // grande zone chargée, centrée à distance
     public void ASquareZone_HitsEveryoneInIt_AlliesIncluded(string caster, string skillId, int centerX, int centerY, StatusKind status)
     {
-        var sim = Combat(caster, skillId, (1, 2),
+        var sim = Fight(caster, skillId, (1, 2),
             ("fighter", 0, centerX + 1, centerY), ("brute", 1, centerX, centerY - 1), ("brute", 1, 8, 4));
 
         var events = Use(sim, skillId, cell: (centerX, centerY));
@@ -151,7 +107,7 @@ public class TrialContentTests
     public void ALine_HitsTheEnemiesItCrosses_UpToItsLength_NotTheAllies(string caster, string skillId, int length, StatusKind? status)
     {
         // Sur la ligne : un allié juste devant, un ennemi au bout de la ligne, un ennemi une case trop loin.
-        var sim = Combat(caster, skillId, (0, 2), ("fighter", 0, 1, 2), ("brute", 1, length, 2), ("brute", 1, length + 1, 2));
+        var sim = Fight(caster, skillId, (0, 2), ("fighter", 0, 1, 2), ("brute", 1, length, 2), ("brute", 1, length + 1, 2));
 
         var events = Use(sim, skillId, cell: (1, 2));
 
@@ -162,7 +118,7 @@ public class TrialContentTests
     [Fact]
     public void Disarm_LeavesItsTargetWithItsBasicAttackOnly_AndDoesNoDamage()
     {
-        var sim = Combat("fighter", "disarm", (0, 2), ("gunner", 1, 1, 2));
+        var sim = Fight("fighter", "disarm", (0, 2), ("gunner", 1, 1, 2));
 
         var events = Use(sim, "disarm", target: 2);
 
@@ -198,7 +154,7 @@ public class TrialContentTests
     [InlineData("focus", StatusKind.Empowered)]
     public void TheTelepath_StrengthensAnAlly(string skillId, StatusKind status)
     {
-        var sim = Combat("telepath", skillId, (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 6, 2));
+        var sim = Fight("telepath", skillId, (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 6, 2));
 
         var events = Use(sim, skillId, target: 2);
 
@@ -211,7 +167,7 @@ public class TrialContentTests
     public void CollectiveSurge_HastensTheAlliesAround_NotTheSpeedsterNorTheEnemies()
     {
         // Un allié à 2 cases (dans la zone), un allié à 5 cases (hors zone), un ennemi au contact.
-        var sim = Combat("speedster", "collective-surge", (2, 2), ("fighter", 0, 4, 2), ("tech", 0, 7, 2), ("brute", 1, 1, 2));
+        var sim = Fight("speedster", "collective-surge", (2, 2), ("fighter", 0, 4, 2), ("tech", 0, 7, 2), ("brute", 1, 1, 2));
 
         var events = Use(sim, "collective-surge", cell: (2, 2));
 
@@ -222,7 +178,7 @@ public class TrialContentTests
     [Fact]
     public void DesignationShot_ExposesItsTarget_ForFourSeconds()
     {
-        var sim = Combat("tech", "designation-shot", (0, 2), ("brute", 1, 4, 2));
+        var sim = Fight("tech", "designation-shot", (0, 2), ("brute", 1, 4, 2));
 
         var exposed = Use(sim, "designation-shot", target: 2).OfType<StatusApplied>().Single();
 
@@ -252,12 +208,12 @@ public class TrialContentTests
     [Fact]
     public void Jamming_TakesGaugeFromItsTarget_AndInterferenceFromTheEnemiesOfASmallZone()
     {
-        var jamming = Combat("tech", "jamming", (0, 2), ("brute", 1, 5, 2));
+        var jamming = Fight("tech", "jamming", (0, 2), ("brute", 1, 5, 2));
         jamming.FindUnit(new UnitId(2))!.Gauge = Rules.GaugeCapacity;
         var one = Use(jamming, "jamming", target: 2).OfType<GaugeLost>().Single();
 
         // Un allié (unité 2) et un ennemi (unité 3) dans la zone, un ennemi (unité 4) hors de la zone.
-        var interference = Combat("tech", "interference", (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 5, 2), ("brute", 1, 8, 4));
+        var interference = Fight("tech", "interference", (0, 2), ("fighter", 0, 4, 2), ("brute", 1, 5, 2), ("brute", 1, 8, 4));
         foreach (var unit in interference.Units)
             unit.Gauge = Rules.GaugeCapacity;
         var several = Use(interference, "interference", cell: (5, 2)).OfType<GaugeLost>().ToList();
@@ -281,7 +237,7 @@ public class TrialContentTests
     public void Provocation_HitsAndTauntsTheEnemiesAround_ForTheirNextActivation()
     {
         // Un allié (unité 2) et un ennemi (unité 3) à 2 cases du colosse, un ennemi (unité 4) trop loin.
-        var sim = CombatAgainstAi("colossus", "provocation", (2, 2), ("fighter", 0, 4, 2), ("brute", 1, 2, 0), ("brute", 1, 7, 2));
+        var sim = FightAgainstAi("colossus", "provocation", (2, 2), ("fighter", 0, 4, 2), ("brute", 1, 2, 0), ("brute", 1, 7, 2));
 
         var events = Use(sim, "provocation", cell: (2, 2));
 
@@ -292,7 +248,7 @@ public class TrialContentTests
     [Fact]
     public void Challenge_TauntsOneEnemyFromAfar_ForTwoActivations_WithoutDamage()
     {
-        var sim = CombatAgainstAi("colossus", "challenge", (0, 2), ("brute", 1, 5, 2));
+        var sim = FightAgainstAi("colossus", "challenge", (0, 2), ("brute", 1, 5, 2));
 
         var events = Use(sim, "challenge", target: 2);
 
@@ -304,8 +260,8 @@ public class TrialContentTests
     public void SteelSkin_GivesTheColossusHalfHisCurrentHp_AndAegisGivesThemToAnAdjacentAlly()
     {
         var hp = Content.Units["colossus"].MaxHp;
-        var onSelf = Use(Combat("colossus", "steel-skin", (0, 2), ("brute", 1, 6, 2)), "steel-skin");
-        var onAlly = Use(Combat("colossus", "aegis", (0, 2), ("fighter", 0, 1, 2), ("brute", 1, 6, 2)), "aegis", target: 2);
+        var onSelf = Use(Fight("colossus", "steel-skin", (0, 2), ("brute", 1, 6, 2)), "steel-skin");
+        var onAlly = Use(Fight("colossus", "aegis", (0, 2), ("fighter", 0, 1, 2), ("brute", 1, 6, 2)), "aegis", target: 2);
 
         Assert.Equal((new UnitId(1), hp / 2), (onSelf.OfType<TempHpGained>().Single().Unit, onSelf.OfType<TempHpGained>().Single().Amount));
         Assert.Equal((new UnitId(2), hp / 2), (onAlly.OfType<TempHpGained>().Single().Unit, onAlly.OfType<TempHpGained>().Single().Amount));
