@@ -40,6 +40,8 @@ public class CombatRulesTests
           "slipstreamGaugeGainPercent": 5,
           "auraRange": 2,
           "commandFillPercent": 115,
+          "overclockingFillPercent": 130,
+          "doubleDeploymentCount": 2,
           "jammingFieldFillPercent": 85,
           "intentionThresholdPercent": 50,
           "reviveHpPercent": 25,

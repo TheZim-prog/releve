@@ -195,8 +195,7 @@ public sealed partial class CombatSimulation
         if (CheckTarget(unit, position, target, skill) is { } reason)
             return (null, reason);
         var end = use.Cell!.Value;
-        if (end == position
-            || Pathfinder.FindPath(_grid, position, end, skill.MoveOptions.RetreatDistance, cell => OccupantFor(unit, cell)) is null)
+        if (WalkTo(unit, position, end, skill.MoveOptions.RetreatDistance) is null)
             return (null, RejectionReason.InvalidDestination);
         return (new PlannedAction(skill, target, null, end), null);
     }
@@ -221,18 +220,38 @@ public sealed partial class CombatSimulation
     private List<Cell> ChargeCourse(Unit caster, Cell start, Cell destination)
     {
         var step = start.DirectionTo(destination)!.Value;
+        var line = new List<Cell>();
+        for (var cell = start; cell != destination; cell = line[^1])
+            line.Add(new Cell(cell.X + step.X, cell.Y + step.Y));
+        return CourseUntilHalt(caster, start, line);
+    }
+
+    /// <summary>
+    /// Une course au sol, coupée à la première case libre dont le sol arrête l'unité (piège, sol qui fige) ; par-dessus
+    /// une unité à terre ou un civil, elle ne touche pas le sol.
+    /// </summary>
+    private List<Cell> CourseUntilHalt(Unit unit, Cell start, IReadOnlyList<Cell> cells)
+    {
         var course = new List<Cell>();
-        for (var cell = start; cell != destination;)
+        var previous = start;
+        foreach (var next in cells)
         {
-            var next = new Cell(cell.X + step.X, cell.Y + step.Y);
             course.Add(next);
-            // Par-dessus une unité à terre ou un civil, il ne touche pas le sol.
-            if (IsFreeFor(caster, next) && GroundHalts(caster, cell, next))
+            if (IsFreeFor(unit, next) && GroundHalts(unit, previous, next))
                 break;
-            cell = next;
+            previous = next;
         }
         return course;
     }
+
+    /// <summary>
+    /// Chemin à pied (règles d'un déplacement) de <paramref name="from"/> à une autre case, en <paramref name="steps"/>
+    /// pas au plus, ou <c>null</c>. <paramref name="yielding"/> : une unité qui cèdera sa case (un gadget remplacé).
+    /// </summary>
+    private IReadOnlyList<Cell>? WalkTo(Unit unit, Cell from, Cell to, int steps, Unit? yielding = null) =>
+        to == from ? null
+        : Pathfinder.FindPath(_grid, from, to, steps,
+            cell => yielding is not null && cell == yielding.Position ? Occupant.None : OccupantFor(unit, cell));
 
     /// <summary>
     /// Mouvement spécial planifié par <see cref="PlanSelfMove"/> (sans attaque d'opportunité) :

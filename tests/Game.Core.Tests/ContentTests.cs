@@ -101,7 +101,11 @@ public class ContentTests
     {
         var enemies = new[] { "brawler", "brute", "gunner", "kingpin" };
 
-        Assert.Equal(enemies, Units.Values.Where(u => u.Behavior is Behaviors.Basic or Behaviors.Gunner && u.Mobility > 0).Select(u => u.Id).Order());
+        // Les unités mobiles commandées par l'IA, sauf les gadgets que posent les compétences (le drone).
+        var summoned = Skills.Values.Select(s => s.Summon?.Id).OfType<string>().ToHashSet();
+        Assert.Equal(enemies, Units.Values
+            .Where(u => u.Behavior is Behaviors.Basic or Behaviors.Gunner && u.Mobility > 0 && !summoned.Contains(u.Id))
+            .Select(u => u.Id).Order());
         Assert.All(enemies, id =>
         {
             var enemy = Units[id];

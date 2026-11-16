@@ -88,6 +88,12 @@ public enum PassiveKind
 
     /// <summary>Coup d'arrêt : ses attaques d'opportunité qui touchent arrêtent net le déplacement de la cible.</summary>
     StoppingBlow,
+
+    /// <summary>Surcadençage (tech) : ses gadgets remplissent leur jauge plus vite (<see cref="CombatRules.OverclockingFillPercent"/>), tant qu'il est debout.</summary>
+    Overclocking,
+
+    /// <summary>Double déploiement (tech) : il peut avoir plusieurs gadgets du même type à la fois (<see cref="CombatRules.DoubleDeploymentCount"/>).</summary>
+    DoubleDeployment,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

@@ -1,4 +1,5 @@
-// Gadgets posés par des compétences (ex. skills/tech/engineer.json) : immobiles, ils agissent seuls avec leur jauge.
+// Gadgets posés par des compétences (ex. skills/tech/engineer.json) : ils agissent seuls avec leur jauge (le drone se
+// déplace, les autres sont immobiles ; les leurres n'agissent pas).
 [
   {
     "id": "turret", "name": "Tourelle",
@@ -23,5 +24,50 @@
     "behavior": "beacon",
     "maxActivations": 3,
     "skills": ["shield-pulse"]
+  },
+  {
+    // Variante de la tourelle : des tirs plus faibles, qui ralentissent.
+    "id": "suppression-turret", "name": "Tourelle de suppression",
+    "maxHp": 30, "initiative": 80, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "basic",
+    "skills": ["suppressive-burst"]
+  },
+  {
+    // Drone mobile : il se déplace et attaque tout seul (sans attaque d'opportunité).
+    "id": "combat-drone", "name": "Drone de combat",
+    "maxHp": 35, "initiative": 75, "mobility": 4,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "basic",
+    "skills": ["drone-shot"]
+  },
+  {
+    // Sphère d'énergie de l'énergétique : explose autour d'elle quand un ennemi y est, 3 fois, puis disparaît.
+    "id": "star", "name": "Astre",
+    "maxHp": 25, "initiative": 150, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "beacon",
+    "maxActivations": 3,
+    "skills": ["star-burst"]
+  },
+  {
+    // Leurre du speedster : n'agit pas ; à son apparition, les ennemis à 3 cases le visent pour leur prochaine action.
+    // Un coup suffit à le faire disparaître.
+    "id": "afterimage", "name": "Image rémanente",
+    "maxHp": 1, "initiative": 1, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "inert",
+    "lure": { "range": 3, "actions": 1 },
+    "skills": []
+  },
+  {
+    // Variante : le même leurre, qui explose quand il est frappé (petits dégâts aux ennemis à son contact).
+    "id": "rigged-decoy", "name": "Leurre piégé",
+    "maxHp": 1, "initiative": 1, "mobility": 0,
+    "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0,
+    "behavior": "inert",
+    "lure": { "range": 3, "actions": 1 },
+    "defeatBlast": { "minDamage": 6, "maxDamage": 9 },
+    "skills": []
   }
 ]

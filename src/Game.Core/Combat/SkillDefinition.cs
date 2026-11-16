@@ -127,7 +127,7 @@ public sealed record SkillDefinition
     /// <summary>
     /// Le lanceur se déplace en l'utilisant (mouvement spécial, sauvetage, permutation) : impossible quand il est immobilisé.
     /// </summary>
-    public bool MovesCaster => SelfMove is not null || IsRescue || ForcedMove?.Type == ForcedMoveType.Swap;
+    public bool MovesCaster => SelfMove is not null || IsRescue || ForcedMove?.Type == ForcedMoveType.Swap || SummonLeftBehind;
 
     /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
     public bool IsMental { get; init; }
@@ -155,6 +155,12 @@ public sealed record SkillDefinition
     /// de ce type, de l'équipe du lanceur. Elle remplace celle du même type déjà posée par le même lanceur.
     /// </summary>
     public UnitDefinition? Summon { get; init; }
+
+    /// <summary>
+    /// L'invocation est laissée derrière soi (ex. Image rémanente) : la case visée est celle où le lanceur va, à pied
+    /// (<see cref="Range"/> pas au plus, sans attaque d'opportunité) ; l'unité apparaît sur la case qu'il quitte.
+    /// </summary>
+    public bool SummonLeftBehind { get; init; }
 
     /// <summary>
     /// Dôme : au lieu de frapper, la compétence (zone carrée) pose un dôme sur ses cases. Il bloque la prochaine
@@ -296,7 +302,7 @@ public sealed record SkillDefinition
         if (FlankDamagePercent != 0 && (FlankDamagePercent is < 100 or > 1000 || Range != 1))
             throw new ArgumentException($"Skill '{Id}': a flank bonus is between 100 and 1000 %, on an attack at range 1.");
 
-        // Invocation : une case visée, rien d'autre ; l'unité posée est une unité IA immobile, sans attaque d'opportunité.
+        // Invocation : une case visée, rien d'autre ; l'unité posée agit seule (IA, immobile ou non), sans attaque d'opportunité.
         if (Summon is not null)
         {
             if (Zone is not null || IsCharged || DealsDamage || Heals || Effects.Count > 0 || GaugeGainPercent > 0
@@ -310,11 +316,13 @@ public sealed record SkillDefinition
             {
                 throw new ArgumentException($"Skill '{Id}': {e.Message}", e);
             }
-            if (Summon.Behavior is null || Summon.Mobility != 0 || Summon.BasicAttack is not null
-                || Summon.OnDefeat != DefeatOutcome.Removed)
+            if (Summon.Behavior is null || Summon.BasicAttack is not null || Summon.OnDefeat != DefeatOutcome.Removed)
                 throw new ArgumentException(
-                    $"Skill '{Id}': a summoned unit acts on its own, does not move, makes no opportunity attack and is removed when destroyed.");
+                    $"Skill '{Id}': a summoned unit acts on its own, makes no opportunity attack and is removed when destroyed.");
         }
+
+        if (SummonLeftBehind && Summon is null)
+            throw new ArgumentException($"Skill '{Id}': only a summon can be left behind.");
 
         // Pouvoirs mentaux : offensifs. La domination (un changement de camp) vise une seule unité.
         if (IsMental && !IsOffensive)

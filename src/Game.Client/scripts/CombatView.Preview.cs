@@ -61,9 +61,12 @@ public partial class CombatView
                 var (center, radius) = aiming.FirstTarget is { } first && _sim.FindUnit(first) is { } chosen
                     ? skill.ForcedMove is { } move ? (chosen.Position, move.Distance) : (origin, skill.RescueDropRadius ?? skill.Range)
                     : (origin, skill.Range);
-                // Le repli d'une Retraite se fait à pied : les cases où le héros peut vraiment aller.
-                range = aiming.FirstTarget is not null && skill.SelfMoveOptions is { RetreatDistance: > 0 } retreat
-                    ? _sim.WalkableCells(unit.Id, origin, retreat.RetreatDistance).Keys.Where(c => c != origin)
+                // Le repli d'une Retraite et la fuite d'une Image rémanente se font à pied : les cases où le héros peut aller.
+                int? walk = aiming.FirstTarget is not null && skill.SelfMoveOptions is { RetreatDistance: > 0 } retreat
+                    ? retreat.RetreatDistance
+                    : skill.SummonLeftBehind ? skill.Range : null;
+                range = walk is { } steps
+                    ? _sim.WalkableCells(unit.Id, origin, steps).Keys.Where(c => c != origin)
                     : Cells(c => c.DistanceTo(center) <= radius && c != center);
             }
             (aim, target, hint, hintColor) = AimPreview(unit, aiming, origin);

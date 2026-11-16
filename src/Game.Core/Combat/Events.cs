@@ -122,6 +122,9 @@ public sealed record TempHpGained(int Tick, UnitId Unit, int Amount, int EndTick
 /// <summary>Les PV temporaires de l'unité encaissent <paramref name="Amount"/> dégâts ; il lui en reste <paramref name="TempHpLeft"/>.</summary>
 public sealed record DamageAbsorbed(int Tick, UnitId Unit, int Amount, int TempHpLeft) : CombatEvent(Tick);
 
+/// <summary>L'unité détruite explose sur sa case (ex. Leurre piégé) ; les dégâts suivent.</summary>
+public sealed record UnitBlewUp(int Tick, UnitId Unit, Cell Cell) : CombatEvent(Tick);
+
 /// <summary>La chaîne de <paramref name="Caster"/> rebondit de <paramref name="From"/> sur <paramref name="To"/> (avant de la frapper).</summary>
 public sealed record ChainBounced(int Tick, UnitId Caster, UnitId From, UnitId To) : CombatEvent(Tick);
 

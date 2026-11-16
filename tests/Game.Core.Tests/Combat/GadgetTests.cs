@@ -220,7 +220,6 @@ public class GadgetTests
 
     [Theory]
     [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "summon": { "id": "g", "name": "G", "maxHp": 10, "initiative": 5, "mobility": 0, "onDefeat": "downed", "basicAttack": null, "opportunityAttacksPerCycle": 0, "behavior": "basic", "skills": [] } }""")]
-    [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "summon": { "id": "g", "name": "G", "maxHp": 10, "initiative": 5, "mobility": 2, "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0, "behavior": "basic", "skills": [] } }""")]
     [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0, "summon": { "id": "g", "name": "G", "maxHp": 10, "initiative": 5, "mobility": 0, "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0, "behavior": null, "skills": [] } }""")]
     [InlineData("""{ "id": "x", "weight": "light", "range": 3, "minDamage": 5, "maxDamage": 5, "cooldownMs": 0, "summon": { "id": "g", "name": "G", "maxHp": 10, "initiative": 5, "mobility": 0, "onDefeat": "removed", "basicAttack": null, "opportunityAttacksPerCycle": 0, "behavior": "basic", "skills": [] } }""")]
     [InlineData("""{ "id": "x", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "minHeal": 5, "maxHeal": 5, "cooldownMs": 0 }""")]

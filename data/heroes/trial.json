@@ -19,10 +19,11 @@
     "id": "trial-speedster", "archetype": "speedster", "level": 20,
     "points": { "hp": 4, "power": 3, "initiative": 12 },
     "learned": ["whirlwind", "harassment", "flash-rescue", "clearance", "carry", "slipstream", "collective-surge",
-                "breakthrough", "round-trip", "ignoresOpportunityAttacks", "chain-strike", "reflexes"],
+                "breakthrough", "round-trip", "ignoresOpportunityAttacks", "chain-strike", "reflexes", "afterimage"],
     // Mur de vent (variante de whirlwind ; remettre whirlwind pour dissiper le Fumigène du combattant).
     // Frappe en chaîne (variante : ricochet).
-    "equipped": ["chain-strike", "wind-wall", "clearance", "collective-surge"],
+    // Image rémanente (variante : rigged-decoy).
+    "equipped": ["chain-strike", "afterimage", "clearance", "collective-surge"],
     // Passif : Réflexes (autres : ignoresOpportunityAttacks, slipstream).
     "passive": "reflexes"
   },
@@ -45,24 +46,24 @@
     // Variantes à essayer : electric-arc (beam), controlled-blast (blast), discharge (melting-point), freeze (ice-shard).
     "id": "trial-energetic", "archetype": "energetic", "level": 20,
     "points": { "hp": 3, "power": 13, "initiative": 3 },
-    "learned": ["beam", "blast", "fire-lance", "piercing", "ice-shard", "ice-wall", "black-ice", "frost", "absolute-zero",
+    "learned": ["beam", "blast", "fire-lance", "piercing", "ice-shard", "ice-wall", "black-ice", "frost", "absolute-zero", "star",
                 "nova", "propulsion", "melting-point"],
     // Mur de glace (variante : ice-pillar) et Verglas (variante : frostbite).
     // Chaîne d'éclairs (variante de fire-lance).
-    "equipped": ["ice-wall", "black-ice", "chain-lightning", "absolute-zero"],
+    // Astre (le gros coup de la branche Feu ; absolute-zero, celui de la Glace, est aussi acheté).
+    "equipped": ["ice-wall", "black-ice", "chain-lightning", "star"],
     "passive": "piercing"
   },
   {
-    // Tacticien et Saboteur : Tir de désignation (variante : suppression-shot) et Électrochoc (variante : net).
-    // À essayer aussi : shield-beacon, variante de nano-heal. Passif : Champ de brouillage (autres : energyRecovery).
+    // Ingénieur complet : Drone de combat, Tourelle de suppression (variante de turret), Piège explosif (variante de
+    // trap), passif Surcadençage (autre : doubleDeployment). Et le Tir de couverture (variante : close-protection).
+    // À essayer aussi : shield-beacon (variante de nano-heal), designation-shot, electroshock.
     "id": "trial-tech", "archetype": "tech", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
-    "learned": ["turret", "nano-heal", "designation-shot", "covering-fire", "tactical-order", "tacticalAnalysis",
-                "electroshock", "jamming", "hacking", "jammingField", "emp", "energyRecovery", "trap"],
-    // Le Piège explosif (variante de trap, partagé avec le combattant).
-    // Tir de couverture (variante : close-protection).
-    "equipped": ["covering-fire", "explosive-trap", "designation-shot", "emp"],
-    "passive": "jammingField"
+    "learned": ["turret", "nano-heal", "trap", "overclocking", "combat-drone", "doubleDeployment",
+                "designation-shot", "covering-fire", "tactical-order", "electroshock", "jamming", "hacking"],
+    "equipped": ["combat-drone", "suppression-turret", "covering-fire", "explosive-trap"],
+    "passive": "overclocking"
   },
   {
     // Poussée (variante de telekinesis), les variantes de zone Torpeur (Paralysie) et Panique (Confusion), et l'Étau

@@ -17,5 +17,17 @@
     "id": "shield-beacon", "name": "Balise bouclier",
     "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
     "summon": "shield-beacon"
+  },
+  {
+    // Variante de la Tourelle : la tourelle posée tire moins fort, mais ralentit.
+    "id": "suppression-turret", "name": "Tourelle de suppression",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "summon": "suppression-turret"
+  },
+  {
+    // Déploie un drone mobile qui se déplace et attaque tout seul (un à la fois).
+    "id": "combat-drone", "name": "Drone de combat",
+    "weight": "heavy", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "summon": "combat-drone"
   }
 ]

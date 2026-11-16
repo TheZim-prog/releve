@@ -26,5 +26,18 @@
     "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
     "zone": { "shape": "square", "size": 1, "throughWalls": false },
     "ground": { "durationMs": 5000, "blocksShots": true }
+  },
+  {
+    // Laisse un leurre à sa place et file (4 pas, sans attaque d'opportunité) ; le leurre attire les ennemis proches.
+    "id": "afterimage", "name": "Image rémanente",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "summon": "afterimage", "summonLeftBehind": true
+  },
+  {
+    // Variante de l'Image rémanente : il pose le leurre sur une case voisine et reste où il est ; le leurre explose
+    // quand il est frappé.
+    "id": "rigged-decoy", "name": "Leurre piégé",
+    "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "summon": "rigged-decoy"
   }
 ]

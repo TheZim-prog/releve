@@ -265,7 +265,8 @@ public sealed partial class CombatSimulation
         }
 
         Execute(unit, actionSkill, action.Target, action.Zone, DamageFactorOf(unit), action.Destination, action.Origin, action.Chain);
-        SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
+        if (unit.Status == UnitStatus.Active) // tombée par une réaction à son action (riposte, explosion) : jauge gelée
+            SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
         AfterAction(unit);
     }
 

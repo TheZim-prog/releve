@@ -50,6 +50,12 @@ public sealed record UnitDefinition
     /// </summary>
     public PassiveKind? Passive { get; init; }
 
+    /// <summary>Leurre : à son apparition, il provoque les ennemis proches (une unité invoquée), ou <c>null</c>.</summary>
+    public LureDefinition? Lure { get; init; }
+
+    /// <summary>Explosion quand l'unité est détruite (ex. Leurre piégé), ou <c>null</c>.</summary>
+    public DefeatBlastDefinition? DefeatBlast { get; init; }
+
     /// <summary>Boss : ne peut pas être exécuté (ni, plus tard, dominé). Faux par défaut.</summary>
     public bool IsBoss { get; init; }
 
@@ -112,6 +118,16 @@ public sealed record UnitDefinition
                            || Initiative == 0 || Mobility == 0))
             throw new ArgumentException(
                 $"Unit '{Id}': a civilian flees ('{Behaviors.Flee}', so it can act and move), has no skill or opportunity attack, and is lost (removed) at 0 HP.");
+        Lure?.Validate(Id);
+        // Un leurre est un gadget : posé par une compétence, il agit seul et disparaît à 0 PV.
+        if (Lure is not null && (Behavior is null || OnDefeat != DefeatOutcome.Removed || BasicAttack is not null))
+            throw new ArgumentException($"Unit '{Id}': a lure is a gadget (AI, removed at 0 HP, no opportunity attack).");
+        // Une balise lance une zone autour d'elle (portée 0).
+        if (Behavior == Behaviors.Beacon && !Skills.Any(s => s.Zone is not null && s.Range == 0))
+            throw new ArgumentException($"Unit '{Id}': a beacon needs a zone skill around itself (range 0).");
+        DefeatBlast?.Validate(Id);
+        if (DefeatBlast is not null && OnDefeat != DefeatOutcome.Removed)
+            throw new ArgumentException($"Unit '{Id}': only a unit removed at 0 HP can blow up.");
         if (Behavior == Behaviors.Flee && !IsCivilian)
             throw new ArgumentException($"Unit '{Id}': only civilians always flee (others flee below fleeAtHpPercent).");
 

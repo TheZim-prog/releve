@@ -8,8 +8,8 @@
       "id": "engineer", "name": "Ingénieur",
       "tiers": [
         { "actives": [ { "skill": "turret", "variant": "suppression-turret" }, { "skill": "nano-heal", "variant": "shield-beacon" } ] },
-        { "actives": [ { "skill": "trap", "variant": "explosive-trap" } ], "passives": [ { "id": "overclocking", "name": "Surcadençage", "planned": true } ] },
-        { "actives": [ { "skill": "combat-drone" } ], "passives": [ { "id": "doubleDeployment", "name": "Double déploiement", "planned": true } ] }
+        { "actives": [ { "skill": "trap", "variant": "explosive-trap" } ], "passives": [ { "id": "overclocking", "name": "Surcadençage" } ] },
+        { "actives": [ { "skill": "combat-drone" } ], "passives": [ { "id": "doubleDeployment", "name": "Double déploiement" } ] }
       ]
     },
     {
@@ -30,8 +30,6 @@
     }
   ],
   "planned": {
-    "suppression-turret": "Tourelle de suppression",
-    "combat-drone": "Drone de combat",
     "reload": "Rechargement",
     "coordinated-strike": "Frappe coordonnée",
     "hacking": "Piratage",

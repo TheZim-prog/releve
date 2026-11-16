@@ -66,6 +66,12 @@ public sealed record CombatRules
     /// <summary>Commandement : vitesse de jauge des alliés proches, en % de la normale (au moins 100).</summary>
     public required int CommandFillPercent { get; init; }
 
+    /// <summary>Surcadençage : vitesse de jauge des gadgets du tech qui a ce passif, en % (plus de 100 : plus vite).</summary>
+    public required int OverclockingFillPercent { get; init; }
+
+    /// <summary>Double déploiement : nombre de gadgets du même type qu'un tech qui a ce passif peut avoir à la fois.</summary>
+    public required int DoubleDeploymentCount { get; init; }
+
     /// <summary>Champ de brouillage : vitesse de jauge des ennemis proches, en % de la normale (au plus 100).</summary>
     public required int JammingFieldFillPercent { get; init; }
 
@@ -194,6 +200,10 @@ public sealed record CombatRules
             throw new ArgumentException($"{nameof(AuraRange)} must be between 1 and 20.");
         if (CommandFillPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(CommandFillPercent)} must be between 100 and 1000.");
+        if (OverclockingFillPercent is < 100 or > 1000)
+            throw new ArgumentException($"{nameof(OverclockingFillPercent)} must be between 100 and 1000.");
+        if (DoubleDeploymentCount is < 2 or > 5)
+            throw new ArgumentException($"{nameof(DoubleDeploymentCount)} must be between 2 and 5.");
         ValidatePercent(JammingFieldFillPercent, nameof(JammingFieldFillPercent), max: 100, min: 1);
         ValidatePercent(DisarmedOnBossDurationPercent, nameof(DisarmedOnBossDurationPercent), max: 100, min: 1);
         if (VigilanceExtraOpportunityAttacks is < 1 or > 10)

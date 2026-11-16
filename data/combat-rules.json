@@ -55,6 +55,10 @@
   // celle des ennemis, en % de leur vitesse normale.
   "auraRange": 2,
   "commandFillPercent": 115,
+  // Surcadençage : les gadgets du tech remplissent leur jauge 30 % plus vite.
+  "overclockingFillPercent": 130,
+  // Double déploiement : deux gadgets du même type à la fois.
+  "doubleDeploymentCount": 2,
   "jammingFieldFillPercent": 85,
 
   // Désarmé : l'état dure ce % de sa durée normale sur un boss.

@@ -56,6 +56,17 @@ public sealed partial class CombatSimulation
         if (skill.IsRescue)
             return PlanRescue(unit, position, skill, use);
 
+        if (skill.Summon is not null && skill.SummonLeftBehind)
+        {
+            // Une case où il peut aller à pied, en Range pas au plus ; l'unité apparaît sur celle qu'il quitte.
+            // Le gadget qu'il remplacera lui cède sa case. Zone : le chemin, pour l'aperçu et pour ce qu'il croise.
+            if (use.Cell is not { } destination || use.Target is not null)
+                return (null, RejectionReason.InvalidTarget);
+            if (WalkTo(unit, position, destination, skill.Range, ReplacedGadget(unit, skill.Summon)) is not { } path)
+                return (null, RejectionReason.InvalidDestination);
+            return (new PlannedAction(skill, null, path, destination), null);
+        }
+
         if (skill.Summon is not null)
         {
             // Une case libre (une fois le lanceur arrivé), à portée et en vue.
@@ -63,10 +74,9 @@ public sealed partial class CombatSimulation
                 return (null, RejectionReason.InvalidTarget);
             if (!IsWithinRange(position, spot, skill.Range))
                 return (null, RejectionReason.OutOfRange);
-            // Libre, ou occupée par le lanceur (il en part) ou par son ancien gadget du même type (il sera remplacé).
+            // Libre, ou occupée par le lanceur (il en part) ou par celui de ses gadgets du même type qui sera remplacé.
             if (!_grid.IsWalkable(spot)
-                || (UnitAt(spot) is { } occupant && occupant != unit
-                    && !(occupant.SummonedBy == unit.Id && occupant.Definition.Id == skill.Summon.Id)))
+                || (UnitAt(spot) is { } occupant && occupant != unit && occupant != ReplacedGadget(unit, skill.Summon)))
                 return (null, RejectionReason.InvalidDestination);
             if (!HasLineOfSight(unit, position, spot))
                 return (null, RejectionReason.NoLineOfSight);

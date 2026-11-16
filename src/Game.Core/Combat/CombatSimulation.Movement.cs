@@ -68,7 +68,6 @@ public sealed partial class CombatSimulation
                 _events.Add(new OpportunityAttack(CurrentTick, enemy.Id, unit.Id, attack.Id));
                 var landed = ResolveHit(enemy, attack, unit, DamageFactorOf(enemy), lastFreeCell);
                 EndSource(); // chaque attaque d'opportunité est une source à part
-                FlushReactions();
                 FlushGauge(enemy);
                 if (IsHalted(stopped: landed && enemy.HasPassive(PassiveKind.StoppingBlow)))
                     return false;

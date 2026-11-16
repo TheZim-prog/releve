@@ -88,11 +88,19 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Fin d'une source (compétence ou attaque d'opportunité) : les dômes qui l'ont absorbée disparaissent, ainsi que
-    /// ceux dont le lanceur est tombé pendant cette source (pas avant : l'attaque reste bloquée pour tous).
+    /// Fin d'une source (compétence, attaque d'opportunité, piège…) : les dômes qui l'ont absorbée disparaissent, ainsi que
+    /// ceux dont le lanceur est tombé pendant cette source (pas avant : l'attaque reste bloquée pour tous). Puis les
+    /// réactions qu'elle a provoquées (ripostes, tirs de protection, explosions) partent, chacune comme une source à part.
     /// Tous les dégâts arrivent pendant une source, donc tout lanceur tombé passe par ici.
     /// </summary>
     private void EndSource()
+    {
+        EndDomes();
+        FlushReactions();
+    }
+
+    /// <summary>Les dômes qui ont absorbé la source, ou dont le lanceur est tombé, disparaissent.</summary>
+    private void EndDomes()
     {
         if (_domes.Count == 0)
             return;

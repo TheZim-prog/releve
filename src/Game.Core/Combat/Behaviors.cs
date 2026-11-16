@@ -11,8 +11,8 @@ public static class Behaviors
     public const string Basic = "basic";
 
     /// <summary>
-    /// Balise (gadget immobile) : jauge pleine, elle lance sa zone de soutien autour d'elle (soin, PV temporaires),
-    /// seulement si un allié en profiterait ; sinon elle attend.
+    /// Balise (gadget immobile) : jauge pleine, elle lance sa zone autour d'elle, seulement si elle sert (un allié
+    /// à soigner ou à protéger ; un adversaire à frapper, pour l'Astre) ; sinon elle attend.
     /// </summary>
     public const string Beacon = "beacon";
 
@@ -22,9 +22,13 @@ public static class Behaviors
     /// </summary>
     public const string Gunner = "gunner";
 
+    /// <summary>Inerte (un leurre) : n'agit jamais et ne bouge pas.</summary>
+    public const string Inert = "inert";
+
     internal static readonly IUnitBehavior BasicInstance = new BasicBehavior(BasicBehavior.Mode.Basic);
     private static readonly IUnitBehavior BeaconInstance = new BeaconBehavior();
     private static readonly IUnitBehavior GunnerInstance = new BasicBehavior(BasicBehavior.Mode.Gunner);
+    private static readonly IUnitBehavior InertInstance = new InertBehavior();
 
     /// <summary>Unité confuse (état, pas une donnée) : attaque l'unité debout la plus proche, quel que soit son camp.</summary>
     internal static readonly IUnitBehavior ConfusedInstance = new BasicBehavior(BasicBehavior.Mode.Confused);
@@ -44,6 +48,7 @@ public static class Behaviors
         Basic => BasicInstance,
         Beacon => BeaconInstance,
         Gunner => GunnerInstance,
+        Inert => InertInstance,
         Flee => FleeInstance,
         _ => null,
     };

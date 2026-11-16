@@ -113,7 +113,7 @@ public sealed partial class CombatSimulation
         while (_pendingReactions.TryDequeue(out var reaction))
         {
             AsReaction(reaction);
-            EndSource();
+            EndDomes();
         }
     }
 

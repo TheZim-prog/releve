@@ -10,5 +10,10 @@
     "id": "shield-pulse", "name": "Impulsion de protection", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 0,
     "tempHp": { "min": 9, "max": 12, "durationMs": 6000 },
     "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "allies" }
-  }
+  },
+  {
+    "id": "suppressive-burst", "name": "Rafale de suppression", "weight": "light", "range": 5, "minDamage": 3, "maxDamage": 5, "cooldownMs": 0,
+    "effects": [ { "status": "offBalance", "durationMs": 2000 } ]
+  },
+  { "id": "drone-shot", "name": "Tir de drone", "weight": "light", "range": 4, "minDamage": 6, "maxDamage": 9, "cooldownMs": 0 }
 ]

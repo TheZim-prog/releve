@@ -40,5 +40,17 @@
     "weight": "light", "range": 6, "minDamage": 8, "maxDamage": 11, "cooldownMs": 14000,
     "chain": { "maxTargets": 4, "bounceRange": 3 },
     "effects": [ { "status": "stunned", "durationMs": 700 } ]
+  },
+  {
+    // Pose une sphère d'énergie qui explose 3 fois autour d'elle (sur les ennemis), puis disparaît.
+    "id": "star", "name": "Astre",
+    "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "summon": "star"
+  },
+  {
+    // L'explosion de l'Astre, autour de lui ; les ennemis seulement.
+    "id": "star-burst", "name": "Explosion d'astre",
+    "weight": "light", "range": 0, "minDamage": 10, "maxDamage": 13, "cooldownMs": 0,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" }
   }
 ]

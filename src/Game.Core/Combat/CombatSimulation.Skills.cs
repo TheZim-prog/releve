@@ -33,7 +33,21 @@ public sealed partial class CombatSimulation
         else if (skill.Summon is not null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null));
-            Summon(caster, skill.Summon, destination!.Value);
+            if (skill.SummonLeftBehind)
+            {
+                // Il part à pied (un piège ou un sol qui fige l'arrête en chemin) ; l'unité apparaît sur la case qu'il
+                // vient de quitter. L'ancien leurre, qui lui cède peut-être sa case, disparaît d'abord.
+                var start = caster.Position;
+                if (ReplacedGadget(caster, skill.Summon) is { } replaced)
+                    Dismiss(replaced);
+                var course = CourseUntilHalt(caster, start, zone!);
+                SelfDisplace(caster, course[^1], course);
+                Summon(caster, skill.Summon, start);
+            }
+            else
+            {
+                Summon(caster, skill.Summon, destination!.Value);
+            }
         }
         else if (zone is null)
         {
@@ -71,7 +85,6 @@ public sealed partial class CombatSimulation
         if (skill.Watch is not null)
             SetWatch(caster, skill, zone, zone is null ? target : null);
         EndSource();
-        FlushReactions();
     }
 
     /// <summary>
@@ -112,20 +125,37 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Pose une unité invoquée sur <paramref name="cell"/>, de l'équipe du lanceur, jauge vide ; elle remplace celle
-    /// du même type déjà posée par ce lanceur. Son identifiant suit le plus grand existant (déterministe). Elle
-    /// profite de la puissance du lanceur (ses dégâts et ses soins), pas de ses autres points de stats.
+    /// Pose une unité invoquée sur <paramref name="cell"/>, de l'équipe du lanceur, jauge vide ; elle remplace la plus
+    /// ancienne du même type déjà posée par ce lanceur s'il en a déjà autant qu'il peut (une ; plus avec Double
+    /// déploiement). Son identifiant suit le plus grand existant (déterministe). Elle profite de la puissance du lanceur
+    /// (ses dégâts et ses soins), pas de ses autres points de stats. Un leurre provoque aussitôt les ennemis proches.
     /// </summary>
     private void Summon(Unit owner, UnitDefinition definition, Cell cell)
     {
-        foreach (var previous in _units.Where(u => u.SummonedBy == owner.Id && u.Definition.Id == definition.Id
-                                                   && u.Status != UnitStatus.Removed).ToList())
+        if (ReplacedGadget(owner, definition) is { } previous)
             Dismiss(previous);
 
         var id = new UnitId(_units.Max(u => u.Id.Value) + 1);
         var unit = new Unit(definition.ToSetup(id, owner.Team, cell), Rules, owner.PowerPercent) { SummonedBy = owner.Id };
         _units.Add(unit);
         _events.Add(new UnitSummoned(CurrentTick, id, definition.Id, owner.Id, owner.Team, cell));
+        if (definition.Lure is { } lure)
+        {
+            foreach (var enemy in _units.Where(u => u.Status == UnitStatus.Active && AreOpponents(u, unit)
+                                                    && u.Position.DistanceTo(cell) <= lure.Range).ToList())
+                Taunt(enemy, unit, lure.Actions);
+        }
+    }
+
+    /// <summary>
+    /// Le gadget du même type que le lanceur perdrait en posant celui-ci : le plus ancien, s'il en a déjà autant qu'il
+    /// peut en avoir à la fois (un, ou <see cref="CombatRules.DoubleDeploymentCount"/> avec Double déploiement).
+    /// </summary>
+    private Unit? ReplacedGadget(Unit owner, UnitDefinition definition)
+    {
+        var placed = _units.Where(u => u.SummonedBy == owner.Id && u.Definition.Id == definition.Id && u.Status != UnitStatus.Removed).ToList();
+        var allowed = owner.HasPassive(PassiveKind.DoubleDeployment) ? Rules.DoubleDeploymentCount : 1;
+        return placed.Count >= allowed ? placed[0] : null;
     }
 
     /// <summary>
@@ -150,7 +180,8 @@ public sealed partial class CombatSimulation
             else
                 _events.Add(new ChargeMissed(CurrentTick, unit.Id, skill.Id, charge.Target!.Value));
 
-            SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(skill)));
+            if (unit.Status == UnitStatus.Active) // tombée par une réaction (riposte, explosion)
+                SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(skill)));
             FlushGauge(unit);
             AfterAction(unit);
             DismissIfExhausted(unit);

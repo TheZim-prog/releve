@@ -46,6 +46,8 @@ internal static class CombatTestKit
         SlipstreamGaugeGainPercent = 5,
         AuraRange = 2,
         CommandFillPercent = 150,
+        OverclockingFillPercent = 200,
+        DoubleDeploymentCount = 2,
         JammingFieldFillPercent = 50,
         IntentionThresholdPercent = 50,
         ReviveHpPercent = 25,

@@ -216,14 +216,30 @@ public sealed partial class CombatSimulation
         if (target.Status == UnitStatus.Removed)
         {
             _events.Add(new UnitRemoved(CurrentTick, target.Id));
+            // Détruite, elle explose (ex. Leurre piégé) : une réaction, après la source qui l'a détruite.
+            if (target.Definition.DefeatBlast is { } blast)
+            {
+                var cell = target.Position;
+                _pendingReactions.Enqueue(() =>
+                {
+                    _events.Add(new UnitBlewUp(CurrentTick, target.Id, cell));
+                    DamageOpponentsAround(target, cell, blast.MinDamage, blast.MaxDamage);
+                });
+            }
             return;
         }
 
         // Une unité par case : à terre en traversant un allié, elle tombe sur la dernière case libre.
+        // Sans case de repli connue (des dégâts de zone sur une unité en pleine course), la première case libre voisine.
         if (IsOccupiedByOther(target, target.Position))
-            target.Position = fallbackCell ?? throw new InvalidOperationException($"Unit {target.Id} fell on an occupied cell.");
+            target.Position = fallbackCell ?? FreeCellNear(target)
+                ?? throw new InvalidOperationException($"Unit {target.Id} fell on an occupied cell.");
         _events.Add(new UnitDowned(CurrentTick, target.Id, target.Position));
     }
+
+    /// <summary>Une case libre voisine de l'unité (ordre fixe des voisines), ou <c>null</c>.</summary>
+    private Cell? FreeCellNear(Unit unit) =>
+        _grid.Neighbors(unit.Position).Where(c => !IsOccupiedByOther(unit, c)).Select(c => (Cell?)c).FirstOrDefault();
 
     /// <summary>
     /// Met l'unité hors de combat (à terre ou retirée) : elle perd ses états, sa charge et son intention, annoncés

@@ -113,6 +113,7 @@ public static class Texts
             AttackDodged d => $"{N(d.Unit)} esquive l'attaque de {N(d.Attacker)}",
             AttackIntercepted i => $"{N(i.Guard)} s'interpose devant {N(i.Ally)}",
             CounterAttack c => $"{N(c.Unit)} riposte contre {N(c.Target)}",
+            UnitBlewUp b => $"{N(b.Unit)} explose !",
             WatchFired w => $"{N(w.Owner)} tire sur {N(w.Target)} (surveillance)",
             UnitResisted r => $"{N(r.Unit)} résiste",
             UnitSummoned s => $"{N(s.Owner)} pose : {N(s.Unit)}",

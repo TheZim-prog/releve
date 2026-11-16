@@ -69,11 +69,18 @@ public sealed partial class CombatSimulation
     /// Auras qui changent la vitesse de jauge de l'unité, en % : Commandement d'un allié proche (plus vite), Champ de
     /// brouillage d'un adversaire proche (plus lentement). Chacune compte une fois, quel que soit le nombre de porteurs ;
     /// la distance se compte en cases, sans ligne de vue ; le porteur ne profite pas de son propre Commandement ; les
-    /// gadgets ne donnent ni ne reçoivent d'aura.
+    /// gadgets ne donnent ni ne reçoivent d'aura (seulement le Surcadençage de leur lanceur).
     /// </summary>
     private IEnumerable<int> AuraFillPercents(Unit unit)
     {
-        if (_auraBearers.Count == 0 || unit.SummonedBy is not null || unit.IsCivilian)
+        // Un gadget n'a pas d'aura, mais le Surcadençage de son lanceur debout l'accélère.
+        if (unit.SummonedBy is { } ownerId)
+        {
+            if (_overclockers.Contains(ownerId))
+                yield return Rules.OverclockingFillPercent;
+            yield break;
+        }
+        if (_auraBearers.Count == 0 || unit.IsCivilian)
             yield break;
         bool Near(Unit bearer, PassiveKind passive) =>
             bearer != unit && bearer.HasPassive(passive) && bearer.Position.DistanceTo(unit.Position) <= Rules.AuraRange;
@@ -84,9 +91,14 @@ public sealed partial class CombatSimulation
             yield return Rules.JammingFieldFillPercent;
     }
 
-    /// <summary>Les porteurs d'aura debout, relevés une fois par tick avant le remplissage des jauges.</summary>
+    // Lanceurs debout qui ont le Surcadençage, relevés avec les porteurs d'aura.
+    private readonly HashSet<UnitId> _overclockers = new();
+
+    /// <summary>Les porteurs d'aura (et de Surcadençage) debout, relevés une fois par tick avant le remplissage des jauges.</summary>
     private void FindAuraBearers()
     {
+        _overclockers.Clear();
+        _overclockers.UnionWith(_units.Where(u => u.Status == UnitStatus.Active && u.HasPassive(PassiveKind.Overclocking)).Select(u => u.Id));
         _auraBearers.Clear();
         _auraBearers.AddRange(_units.Where(u => u.IsStandingCombatant && u.Passive is PassiveKind.Command or PassiveKind.JammingField));
     }

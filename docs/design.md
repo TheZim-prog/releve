@@ -122,7 +122,7 @@
 *Perturbateur*
 - **Palier 1 : Tourbillon** (légère ; cf. section 3). **Variante : Mur de vent**, au lieu de déséquilibrer, la zone bloque les tirs qui la traversent pendant quelques secondes. *Précisions* : un « tir » est toute attaque à distance qui n'est pas un pouvoir mental (le soutien, la télékinésie et ce qui n'agit que sur le terrain, comme un fumigène ou un mur de glace, passent) ; il est arrêté s'il part de la zone, y arrive ou la traverse, dans les deux sens ; un tir en ligne s'arrête à son bord. Le Tourbillon dissipe la fumée qu'il touche, et peut être visé dans la fumée.
 - **Palier 1 : Harcèlement** (légère) : rafale de coups sur une cible : dégâts, et elle est déséquilibrée. **Variante : Vol à la tire**, désarme la cible au lieu de la déséquilibrer.
-- **Palier 2 : Image rémanente** (légère) : il laisse un leurre à sa place et se déplace ; le leurre attire les ennemis et disparaît au premier coup. **Variante : Leurre piégé**, il pose le leurre sur une case voisine et reste où il est (pas de déplacement gratuit) ; le leurre explose quand il est frappé : petits dégâts aux ennemis autour.
+- **Palier 2 : Image rémanente** (légère) : il laisse un leurre à sa place et se déplace ; le leurre attire les ennemis et disparaît au premier coup. **Variante : Leurre piégé**, il pose le leurre sur une case voisine et reste où il est (pas de déplacement gratuit) ; le leurre explose quand il est frappé : petits dégâts aux ennemis autour. *Précisions* : « attire » = à son apparition, les ennemis (IA) à quelques cases le visent pour leur prochaine action, comme une provocation ; le speedster va à pied, en quelques pas, sans attaque d'opportunité ; un seul leurre à la fois ; l'explosion touche les ennemis à son contact.
 - **Palier 2, passif : Diversion** : les ennemis à son contact ne font plus d'attaques d'opportunité contre ses alliés.
 - **Palier 3 : Vortex** (lourde) : il court autour d'une grande zone ; les ennemis sont ramenés vers le centre, déséquilibrés, et prennent des dégâts.
 - **Palier 3, passif : Voleur de temps** : ses coups retirent un peu de jauge à la cible.
@@ -134,7 +134,7 @@
 - **Palier 1 : Déflagration** (lourde, chargée ; cf. section 3). **Variante : Tir maîtrisé**, ne touche que les ennemis et épargne le décor, avec moins de dégâts.
 - **Palier 2 : Lance de feu** (légère) : très gros dégâts sur une seule cible à distance, longue recharge. **Variante : Chaîne d'éclairs**, rebondit sur les ennemis proches (même règle de rebond que la Frappe en chaîne du speedster), avec moins de dégâts par cible et un court étourdissement. *Précisions* : la première cible est à portée et en vue ; un rebond saute par-dessus les unités, pas à travers un mur, une fumée ou un mur de vent ; l'énergétique ne bouge pas. Pour les deux chaînes : un lanceur confus qui vise un allié rebondit sur les alliés (la chaîne reste dans le camp de sa première cible).
 - **Palier 2, passif : Perforant** : ses attaques ignorent la couverture.
-- **Palier 3 : Astre** (lourde) : il pose une sphère d'énergie qui explose trois fois de suite autour d'elle, puis disparaît (même mécanisme que la balise du tech).
+- **Palier 3 : Astre** (lourde) : il pose une sphère d'énergie qui explose trois fois de suite autour d'elle, puis disparaît (même mécanisme que la balise du tech). *Précisions* : comme la balise, elle n'explose que si un ennemi est autour d'elle ; ses explosions ne touchent que les ennemis ; c'est une unité, qu'on peut détruire.
 - **Palier 3, passif : Réaction en chaîne** : un ennemi qu'il met hors de combat explose et blesse les ennemis voisins (ennemis seulement ; un ennemi qui en tombe explose à son tour ; pas pour un gadget ; une collision après une Onde de recul compte ; un dôme n'en protège pas).
 
 *Brasier*
@@ -185,9 +185,9 @@
 - **Palier 1 : Tourelle** (légère ; cf. section 3). **Variante : Tourelle de suppression**, moins de dégâts, mais ses tirs ralentissent.
 - **Palier 1 : Nano-soin** (légère ; cf. section 3). **Variante : Balise bouclier**, donne des PV temporaires au lieu de soigner (elle se déclenche quand un héros allié autour d'elle n'en a pas, pas pour un gadget ; montant multiplié par la puissance du tech, comme un soin).
 - **Palier 2 : Piège** (légère ; partagé avec le combattant, branche Franc-tireur). **Variante : Piège explosif**, comme chez le combattant.
-- **Palier 2, passif : Surcadençage** : ses gadgets agissent plus vite.
-- **Palier 3 : Drone de combat** (lourde) : il déploie un drone mobile, qui se déplace et attaque tout seul.
-- **Palier 3, passif : Double déploiement** : il peut avoir deux tourelles ou deux balises actives à la fois.
+- **Palier 2, passif : Surcadençage** : ses gadgets agissent plus vite (leur jauge se remplit plus vite, tant que le tech est debout).
+- **Palier 3 : Drone de combat** (lourde) : il déploie un drone mobile, qui se déplace et attaque tout seul (IA de base, sans attaque d'opportunité ; un à la fois, comme les autres gadgets).
+- **Palier 3, passif : Double déploiement** : il peut avoir deux tourelles ou deux balises actives à la fois (deux gadgets de chaque type, drone compris ; en poser un troisième remplace le plus ancien).
 
 *Tacticien*
 - **Palier 1 : Tir de désignation** (légère) : dégâts à distance, et la cible devient vulnérable aux dégâts de tous. **Variante : Tir de suppression**, ralentit la cible au lieu de la rendre vulnérable.
