@@ -25,6 +25,14 @@
     "forcedMove": { "type": "throw", "distance": 3, "collisionMinDamage": 7, "collisionMaxDamage": 11 }
   },
   {
+    // Attrape un ennemi au contact, frappe avec lui tout ce qui l'entoure (alliés compris, l'ennemi aussi), puis le
+    // lance vers la case choisie (règles du Renversement : la distance se compte depuis sa case).
+    "id": "spin-throw", "name": "Tourniquet",
+    "weight": "heavy", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 18000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "forcedMove": { "type": "spin", "distance": 3, "collisionMinDamage": 7, "collisionMaxDamage": 11 }
+  },
+  {
     // Lance un allié debout au contact sur une case libre (5 cases au plus) ; l'allié garde sa jauge.
     "id": "catapult", "name": "Catapulte",
     "target": "ally", "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,

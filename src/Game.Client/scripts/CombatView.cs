@@ -47,7 +47,6 @@ public partial class CombatView : Node3D
     private static readonly Color OrderHint = new(0.55f, 0.85f, 1f);
 
     private readonly Dictionary<UnitId, UnitView> _views = new();
-    private readonly Dictionary<UnitId, IReadOnlyList<Cell>> _domes = new();
 
     private ICombatSession _session = null!;
     private GameContent _data = null!;
@@ -150,14 +149,11 @@ public partial class CombatView : Node3D
         foreach (var view in _views.Values)
             view.QueueFree();
         _views.Clear();
-        _domes.Clear();
         _board?.QueueFree();
 
         _data = _session.Content;
         _sim = _session.Simulation;
-        // Combat rejoint en cours (reconnexion) : les dômes encore levés. Le décor détruit est déjà dans la grille.
-        foreach (var e in _sim.EventLog)
-            TrackDome(e);
+        // Combat rejoint en cours (reconnexion) : le décor détruit ou déplacé est déjà dans la grille.
         _board = new BoardView();
         AddChild(_board);
         _board.Build(_sim.Grid);
@@ -251,9 +247,6 @@ public partial class CombatView : Node3D
             case HitBlocked b:
                 Float(b.Unit, "bloqué", Protected);
                 break;
-            case DomeRaised or DomeEnded:
-                TrackDome(e);
-                break;
             case AttackParried p:
                 Float(p.Unit, "paré", Protected);
                 break;
@@ -269,15 +262,11 @@ public partial class CombatView : Node3D
             case ObstacleMelted m:
                 _board.RemoveObstacle(m.Cell);
                 break;
+            case SceneryTaken s:
+                _board.RemoveObstacle(s.From);
+                if (s.To is { } to)
+                    _board.AddObstacle(to, Terrain.LowObstacle);
+                break;
         }
-    }
-
-    /// <summary>Dômes levés : suivis par leurs événements, en direct comme en relisant le journal (reconnexion).</summary>
-    private void TrackDome(CombatEvent e)
-    {
-        if (e is DomeRaised raised)
-            _domes[raised.Owner] = raised.Cells;
-        else if (e is DomeEnded ended)
-            _domes.Remove(ended.Owner);
     }
 }

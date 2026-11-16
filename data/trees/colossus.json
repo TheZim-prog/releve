@@ -9,7 +9,7 @@
       "tiers": [
         { "actives": [ { "skill": "dome", "variant": "personal-shield" }, { "skill": "provocation", "variant": "challenge" } ] },
         { "actives": [ { "skill": "steel-skin", "variant": "aegis" } ], "passives": [ { "id": "bodyguard", "name": "Garde du corps" } ] },
-        { "actives": [ { "skill": "fortress" } ], "passives": [ { "id": "unshakable", "name": "Inébranlable", "planned": true } ] }
+        { "actives": [ { "skill": "fortress" } ], "passives": [ { "id": "unshakable", "name": "Inébranlable" } ] }
       ]
     },
     {
@@ -28,12 +28,5 @@
         { "actives": [ { "skill": "spin-throw" } ], "passives": [ { "id": "stoppingBlow", "name": "Coup d'arrêt" } ] }
       ]
     }
-  ],
-  "planned": {
-    "personal-shield": "Bouclier personnel",
-    "fortress": "Forteresse",
-    "throw-scenery": "Lancer de décor",
-    "barricade": "Barricade",
-    "spin-throw": "Tourniquet"
-  }
+  ]
 }

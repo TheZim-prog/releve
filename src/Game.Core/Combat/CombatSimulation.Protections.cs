@@ -47,19 +47,53 @@ public sealed partial class CombatSimulation
         }
     }
 
-    /// <summary>Dôme posé par une unité : ses cases, et s'il a déjà bloqué quelque chose pendant la source en cours.</summary>
-    private sealed class Dome(Unit owner, IReadOnlyList<Cell> cells)
+    /// <summary>
+    /// Dôme posé par une unité : ses cases, ou l'allié qu'il suit (Bouclier personnel) ; s'il est tenu (Forteresse : il
+    /// bloque tout sans tomber, sauf son lanceur) ; et s'il tombe à la fin de la source en cours (il a bloqué un coup,
+    /// ou sa forteresse vient d'être lâchée).
+    /// </summary>
+    private sealed class Dome(Unit owner, IReadOnlyList<Cell>? cells, Unit? shielded, bool held)
     {
         public Unit Owner { get; } = owner;
-        public HashSet<Cell> Cells { get; } = cells.ToHashSet();
-        public bool Absorbing { get; set; }
+        public Unit? Shielded { get; } = shielded;
+        public bool Held { get; } = held;
+        public bool Falling { get; set; }
+        private readonly HashSet<Cell> _cells = cells?.ToHashSet() ?? new HashSet<Cell>();
+
+        /// <summary>Les cases couvertes maintenant : celles du dôme, ou celle de l'allié qu'il suit.</summary>
+        public IEnumerable<Cell> Cells => Shielded is { } ally ? new[] { ally.Position } : _cells;
+
+        /// <summary>Le dôme couvre-t-il cette unité (de son équipe, ou un civil) ?</summary>
+        public bool Covers(Unit unit) =>
+            (Owner.Team == unit.Team || unit.IsCivilian)
+            && (Shielded is { } ally ? unit == ally : _cells.Contains(unit.Position) && !(Held && unit == Owner));
     }
 
-    /// <summary>Pose le dôme (l'ancien est déjà tombé : poser un dôme est une action du lanceur).</summary>
-    private void RaiseDome(Unit owner, IReadOnlyList<Cell> cells)
+    /// <summary>
+    /// Les cases protégées par un dôme en ce moment (celui d'un Bouclier personnel suit son allié ; une forteresse ne
+    /// protège pas la case de celui qui la tient).
+    /// </summary>
+    public IEnumerable<Cell> DomeCells => _domes.SelectMany(d => d.Cells.Where(c => !(d.Held && c == d.Owner.Position)));
+
+    /// <summary>
+    /// Pose un dôme sur ces cases, ou sur un allié qu'il suit (l'ancien est déjà tombé : poser un dôme est une action
+    /// du lanceur). <paramref name="held"/> : une forteresse, tenue pendant la charge.
+    /// </summary>
+    private void RaiseDome(Unit owner, IReadOnlyList<Cell>? cells, Unit? shielded = null, bool held = false)
     {
-        _domes.Add(new Dome(owner, cells));
-        _events.Add(new DomeRaised(CurrentTick, owner.Id, cells));
+        var dome = new Dome(owner, cells, shielded, held);
+        _domes.Add(dome);
+        _events.Add(new DomeRaised(CurrentTick, owner.Id, dome.Cells.ToList(), shielded?.Id));
+    }
+
+    /// <summary>
+    /// La forteresse de l'unité est lâchée (charge interrompue) : elle tombe à la fin de la source en cours, qui reste
+    /// bloquée pour tous ses protégés.
+    /// </summary>
+    private void LetGoOfFortress(Unit owner)
+    {
+        foreach (var dome in _domes.Where(d => d.Owner == owner && d.Held))
+            dome.Falling = true;
     }
 
     private void RemoveDome(Unit owner)
@@ -70,21 +104,30 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Un coup offensif (compétence visant un ennemi ou une zone) sur <paramref name="target"/> est-il bloqué par
-    /// un dôme de son équipe qui la couvre ? Si oui, le dôme absorbe la source en cours (il tombera à sa fin). Un coup
-    /// qui ignore les protections passe sans l'entamer. <paramref name="harmful"/> : des dégâts que fait une
-    /// compétence de soutien (l'impact d'un allié lancé), bloqués comme un coup offensif.
+    /// un dôme de son équipe qui la couvre ? Si oui, le dôme absorbe la source en cours (il tombera à sa fin), sauf une
+    /// forteresse, qui tient (et passe donc avant les autres dômes). Un coup qui ignore les protections passe sans
+    /// l'entamer. <paramref name="harmful"/> : des dégâts que fait une compétence de soutien (l'impact d'un allié lancé),
+    /// bloqués comme un coup offensif.
     /// </summary>
     private bool IsBlockedByDome(SkillDefinition skill, Unit target, bool harmful = false)
     {
-        if (!(skill.IsOffensive || harmful) || skill.IgnoresProtections)
+        if (DomeBlocking(skill, target, harmful) is not { } dome)
             return false;
-        // Un dôme protège son équipe et les civils sous lui.
-        var dome = _domes.FirstOrDefault(d => (d.Owner.Team == target.Team || target.IsCivilian) && d.Cells.Contains(target.Position));
-        if (dome is null)
-            return false;
-        dome.Absorbing = true;
+        if (!dome.Held)
+            dome.Falling = true;
         _events.Add(new HitBlocked(CurrentTick, target.Id, dome.Owner.Id));
         return true;
+    }
+
+    /// <summary>
+    /// Le dôme qui bloquerait ce coup sur <paramref name="target"/>, sans rien consommer : une forteresse d'abord (elle
+    /// tient), sinon le premier dôme qui la couvre ; aucun pour un soutien ou un coup qui ignore les protections.
+    /// </summary>
+    private Dome? DomeBlocking(SkillDefinition skill, Unit target, bool harmful = false)
+    {
+        if (!(skill.IsOffensive || harmful) || skill.IgnoresProtections)
+            return null;
+        return _domes.FirstOrDefault(d => d.Held && d.Covers(target)) ?? _domes.FirstOrDefault(d => d.Covers(target));
     }
 
     /// <summary>
@@ -99,12 +142,16 @@ public sealed partial class CombatSimulation
         FlushReactions();
     }
 
-    /// <summary>Les dômes qui ont absorbé la source, ou dont le lanceur est tombé, disparaissent.</summary>
+    /// <summary>
+    /// Les dômes qui ont absorbé la source ou qui ont été lâchés, ceux dont le lanceur est tombé et ceux dont l'allié
+    /// protégé est tombé disparaissent.
+    /// </summary>
     private void EndDomes()
     {
         if (_domes.Count == 0)
             return;
-        foreach (var dome in _domes.Where(d => d.Absorbing || d.Owner.Status != UnitStatus.Active).ToList())
+        foreach (var dome in _domes.Where(d => d.Falling || d.Owner.Status != UnitStatus.Active
+                                               || d.Shielded is { Status: not UnitStatus.Active }).ToList())
             RemoveDome(dome.Owner);
     }
 }

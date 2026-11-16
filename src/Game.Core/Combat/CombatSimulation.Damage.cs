@@ -58,7 +58,7 @@ public sealed partial class CombatSimulation
                 var roll = skill.DealsDamage ? _random.NextInt(skill.MinDamage, skill.MaxDamage) : 0;
                 if (robotBonus is { DealsDamage: true })
                     roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
-                var factor = WithDamagePassives(WithFlankBonus(damageFactor, attacker, skill, target), attacker, skill, target);
+                var factor = WithDamagePassives(WithSkillBonuses(damageFactor, attacker, skill, target), attacker, skill, target);
                 dealt = Scaled(roll, factor, target);
                 if (origin is { } from && !attacker.HasPassive(PassiveKind.Piercing) && CoverFor(from, target.Position) is { } cover)
                     dealt = AbsorbByCover(target, cover, dealt);
@@ -82,6 +82,9 @@ public sealed partial class CombatSimulation
             GrantTempHp(attacker, target, tempHp);
         foreach (var effect in skill.Effects)
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
+        // Un état qu'elle ignore (Inébranlable) : on le dit, pour un coup (pas pour un sol qui le reposerait sans cesse).
+        if (skill.Effects.Any(e => ResistsStatus(target, e.Status)))
+            _events.Add(new UnitResisted(CurrentTick, target.Id));
         foreach (var effect in robotBonus?.Effects ?? [])
             ApplyStatus(target, effect, attacker);
         StatusPassivesOnHit(attacker, skill, target);
@@ -123,16 +126,19 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Prise en tenaille : le multiplicateur de dégâts, augmenté si la compétence a ce bonus et qu'un allié du lanceur
-    /// (un héros debout, pas un gadget) est lui aussi au contact de la cible.
+    /// Le multiplicateur de dégâts, augmenté par les bonus de la compétence elle-même. Prise en tenaille : si un allié du
+    /// lanceur (un héros debout, pas un gadget) est lui aussi au contact de la cible. Coup de grâce : selon la part de
+    /// PV qui manquent à la cible (boss compris).
     /// </summary>
-    private int WithFlankBonus(int damageFactor, Unit attacker, SkillDefinition skill, Unit target)
+    private int WithSkillBonuses(int damageFactor, Unit attacker, SkillDefinition skill, Unit target)
     {
-        if (skill.FlankDamagePercent == 0)
-            return damageFactor;
-        var flanked = _units.Any(u => u != attacker && u.IsStandingCombatant && u.Team == attacker.Team
-                                     && IsInMeleeReach(u, target.Position));
-        return flanked ? (int)((long)damageFactor * skill.FlankDamagePercent / 100) : damageFactor;
+        long factor = damageFactor;
+        if (skill.FlankDamagePercent != 0
+            && _units.Any(u => u != attacker && u.IsStandingCombatant && u.Team == attacker.Team && IsInMeleeReach(u, target.Position)))
+            factor = factor * skill.FlankDamagePercent / 100;
+        if (skill.MissingHpDamageBonusPercent != 0)
+            factor = factor * (100 + (long)skill.MissingHpDamageBonusPercent * (target.MaxHp - target.Hp) / target.MaxHp) / 100;
+        return (int)factor;
     }
 
     /// <summary>Exécution : la cible est au plus au seuil de PV de la compétence, et ce n'est pas un boss.</summary>

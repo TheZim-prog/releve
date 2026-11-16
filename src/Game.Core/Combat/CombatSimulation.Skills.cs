@@ -10,7 +10,8 @@ public sealed partial class CombatSimulation
     /// La compétence prend effet : sur sa cible, ou sur les unités debout de la zone (dans l'ordre des unités ; une
     /// unité tombée en cours de route, par une Réaction en chaîne, n'est plus touchée).
     /// <paramref name="damageFactor"/> : multiplicateur de dégâts du lanceur, en dix-millièmes (voir <see cref="DamageFactorOf"/>).
-    /// <paramref name="destination"/> : case où une télékinésie pose sa cible ; <paramref name="zoneOrigin"/> : d'où part
+    /// <paramref name="destination"/> : case où une télékinésie pose sa cible (vers laquelle un tourniquet lance la sienne,
+    /// ou obstacle que prend un décor) ; <paramref name="zoneOrigin"/> : d'où part
     /// une zone ordinaire (pour la couverture ; une attaque ciblée part du lanceur) ; <paramref name="chain"/> : les
     /// maillons d'une chaîne planifiée.
     /// </summary>
@@ -49,35 +50,26 @@ public sealed partial class CombatSimulation
                 Summon(caster, skill.Summon, destination!.Value);
             }
         }
+        else if (skill.ShieldsAlly)
+        {
+            _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
+            RaiseDome(caster, null, shielded: target);
+        }
         else if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
             var landed = ResolveHit(caster, skill, target, damageFactor, origin: caster.Position);
+            if (landed && target.Status != UnitStatus.Active && skill.ResetsCooldownOnKill)
+                caster.StartCooldown(skill.Id, CurrentTick);
             if (landed && target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
                 ApplyForcedMove(caster, skill, target, move, damageFactor, destination);
         }
         else
         {
-            _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, zone));
-            if (skill.CreatesDome)
-            {
-                RaiseDome(caster, zone);
-            }
-            else if (skill.Raises is { } obstacle)
-            {
-                RaiseObstacles(obstacle, zone);
-            }
-            else if (skill.HasHitEffect)
-            {
-                var hit = UnitsAffectedBy(caster, skill, zone).Where(u => ResolveHit(caster, skill, u, damageFactor, origin: zoneOrigin)).ToList();
-                if (skill.ForcedMove is { } push)
-                    PushFromZone(caster, skill, hit, push, damageFactor, zoneOrigin ?? caster.Position);
-            }
-            // Ce que la zone laisse sur le terrain, après ses coups : la fumée dissipée, puis sa propre zone au sol.
-            if (skill.ClearsSmoke)
-                ClearSmoke(zone);
-            if (skill.Ground is not null)
-                LayGround(caster, skill, zone);
+            // Un tourniquet nomme l'ennemi attrapé ; un décor qui n'est plus là (détruit entre-temps) : rien ne part.
+            _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target?.Id, zone));
+            if (skill.Scenery is null || TakeSceneryFor(caster, skill.Scenery, zoneOrigin!.Value, taken: destination!.Value))
+                ExecuteZone(caster, skill, target, zone, damageFactor, destination, zoneOrigin);
         }
         // Ce que la compétence prépare pour plus tard : une garde pour le lanceur, une surveillance.
         if (skill.Guard is { } guard)
@@ -85,6 +77,42 @@ public sealed partial class CombatSimulation
         if (skill.Watch is not null)
             SetWatch(caster, skill, zone, zone is null ? target : null);
         EndSource();
+    }
+
+    /// <summary>
+    /// Effet d'une compétence à zone : un dôme, des obstacles dressés, ou ses coups sur les unités de la zone (puis la
+    /// projection de chacune, ou le lancer de l'ennemi attrapé par un tourniquet) ; puis ce qu'elle laisse sur le terrain.
+    /// </summary>
+    private void ExecuteZone(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell> zone, int damageFactor,
+        Cell? destination, Cell? zoneOrigin)
+    {
+        if (skill.CreatesDome)
+        {
+            RaiseDome(caster, zone);
+        }
+        else if (skill.Raises is { } obstacle)
+        {
+            RaiseObstacles(obstacle, zone);
+        }
+        else if (skill.HasHitEffect)
+        {
+            var hit = UnitsAffectedBy(caster, skill, zone).Where(u => ResolveHit(caster, skill, u, damageFactor, origin: zoneOrigin)).ToList();
+            // Tourniquet : l'ennemi attrapé, s'il a été touché et tient encore debout, est lancé.
+            if (skill.ForcedMove is { Type: ForcedMoveType.Spin } spin)
+            {
+                if (target is { Status: UnitStatus.Active } && hit.Contains(target))
+                    ApplyForcedMove(caster, skill, target, spin, damageFactor, destination);
+            }
+            else if (skill.ForcedMove is { } push)
+            {
+                PushFromZone(caster, skill, hit, push, damageFactor, zoneOrigin ?? caster.Position);
+            }
+        }
+        // Ce que la zone laisse sur le terrain, après ses coups : la fumée dissipée, puis sa propre zone au sol.
+        if (skill.ClearsSmoke)
+            ClearSmoke(zone);
+        if (skill.Ground is not null)
+            LayGround(caster, skill, zone);
     }
 
     /// <summary>
@@ -172,7 +200,9 @@ public sealed partial class CombatSimulation
 
             unit.Charge = null;
             var skill = charge.Skill;
-            if (charge.Zone is not null)
+            if (skill.HoldsDome) // une forteresse tenue jusqu'au bout : elle tombe, sans rien déclencher
+                RemoveDome(unit);
+            else if (charge.Zone is not null)
                 Execute(unit, skill, null, charge.Zone, charge.DamageFactor, zoneOrigin: charge.ZoneOrigin);
             else if (charge.Target is { } targetId && FindUnit(targetId) is { } target
                      && CheckTarget(unit, unit.Position, target, skill) is null)
@@ -194,5 +224,7 @@ public sealed partial class CombatSimulation
             return;
         unit.Charge = null;
         _events.Add(new ChargeInterrupted(CurrentTick, unit.Id, charge.Skill.Id));
+        if (charge.Skill.HoldsDome)
+            LetGoOfFortress(unit);
     }
 }

@@ -29,6 +29,20 @@
     "effects": [ { "status": "stunned", "durationMs": 1000 } ]
   },
   {
+    // Arrache un obstacle bas à son contact (le plus près de la case visée) et le lance : dégâts de zone, obstacle détruit.
+    "id": "throw-scenery", "name": "Lancer de décor",
+    "weight": "light", "range": 4, "minDamage": 12, "maxDamage": 16, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "scenery": { "use": "throw", "reach": 1 }
+  },
+  {
+    // Variante du Lancer de décor : l'obstacle arraché est posé sur une case libre proche (une couverture), avec ses PV.
+    "id": "barricade", "name": "Barricade",
+    "weight": "light", "range": 3, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 0, "throughWalls": false },
+    "scenery": { "use": "place", "reach": 1 }
+  },
+  {
     // Variante du Saut : atterrit au contact d'un ennemi et ne frappe que lui, plus fort.
     "id": "crush", "name": "Écrasement",
     "weight": "light", "range": 4, "minDamage": 17, "maxDamage": 21, "cooldownMs": 12000,

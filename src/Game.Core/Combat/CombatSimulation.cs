@@ -169,7 +169,8 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Empreinte de l'état (tick, unités, générateur aléatoire, nombre d'événements et d'ordres, zones au sol, obstacles dressés) : deux simulations qui
+    /// Empreinte de l'état (tick, unités, générateur aléatoire, nombre d'événements et d'ordres, zones au sol, obstacles
+    /// dressés, dômes, PV des obstacles abîmés) : deux simulations qui
     /// devraient être identiques (serveur et client) le sont si leurs empreintes concordent à chaque tick.
     /// </summary>
     public ulong Checksum()
@@ -220,6 +221,24 @@ public sealed partial class CombatSimulation
             Add((int)unit.SpentReactions);
             Add(unit.Guard is null ? 0 : 1 + (int)unit.Guard.Against);
             Add(unit.GuardEndTick ?? -1);
+        }
+        foreach (var dome in _domes)
+        {
+            Add(dome.Owner.Id.Value);
+            Add(dome.Shielded?.Id.Value ?? -1);
+            Add(dome.Held ? 1 : 0);
+            Add(dome.Falling ? 1 : 0);
+            foreach (var cell in dome.Cells)
+            {
+                Add(cell.X);
+                Add(cell.Y);
+            }
+        }
+        foreach (var (cell, hp) in _coverHp.OrderBy(c => c.Key.Y).ThenBy(c => c.Key.X))
+        {
+            Add(cell.X);
+            Add(cell.Y);
+            Add(hp);
         }
         return hash;
     }

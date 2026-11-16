@@ -51,7 +51,8 @@ public sealed partial class CombatSimulation
             QueueRiposte(attacker, skill, target, byGuard: held.Ripostes);
             return true;
         }
-        if (Interceptor(target) is { } guard)
+        // Le garde du corps ne s'interpose que si le coup allait toucher : pas devant un dôme qui le bloquerait.
+        if (DomeBlocking(skill, target) is null && Interceptor(target) is { } guard)
         {
             guard.SpentReactions |= CycleReactions.Bodyguard;
             _events.Add(new AttackIntercepted(CurrentTick, guard.Id, target.Id, attacker.Id));

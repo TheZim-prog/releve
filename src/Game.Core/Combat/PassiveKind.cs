@@ -94,6 +94,12 @@ public enum PassiveKind
 
     /// <summary>Double déploiement (tech) : il peut avoir plusieurs gadgets du même type à la fois (<see cref="CombatRules.DoubleDeploymentCount"/>).</summary>
     DoubleDeployment,
+
+    /// <summary>
+    /// Inébranlable (colosse) : un adversaire ne peut ni le déplacer de force, ni le déséquilibrer (un allié peut encore
+    /// le lancer ou le déplacer).
+    /// </summary>
+    Unshakable,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

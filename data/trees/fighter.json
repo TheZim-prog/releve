@@ -28,10 +28,5 @@
         { "actives": [ { "skill": "deadly-throw" } ], "passives": [ { "id": "ambusher", "name": "Embusqué" } ] }
       ]
     }
-  ],
-  "planned": {
-    "relentless": "Acharnement",
-    "finishing-blow": "Coup de grâce",
-    "deadly-throw": "Lancer mortel"
-  }
+  ]
 }

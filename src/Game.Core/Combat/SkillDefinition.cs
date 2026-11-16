@@ -168,6 +168,28 @@ public sealed record SkillDefinition
     /// </summary>
     public bool CreatesDome { get; init; }
 
+    /// <summary>Dôme posé sur un allié, sans zone (ex. Bouclier personnel) : il le suit dans ses déplacements.</summary>
+    public bool ShieldsAlly => CreatesDome && Zone is null;
+
+    /// <summary>
+    /// Forteresse : le dôme (une attaque chargée en carré autour du lanceur) se lève dès le début de la charge et dure
+    /// jusqu'à son terme ou à son interruption. Il bloque toutes les attaques contre l'équipe dessous sans tomber, mais
+    /// ne protège pas le lanceur.
+    /// </summary>
+    public bool HoldsDome { get; init; }
+
+    /// <summary>Lancer de décor, Barricade : la compétence prend un obstacle bas du décor, ou <c>null</c>.</summary>
+    public SceneryDefinition? Scenery { get; init; }
+
+    /// <summary>Acharnement : la recharge est annulée si le coup met la cible hors de combat.</summary>
+    public bool ResetsCooldownOnKill { get; init; }
+
+    /// <summary>
+    /// Coup de grâce : bonus de dégâts, en %, contre une cible à 0 PV ; il grandit avec la part de PV qui lui manquent
+    /// (0 = aucun). Boss compris.
+    /// </summary>
+    public int MissingHpDamageBonusPercent { get; init; }
+
     /// <summary>
     /// Exécution : si les PV de la cible sont au plus à ce % de son maximum, elle est achevée au lieu de prendre les
     /// dégâts normaux (sauf un boss). 0 = pas d'exécution.
@@ -247,10 +269,14 @@ public sealed record SkillDefinition
         // Déplacements forcés : une projection vise un ennemi ; une télékinésie n'est pas chargée (la cible bougerait
         // avant le déclenchement) ; une compétence sur « n'importe qui » ne fait que déplacer.
         ForcedMove?.Validate(Id);
-        // Seule une projection va avec une zone, centrée sur le lanceur : chaque unité touchée est repoussée loin de lui.
+        // Seuls une projection (chaque unité touchée est repoussée loin du lanceur) et un tourniquet (l'ennemi attrapé frappe
+        // tout autour, puis il est lancé) vont avec une zone, centrée sur le lanceur ; un tourniquet en a toujours une.
         if (ForcedMove is not null && Zone is not null
-            && (ForcedMove.Type != ForcedMoveType.Push || !IsOffensive || Zone.Shape != ZoneShape.Square || Range != 0))
-            throw new ArgumentException($"Skill '{Id}': only a push goes with a zone, an offensive square around the caster (range 0).");
+            && (ForcedMove.Type is not (ForcedMoveType.Push or ForcedMoveType.Spin) || !IsOffensive || Zone.Shape != ZoneShape.Square
+                || Range != 0 || IsCharged))
+            throw new ArgumentException($"Skill '{Id}': only a push or a spin goes with a zone, an instant offensive square around the caster (range 0).");
+        if (ForcedMove?.Type == ForcedMoveType.Spin && (Zone is null || SelfMove is not null))
+            throw new ArgumentException($"Skill '{Id}': a spin hits a square zone around its caster, without a self move.");
         if (ForcedMove is { IsLinear: true } && Target != SkillTargeting.Enemy)
             throw new ArgumentException($"Skill '{Id}': a push or a throw targets an enemy.");
         // Un renversement passe la cible par-dessus le lanceur : elle est à son contact.
@@ -269,9 +295,13 @@ public sealed record SkillDefinition
                                             || SelfMove is SelfMoveType.Pierce or SelfMoveType.Leap))
             throw new ArgumentException($"Skill '{Id}': an execution is a damaging attack on one enemy.");
 
-        if (CreatesDome && (Zone?.Shape != ZoneShape.Square || IsCharged || DealsDamage || Effects.Count > 0
-                            || GaugeGainPercent > 0 || ForcedMove is not null || ExecuteAtOrBelowPercent > 0))
-            throw new ArgumentException($"Skill '{Id}': a dome is an instant square zone that does nothing else.");
+        // Un dôme : une zone carrée, ou un allié (qu'il suit) ; seule une forteresse se tient, pendant sa charge, autour du lanceur.
+        if (CreatesDome && (!(Zone?.Shape == ZoneShape.Square || (Zone is null && Target == SkillTargeting.Ally))
+                            || IsCharged != HoldsDome || DealsDamage || Effects.Count > 0 || GaugeGainPercent > 0
+                            || ForcedMove is not null || ExecuteAtOrBelowPercent > 0 || TempHp is not null || Heals))
+            throw new ArgumentException($"Skill '{Id}': a dome is an instant square zone or an ally (held only by a fortress), and does nothing else.");
+        if (HoldsDome && (!CreatesDome || Zone is null || Range != 0))
+            throw new ArgumentException($"Skill '{Id}': a fortress is a charged dome around its caster (range 0).");
 
         // Soin : sur un allié, sur soi, ou dans une zone qui ne touche que les alliés ; jamais avec des dégâts.
         if (MinHeal < 0 || MaxHeal < MinHeal)
@@ -413,7 +443,25 @@ public sealed record SkillDefinition
                 || !(Zone is { Shape: ZoneShape.Square } && IsOffensive || Zone is null && Target == SkillTargeting.Ally)))
             throw new ArgumentException($"Skill '{Id}': a watch covers a square zone or an ally, at once, and does nothing else.");
 
-        if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null && Guard is null && Watch is null)
+        // Décor : une zone carrée à portée, instantanée ; lancé, il frappe la zone ; posé, il ne fait rien d'autre et
+        // va sur une seule case.
+        Scenery?.Validate(Id);
+        if (Scenery is not null
+            && (Zone?.Shape != ZoneShape.Square || !IsOffensive || IsCharged || Range < 1 || SelfMove is not null || Summon is not null
+                || CreatesDome || Ground is not null || Raises is not null || ForcedMove is not null
+                || (Scenery.Use == SceneryUse.Throw ? !HasHitEffect : HasHitEffect || Zone.Size != 0)))
+            throw new ArgumentException($"Skill '{Id}': scenery is thrown on a square zone in range (with an effect), or placed on one cell (without).");
+
+        // Recharge annulée par un coup fatal, dégâts selon les PV manquants : un coup qui fait des dégâts à un seul ennemi.
+        if (MissingHpDamageBonusPercent is < 0 or > 1000)
+            throw new ArgumentException($"Skill '{Id}' needs a missing HP damage bonus between 0 and 1000 %.");
+        if ((ResetsCooldownOnKill || MissingHpDamageBonusPercent > 0)
+            && (!IsOffensive || Zone is not null || !DealsDamage || Chain is not null || SelfMove is SelfMoveType.Pierce or SelfMoveType.Leap
+                || (ResetsCooldownOnKill && (SelfMove is not null || CooldownMs == 0))))
+            throw new ArgumentException($"Skill '{Id}': a cooldown reset on a kill (with a cooldown, without self move) or a missing HP bonus belongs to a damaging attack on one enemy.");
+
+        if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null && Guard is null && Watch is null
+            && Scenery is null)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain, forced move or ground effect).");
     }
 }

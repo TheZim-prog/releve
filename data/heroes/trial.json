@@ -2,15 +2,16 @@
 // mesure (scénario « trial »). Pour essayer une variante, la mettre dans "equipped" à la place de sa compétence.
 [
   {
-    // Lutteur et Cogneur en mouvement : Écrasement (variante de leap), Renversement (variante de projection) et
-    // Catapulte (variante : cannonball, l'allié lancé blesse autour de lui).
-    // À essayer aussi : hammer-blow (variante : quake), steel-skin (aegis), provocation (challenge), arm-lock (dismantle).
+    // Rempart et Lutteur au complet : Bouclier personnel (variante de dome), Forteresse, Tourniquet, et le Lancer de
+    // décor (variante : barricade ; il faut un obstacle bas à son contact).
+    // À essayer aussi : leap (variante : crush), projection (reversal), catapult (cannonball), hammer-blow (quake),
+    // steel-skin (aegis), provocation (challenge), arm-lock (dismantle).
     "id": "trial-colossus", "archetype": "colossus", "level": 20,
     "points": { "hp": 12, "power": 5, "initiative": 2 },
-    "learned": ["dome", "provocation", "steel-skin", "leap", "hammer-blow", "throw-scenery", "rage", "shockwave", "projection",
-                "arm-lock", "catapult", "vigilance", "bodyguard"],
-    // Passif : Garde du corps (autres : vigilance, rage).
-    "equipped": ["crush", "reversal", "catapult", "shockwave"],
+    "learned": ["dome", "provocation", "steel-skin", "bodyguard", "fortress", "projection", "arm-lock", "catapult", "vigilance",
+                "spin-throw", "leap", "hammer-blow", "throw-scenery"],
+    // Passif : Garde du corps (autre : vigilance ; unshakable demande un point de plus dans Rempart).
+    "equipped": ["personal-shield", "fortress", "spin-throw", "throw-scenery"],
     "passive": "bodyguard"
   },
   {
@@ -28,16 +29,15 @@
     "passive": "reflexes"
   },
   {
-    // La Ruée (variante : retreat), les variantes Balayage (Coup étourdissant) et Volée (Lames de jet).
-    // À essayer aussi : disarm.
-    // À essayer aussi : precise-strike, qui ignore les protections, et sa variante pincer.
+    // Acharnement (variante : finishing-blow), Lancer mortel (chargé, à longue portée), Parade (variante : deflection),
+    // Maître d'armes, passif Riposte.
+    // À essayer aussi : smoke-bomb (variante : tear-gas), trap (explosive-trap), rush (retreat), disarm (offbeat),
+    // stunning-blow (sweep), precise-strike (pincer), throwing-blades (volley).
     "id": "trial-fighter", "archetype": "fighter", "level": 20,
     "points": { "hp": 6, "power": 8, "initiative": 5 },
-    "learned": ["stunning-blow", "parry", "disarm", "throwing-blades", "smoke-bomb", "precise-strike", "rush", "relentless", "weakPoint",
-                "execution", "trap", "riposte", "weapon-master"],
-    // Fumigène (variante : tear-gas) et Piège (variante : explosive-trap).
-    // Parade (variante : deflection), Maître d'armes, passif Riposte.
-    "equipped": ["parry", "smoke-bomb", "trap", "weapon-master"],
+    "learned": ["stunning-blow", "parry", "disarm", "riposte", "weapon-master", "throwing-blades", "smoke-bomb", "trap", "firstBlood",
+                "deadly-throw", "precise-strike", "rush", "relentless"],
+    "equipped": ["relentless", "deadly-throw", "parry", "weapon-master"],
     "passive": "riposte"
   },
   {

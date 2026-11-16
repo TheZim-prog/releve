@@ -8,6 +8,22 @@
     "createsDome": true
   },
   {
+    // Variante du Bouclier de zone : posé sur un seul allié, qu'il suit. Même règle : une attaque bloquée, et il tombe à
+    // la prochaine action du colosse.
+    "id": "personal-shield", "name": "Bouclier personnel",
+    "target": "ally", "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "createsDome": true
+  },
+  {
+    // Grand dôme autour de lui : bloque toutes les attaques contre les alliés dessous (pas lui) tant qu'il le tient,
+    // 6 s au plus. Immobile, jauge à 0 ; il tombe s'il est étourdi, désarmé, mis à terre ou déplacé de force.
+    "id": "fortress", "name": "Forteresse",
+    "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "chargeMs": 6000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false },
+    "createsDome": true, "holdsDome": true
+  },
+  {
     // Il gagne des PV temporaires : la moitié de ses PV actuels. À lancer avant d'encaisser, pas après.
     "id": "steel-skin", "name": "Peau d'acier",
     "target": "self", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,

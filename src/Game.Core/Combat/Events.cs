@@ -140,15 +140,18 @@ public sealed record TauntEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
 /// <summary>Les PV temporaires de l'unité ont duré leur temps : ce qu'il en restait disparaît.</summary>
 public sealed record TempHpEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
 
-/// <summary>Le dôme de <paramref name="Owner"/> se lève sur ces cases.</summary>
-public sealed record DomeRaised(int Tick, UnitId Owner, IReadOnlyList<Cell> Cells) : CombatEvent(Tick)
+/// <summary>
+/// Le dôme de <paramref name="Owner"/> se lève sur ces cases, ou sur l'allié <paramref name="Shielded"/>, qu'il suit
+/// (Bouclier personnel : <paramref name="Cells"/> est alors sa case du moment).
+/// </summary>
+public sealed record DomeRaised(int Tick, UnitId Owner, IReadOnlyList<Cell> Cells, UnitId? Shielded = null) : CombatEvent(Tick)
 {
     public bool Equals(DomeRaised? other) =>
-        other is not null && base.Equals(other) && Owner == other.Owner && Cells.SequenceEqual(other.Cells);
+        other is not null && base.Equals(other) && Owner == other.Owner && Cells.SequenceEqual(other.Cells)
+        && Shielded == other.Shielded;
 
-    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Owner, Cells.Count);
+    public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), Owner, Cells.Count, Shielded);
 }
-
 /// <summary>Le dôme de <paramref name="Owner"/> bloque un coup sur <paramref name="Unit"/> : ce coup n'a aucun effet sur elle.</summary>
 public sealed record HitBlocked(int Tick, UnitId Unit, UnitId Owner) : CombatEvent(Tick);
 
@@ -278,6 +281,9 @@ public enum RejectionReason
     /// en diagonale, par un mur sur un coin.
     /// </summary>
     NoLineOfSight,
+
+    /// <summary>Pas d'obstacle bas à prendre (Lancer de décor, Barricade) : aucun au contact, ou à portée et en vue.</summary>
+    NoScenery,
 }
 
 public static class RejectionReasons

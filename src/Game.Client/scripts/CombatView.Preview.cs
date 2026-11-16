@@ -9,9 +9,10 @@ public partial class CombatView
 {
     private void UpdateOverlays()
     {
-        _board.SetLayer("charges", _sim.Units.Where(u => u.Charge?.Zone is not null).SelectMany(u => u.Charge!.Zone!),
+        // Les attaques chargées menacent leur zone ; une forteresse, tenue comme une charge, est un dôme.
+        _board.SetLayer("charges", _sim.Units.Where(u => u.Charge is { Zone: not null, Skill.HoldsDome: false }).SelectMany(u => u.Charge!.Zone!),
             new Color(1f, 0.15f, 0.1f, 0.45f), 0.01f);
-        _board.SetLayer("domes", _domes.Values.SelectMany(c => c), new Color(0.3f, 0.6f, 1f, 0.35f), 0.015f);
+        _board.SetLayer("domes", _sim.DomeCells, new Color(0.3f, 0.6f, 1f, 0.35f), 0.015f);
         ShowGroundZones();
         // Surveillances : la zone, ou la case de l'allié protégé (il bouge avec lui).
         _board.SetLayer("watches", _sim.Watches.SelectMany(w => w.Cells
@@ -57,10 +58,13 @@ public partial class CombatView
             if (aiming.Skill is { } skill && aiming.Kind != AimKind.Self)
             {
                 // Portée de l'étape en cours : la cible, puis, en deux temps, la case (autour de la cible pour une
-                // télékinésie, du lanceur pour le dépôt d'un sauvetage ou le repli d'une Retraite).
+                // télékinésie, du lanceur pour le dépôt d'un sauvetage, le repli d'une Retraite ou le lancer d'un
+                // tourniquet). Le tourniquet attrape un ennemi au contact.
                 var (center, radius) = aiming.FirstTarget is { } first && _sim.FindUnit(first) is { } chosen
-                    ? skill.ForcedMove is { } move ? (chosen.Position, move.Distance) : (origin, skill.RescueDropRadius ?? skill.Range)
-                    : (origin, skill.Range);
+                    ? skill.ForcedMove is { Type: ForcedMoveType.Spin } spin ? (origin, spin.Distance)
+                    : skill.ForcedMove is { } move ? (chosen.Position, move.Distance)
+                    : (origin, skill.RescueDropRadius ?? skill.Range)
+                    : (origin, skill.ForcedMove?.Type == ForcedMoveType.Spin ? 1 : skill.Range);
                 // Le repli d'une Retraite et la fuite d'une Image rémanente se font à pied : les cases où le héros peut aller.
                 int? walk = aiming.FirstTarget is not null && skill.SelfMoveOptions is { RetreatDistance: > 0 } retreat
                     ? retreat.RetreatDistance

@@ -83,7 +83,7 @@ public sealed class ContentLoaderTests : IDisposable
     {
         CopyOfTheRealData();
         Rewrite("heroes/prologue.json", "\"equipped\": [\"dome\", \"leap\", \"projection\", \"shockwave\"]",
-            "\"equipped\": [\"dome\", \"leap\", \"projection\", \"fortress\"]"); // pas achetée, et pas encore codée
+            "\"equipped\": [\"dome\", \"leap\", \"projection\", \"force-wave\"]"); // pas à lui, et pas encore codée
         Assert.Contains("prologue-colossus", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
 
         Dispose();
@@ -96,16 +96,16 @@ public sealed class ContentLoaderTests : IDisposable
     public void ASkillAddedToTheLibrary_MustLeaveThePlannedListOfItsTree()
     {
         CopyOfTheRealData();
-        // « fortress » est codée (ici : un coup quelconque), mais l'arbre du colosse la dit encore « à venir ».
-        Rewrite("skills/colossus/wrestler.json", "\n]", """
+        // « force-wave » est codée (ici : un coup quelconque), mais l'arbre du télépathe la dit encore « à venir ».
+        Rewrite("skills/telepath/kinetic.json", "\n]", """
             ,
-              { "id": "fortress", "name": "Forteresse", "weight": "heavy", "range": 1, "minDamage": 3, "maxDamage": 4, "cooldownMs": 0 }
+              { "id": "force-wave", "name": "Onde de force", "weight": "heavy", "range": 1, "minDamage": 3, "maxDamage": 4, "cooldownMs": 0 }
             ]
             """);
 
-        Assert.Contains("fortress", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
+        Assert.Contains("force-wave", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
 
-        Rewrite("trees/colossus.json", "    \"fortress\": \"Forteresse\",\n", "");
-        Assert.True(GameContent.Load(_directory).Skills.ContainsKey("fortress"));
+        Rewrite("trees/telepath.json", "    \"force-wave\": \"Onde de force\",\n", "");
+        Assert.True(GameContent.Load(_directory).Skills.ContainsKey("force-wave"));
     }
 }

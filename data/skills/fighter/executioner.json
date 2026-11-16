@@ -20,6 +20,19 @@
     "flankDamagePercent": 150
   },
   {
+    // Gros coup au contact ; si la cible tombe, la recharge est annulée.
+    "id": "relentless", "name": "Acharnement",
+    "weight": "light", "range": 1, "minDamage": 15, "maxDamage": 19, "cooldownMs": 10000,
+    "resetsCooldownOnKill": true
+  },
+  {
+    // Variante de l'Acharnement : plus de recharge annulée, mais des dégâts qui montent avec les PV manquants de la
+    // cible (jusqu'au double contre une cible presque à terre), boss compris.
+    "id": "finishing-blow", "name": "Coup de grâce",
+    "weight": "light", "range": 1, "minDamage": 12, "maxDamage": 15, "cooldownMs": 10000,
+    "missingHpDamageBonusPercent": 100
+  },
+  {
     // Court jusqu'à un ennemi (4 pas, sans attaque d'opportunité) et le frappe.
     "id": "rush", "name": "Ruée",
     "weight": "light", "range": 4, "minDamage": 10, "maxDamage": 13, "cooldownMs": 8000,

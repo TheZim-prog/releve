@@ -23,6 +23,12 @@ public enum ForcedMoveType
 
     /// <summary>Permutation : le lanceur et sa cible échangent leurs cases.</summary>
     Swap,
+
+    /// <summary>
+    /// Tourniquet : comme un renversement, mais dans la direction choisie (une case visée, la direction la plus proche
+    /// parmi les 8 depuis le lanceur) ; la distance se compte depuis la case du lanceur.
+    /// </summary>
+    Spin,
 }
 
 /// <summary>Déplacement forcé appliqué à la cible d'une compétence (données). Pas d'attaque d'opportunité.</summary>
@@ -46,8 +52,8 @@ public sealed record ForcedMoveDefinition
 
     public int ImpactMaxDamage { get; init; }
 
-    /// <summary>Projection ou renversement : la cible part en ligne droite et peut percuter quelque chose.</summary>
-    public bool IsLinear => Type is ForcedMoveType.Push or ForcedMoveType.Throw;
+    /// <summary>Projection, renversement ou tourniquet : la cible part en ligne droite et peut percuter quelque chose.</summary>
+    public bool IsLinear => Type is ForcedMoveType.Push or ForcedMoveType.Throw or ForcedMoveType.Spin;
 
     public void Validate(string skillId)
     {

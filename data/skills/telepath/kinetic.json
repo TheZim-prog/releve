@@ -12,6 +12,14 @@
     "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 12, "cooldownMs": 5000
   },
   {
+    // Variante du Projectile : soulève un obstacle bas à portée et en vue (le plus près de la case visée) et le lance :
+    // dégâts de zone, obstacle détruit.
+    "id": "telekinetic-throw", "name": "Lancer de décor",
+    "weight": "light", "range": 5, "minDamage": 9, "maxDamage": 12, "cooldownMs": 8000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "scenery": { "use": "throw", "reach": 5 }
+  },
+  {
     // Dégâts légers, et immobilise une cible à distance.
     "id": "vise", "name": "Étau",
     "weight": "light", "range": 5, "minDamage": 5, "maxDamage": 7, "cooldownMs": 10000,

@@ -67,6 +67,7 @@ public partial class CombatView
         var state = hero.Status == UnitStatus.Downed ? "À TERRE"
             : HasOrder(hero.Id) ? (hero.IsReady ? "ordre donné" : "ordre en attente")
             : ready ? "PRÊT"
+            : hero.Charge is { Skill.HoldsDome: true } ? "tient la forteresse"
             : hero.Charge is not null ? "charge…"
             : "";
         // Les états restent visibles même prêt : un héros prêt mais immobilisé ou désarmé ne peut pas tout faire.

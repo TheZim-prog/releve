@@ -70,6 +70,7 @@ public static class Texts
         RejectionReason.NoEffect => "sans effet",
         RejectionReason.OutOfRange => "hors de portée",
         RejectionReason.NoLineOfSight => "pas de ligne de vue",
+        RejectionReason.NoScenery => "pas d'obstacle à prendre",
         _ => reason.ToString(),
     };
 
@@ -84,7 +85,9 @@ public static class Texts
             SkillUsed u => u.Target is { } target && target != u.Unit
                 ? $"{N(u.Unit)} : {S(u.Unit, u.SkillId)} sur {N(target)}"
                 : $"{N(u.Unit)} : {S(u.Unit, u.SkillId)}",
-            ChargeStarted c => $"{N(c.Unit)} charge {S(c.Unit, c.SkillId)}…",
+            ChargeStarted c => sim.FindUnit(c.Unit)?.FindSkill(c.SkillId)?.HoldsDome == true
+                ? $"{N(c.Unit)} : {S(c.Unit, c.SkillId)}"
+                : $"{N(c.Unit)} charge {S(c.Unit, c.SkillId)}…",
             ChargeInterrupted c => $"{N(c.Unit)} : {S(c.Unit, c.SkillId)} interrompue",
             ChargeMissed c => $"{N(c.Unit)} : {S(c.Unit, c.SkillId)} manque sa cible",
             UnitDamaged d => $"{N(d.Unit)} perd {d.Amount} PV ({d.Hp})",
@@ -108,6 +111,7 @@ public static class Texts
             HitBlocked b => $"Le dôme protège {N(b.Unit)}",
             HitCovered c => $"{N(c.Unit)} est à couvert (−{c.Absorbed})",
             CoverDestroyed => "Un obstacle est détruit",
+            SceneryTaken t => t.To is null ? $"{N(t.Unit)} arrache un obstacle et le lance" : $"{N(t.Unit)} déplace un obstacle",
             TrapTriggered t => $"{N(t.Unit)} déclenche le piège de {N(t.Owner)}",
             AttackParried p => $"{N(p.Unit)} pare l'attaque de {N(p.Attacker)}",
             AttackDodged d => $"{N(d.Unit)} esquive l'attaque de {N(d.Attacker)}",

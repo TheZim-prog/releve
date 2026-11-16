@@ -11,6 +11,8 @@ public sealed partial class CombatSimulation
     /// </summary>
     private void ApplyStatus(Unit target, StatusEffect effect, Unit source, int durationPercent = 100)
     {
+        if (ResistsStatus(target, effect.Status))
+            return;
         // Tous les multiplicateurs de durée (robot, Emprise) en une seule division.
         long durationMs = (long)effect.DurationMs * durationPercent, scale = 100;
         if (effect.Status.IsHarmful() && source.HasPassive(PassiveKind.Grip))
@@ -59,6 +61,14 @@ public sealed partial class CombatSimulation
             SetIntention(target, null);
     }
 
+    /// <summary>Inébranlable : jamais déséquilibré, d'où que ça vienne (un gaz allié compris).</summary>
+    private static bool ResistsStatus(Unit target, StatusKind status) =>
+        status == StatusKind.OffBalance && target.HasPassive(PassiveKind.Unshakable);
+
+    /// <summary>
+    /// Les états arrivés à échéance prennent fin. C'est une source à part : une forteresse lâchée par une fin d'état
+    /// (domination) tombe à sa fin.
+    /// </summary>
     private void ExpireStatuses()
     {
         foreach (var unit in _units)
@@ -70,6 +80,7 @@ public sealed partial class CombatSimulation
             foreach (var status in expired)
                 EndStatus(unit, status);
         }
+        EndDomes();
     }
 
     private void EndStatus(Unit unit, StatusKind status)
@@ -99,7 +110,8 @@ public sealed partial class CombatSimulation
     {
         if (unit.Team == team)
             return;
-        ClearReactions(unit); // ce qu'elle avait préparé pour son ancien camp ne sert plus
+        ClearReactions(unit); // ce qu'elle avait préparé pour son ancien camp ne sert plus, son dôme non plus
+        RemoveDome(unit);
         unit.Team = team;
         _events.Add(new TeamChanged(CurrentTick, unit.Id, team));
     }

@@ -29,3 +29,9 @@ public sealed record ObstacleRaised(int Tick, Cell Cell, Terrain Terrain, int En
 
 /// <summary>L'obstacle dressé sur la case a fait son temps : c'est de nouveau du sol.</summary>
 public sealed record ObstacleMelted(int Tick, Cell Cell) : CombatEvent(Tick);
+
+/// <summary>
+/// L'obstacle bas de <paramref name="From"/> est arraché (Lancer de décor, Barricade) : sa case redevient du sol. Posé
+/// ailleurs, il arrive sur <paramref name="To"/> avec ses PV ; lancé, <paramref name="To"/> est <c>null</c> (il est détruit).
+/// </summary>
+public sealed record SceneryTaken(int Tick, UnitId Unit, Cell From, Cell? To) : CombatEvent(Tick);

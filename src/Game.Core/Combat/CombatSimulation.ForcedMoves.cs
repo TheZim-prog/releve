@@ -2,8 +2,8 @@ using Game.Core.Grids;
 
 namespace Game.Core.Combat;
 
-// Déplacements forcés d'une cible : projection, renversement, pose sur une case, permutation. Aucun ne déclenche
-// d'attaque d'opportunité, et tous interrompent une charge en cours.
+// Déplacements forcés d'une cible : projection, renversement, tourniquet, pose sur une case, permutation. Aucun ne
+// déclenche d'attaque d'opportunité, et tous interrompent une charge en cours. Un adversaire inébranlable ne bouge pas.
 public sealed partial class CombatSimulation
 {
     /// <summary>
@@ -18,7 +18,12 @@ public sealed partial class CombatSimulation
             case ForcedMoveType.Push or ForcedMoveType.Throw:
                 Push(caster, skill, target, move, damageFactor, from: caster.Position);
                 break;
+            case ForcedMoveType.Spin:
+                Push(caster, skill, target, move, damageFactor, from: caster.Position, toward: destination);
+                break;
             case ForcedMoveType.Place:
+                if (ResistsForcedMove(caster, target))
+                    break;
                 Displace(target, destination!.Value);
                 LandingImpact(caster, skill, target, move, damageFactor);
                 break;
@@ -44,20 +49,37 @@ public sealed partial class CombatSimulation
         }
     }
 
+    /// <summary>Inébranlable : la cible a ce passif et le déplacement vient d'un adversaire. Elle reste où elle est.</summary>
+    private bool ResistsForcedMove(Unit caster, Unit target)
+    {
+        if (!target.HasPassive(PassiveKind.Unshakable) || !AreOpponents(caster, target))
+            return false;
+        _events.Add(new UnitResisted(CurrentTick, target.Id));
+        return true;
+    }
+
     /// <summary>
     /// Projection : pousse <paramref name="target"/> en ligne droite, loin de <paramref name="from"/> (la direction la
     /// plus proche parmi les 8), sur la distance prévue. Renversement : dans l'autre sens, par-dessus
-    /// <paramref name="from"/>, la distance comptée depuis cette case. Elle s'arrête avant une unité, ou avant un mur, le
-    /// bord ou une diagonale bloquée (même règle de coupe d'angle qu'un déplacement de la cible) ; une collision fait
-    /// des dégâts à la cible et à l'unité percutée si elle est debout.
+    /// <paramref name="from"/>, la distance comptée depuis cette case. Tourniquet : de même, mais vers
+    /// <paramref name="toward"/>. Elle s'arrête avant une unité, ou avant un mur, le bord ou une diagonale bloquée (même
+    /// règle de coupe d'angle qu'un déplacement de la cible) ; une collision fait des dégâts à la cible et à l'unité
+    /// percutée si elle est debout.
     /// </summary>
-    private void Push(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor, Cell from)
+    private void Push(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor, Cell from,
+        Cell? toward = null)
     {
-        if (from.NearestDirectionTo(target.Position) is not { } away)
+        if (ResistsForcedMove(caster, target))
             return;
-        var thrown = move.Type == ForcedMoveType.Throw;
-        var step = thrown ? (X: -away.X, Y: -away.Y) : away;
-        var start = thrown ? from : target.Position;
+        var direction = move.Type switch
+        {
+            ForcedMoveType.Spin => from.NearestDirectionTo(toward!.Value),
+            ForcedMoveType.Throw => from.NearestDirectionTo(target.Position) is { } away ? (-away.X, -away.Y) : null,
+            _ => from.NearestDirectionTo(target.Position),
+        };
+        if (direction is not { } step)
+            return;
+        var start = move.Type == ForcedMoveType.Push ? target.Position : from;
 
         var position = start;
         var collided = false;

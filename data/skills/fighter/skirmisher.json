@@ -8,6 +8,12 @@
     "zone": { "shape": "line", "size": 3, "throughWalls": false, "affects": "enemies" }
   },
   {
+    // Chargé (1,5 s) : très gros dégâts sur une cible à longue portée ; raté si elle sort de sa vue ou de sa portée d'ici là.
+    "id": "deadly-throw", "name": "Lancer mortel",
+    "weight": "heavy", "range": 7, "minDamage": 30, "maxDamage": 38, "cooldownMs": 20000,
+    "chargeMs": 1500
+  },
+  {
     // Écran de fumée sur une zone, 6 s : aucune ligne de vue n'y passe (au contact, on se voit toujours).
     "id": "smoke-bomb", "name": "Fumigène",
     "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 14000,

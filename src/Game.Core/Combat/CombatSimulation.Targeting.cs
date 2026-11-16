@@ -33,7 +33,8 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>) ;
-    /// <paramref name="Destination"/> : case où la télékinésie pose sa cible ; <paramref name="Origin"/> : d'où part une
+    /// <paramref name="Destination"/> : case où la télékinésie pose sa cible, vers laquelle un tourniquet lance la sienne,
+    /// ou de l'obstacle que prend un décor ; <paramref name="Origin"/> : d'où part une
     /// zone ordinaire (centre d'un carré, lanceur pour une ligne), pour la couverture ; <paramref name="Chain"/> : les
     /// maillons d'une chaîne, la première cible comprise.
     /// </summary>
@@ -83,6 +84,9 @@ public sealed partial class CombatSimulation
             return (new PlannedAction(skill, null, null, spot), null);
         }
 
+        if (skill.ForcedMove?.Type == ForcedMoveType.Spin)
+            return PlanSpin(unit, position, skill, use);
+
         if (skill.Zone is { } zone)
         {
             if (use.Cell is not { } cell || use.Target is not null)
@@ -106,7 +110,17 @@ public sealed partial class CombatSimulation
                     return (null, RejectionReason.InvalidDestination);
                 cells = cells.Where(c => CanRaiseOn(unit, position, c)).ToList();
             }
-            return (new PlannedAction(skill, null, cells, Origin: zone.Shape == ZoneShape.Square ? cell : position), null);
+            // Le décor : un obstacle à prendre (montré comme destination) et, pour une barricade, une case où le poser.
+            Cell? obstacle = null;
+            if (skill.Scenery is { } scenery)
+            {
+                if (scenery.Use == SceneryUse.Place && !CanRaiseOn(unit, position, cell))
+                    return (null, RejectionReason.InvalidDestination);
+                if (SceneryFor(unit, position, cell, scenery) is not { } taken)
+                    return (null, RejectionReason.NoScenery);
+                obstacle = taken;
+            }
+            return (new PlannedAction(skill, null, cells, obstacle, Origin: zone.Shape == ZoneShape.Square ? cell : position), null);
         }
 
         if (skill.Target == SkillTargeting.Self)
@@ -128,6 +142,9 @@ public sealed partial class CombatSimulation
         if (!skill.IsOffensive && !HasSupportEffect(skill, target))
             return (null, RejectionReason.NoEffect);
         if (IsImmune(skill, target))
+            return (null, RejectionReason.NoEffect);
+        // Une télékinésie sur un adversaire inébranlable ne le bougerait pas.
+        if (skill.Target == SkillTargeting.Any && target.HasPassive(PassiveKind.Unshakable) && AreOpponents(unit, target))
             return (null, RejectionReason.NoEffect);
         // Un gadget ne se lance pas et ne change pas de place : le déplacement d'un allié vaut pour un équipier.
         if (skill.Target == SkillTargeting.Ally && skill.ForcedMove is not null && target.SummonedBy is not null)
@@ -160,7 +177,8 @@ public sealed partial class CombatSimulation
         || (skill.Heals && target.Hp < target.MaxHp)
         || skill.TempHp is not null
         || (skill.GaugeGainPercent > 0 && !target.IsGaugeFull && target.Charge is null)
-        || skill.Watch is not null;
+        || skill.Watch is not null
+        || skill.CreatesDome;
 
     /// <summary>
     /// Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur ; une télékinésie,
@@ -186,6 +204,21 @@ public sealed partial class CombatSimulation
         && target.Position.DistanceTo(destination) <= distance
         && IsFreeFor(caster, destination)
         && LineOfSight.IsClear(_grid, target.Position, destination);
+
+    /// <summary>
+    /// Tourniquet, depuis <paramref name="position"/> : un ennemi debout à son contact (sans coupe d'angle), puis une case
+    /// autre que la sienne, qui donne la direction du lancer. La zone : le carré autour du lanceur.
+    /// </summary>
+    private (PlannedAction? Action, RejectionReason? Reason) PlanSpin(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
+    {
+        if (use.Target is not { } grabbedId || use.Cell is not { } toward || toward == position
+            || FindUnit(grabbedId) is not { Status: UnitStatus.Active } grabbed || !IsRightSide(unit, grabbed, skill))
+            return (null, RejectionReason.InvalidTarget);
+        if (!IsInMeleeReach(position, grabbed.Position))
+            return (null, RejectionReason.OutOfRange);
+        var cells = skill.Zone!.Cells(_grid, position, position)!;
+        return (new PlannedAction(skill, grabbed, cells, toward, Origin: position), null);
+    }
 
     /// <summary>
     /// Une attaque ciblée de <paramref name="unit"/>, depuis <paramref name="from"/>, peut-elle toucher

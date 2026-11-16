@@ -261,6 +261,9 @@ public sealed partial class CombatSimulation
                 CurrentTick + Rules.MillisecondsToTicks(actionSkill.ChargeMs), DamageFactorOf(unit), action.Origin);
             unit.Charge = charge;
             _events.Add(new ChargeStarted(CurrentTick, unit.Id, actionSkill.Id, charge.Target, charge.Zone, charge.ReleaseTick));
+            // Une forteresse se lève tout de suite et tient pendant la charge.
+            if (actionSkill.HoldsDome)
+                RaiseDome(unit, charge.Zone, held: true);
             return;
         }
 
