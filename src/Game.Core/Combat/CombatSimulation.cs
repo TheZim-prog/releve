@@ -90,10 +90,11 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Équipes encore en lice : celles (d'origine : une unité dominée compte pour la sienne) qui ont au moins une unité
-    /// debout, sans compter les civils ni les gadgets. Sans le camp des joueurs, le combat est perdu.
+    /// debout, sans compter les civils, les gadgets ni les fuyards (une unité en fuite ne compte plus, même avant
+    /// d'atteindre le bord). Sans le camp des joueurs, le combat est perdu.
     /// </summary>
     public IReadOnlySet<int> TeamsStillFighting() =>
-        _units.Where(u => u.IsStandingCombatant)
+        _units.Where(u => u.IsStandingCombatant && !u.IsFleeing)
             .Select(u => u.OriginalTeam)
             .ToHashSet();
 
@@ -223,6 +224,7 @@ public sealed partial class CombatSimulation
             Add(unit.TauntedBy?.Value ?? 0);
             Add(unit.PendingGauge);
             Add((int)unit.Status);
+            Add((unit.IsFleeing ? 1 : 0) | (unit.Escaped ? 2 : 0) | (unit.Surrendered ? 4 : 0) | (unit.FellAsLeader ? 8 : 0));
             Add(unit.Team);
             Add((int)unit.SpentReactions);
             Add(unit.Guard is null ? 0 : 1 + (int)unit.Guard.Against);

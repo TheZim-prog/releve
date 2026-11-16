@@ -48,7 +48,12 @@ ne dépend de ce que ces héros équipent.
 **Donner des objectifs à un combat** : une liste `"objectives"` dans le scénario, par exemple
 `[ { "kind": "eliminate" } ]`. Ajouter `"secondary": true` à un objectif qui ne compte que pour le bilan ; il faut au
 moins un objectif principal. Sans liste, le combat est une élimination de tous les ennemis. Dans tous les cas, perdre
-tous les héros est une défaite. Types disponibles : `eliminate` (plus aucun ennemi debout, enfuis compris).
+tous les héros est une défaite. Types disponibles : `eliminate` (plus aucun ennemi debout : ceux qui sont enfuis ou en fuite ne comptent plus).
+
+**Désigner le chef d'une bande** : ajouter `"leader": "flee"` ou `"leader": "surrender"` à une unité du scénario (pas un
+héros ; un seul chef par camp). Quand il tombe (vaincu, à terre ou enfui), les autres unités de son camp prennent la
+fuite (`flee`) ou se rendent et quittent le combat (`surrender`). Dans les deux cas, elles ne comptent plus : abattre
+le chef suffit à gagner une élimination.
 
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et

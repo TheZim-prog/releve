@@ -30,7 +30,10 @@ public sealed record ScenarioDefinition
         return scenario;
     }
 
-    /// <summary>Vérifie le scénario seul : carte lisible, unités sur des cases libres et distinctes, objectifs valides.</summary>
+    /// <summary>
+    /// Vérifie le scénario seul : carte lisible, unités sur des cases libres et distinctes, au plus un chef par camp (un
+    /// ennemi, pas un héros), objectifs valides.
+    /// </summary>
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name))
@@ -56,7 +59,11 @@ public sealed record ScenarioDefinition
                 throw new ArgumentException($"Scenario '{Id}': {unit.Label} stands on a blocked cell {cell}.");
             if (!taken.Add(cell))
                 throw new ArgumentException($"Scenario '{Id}': two units on {cell}.");
+            if (unit.Leader is not null && (unit.Hero is not null || unit.Team == CombatSimulation.PlayerTeam))
+                throw new ArgumentException($"Scenario '{Id}': {unit.Label} cannot lead minions (only an enemy unit can, not a hero).");
         }
+        if (Units.Where(u => u.Leader is not null).GroupBy(u => u.Team).FirstOrDefault(g => g.Count() > 1) is { } team)
+            throw new ArgumentException($"Scenario '{Id}': team {team.Key} has more than one leader.");
     }
 
     /// <summary>
@@ -106,8 +113,10 @@ public sealed record ScenarioDefinition
             var gauge = hero.Definition.Passive == PassiveKind.FlyingStart ? rules.GaugeCapacity : 0;
             return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points);
         }
-        return units.TryGetValue(unit.Unit!, out var definition)
-            ? definition.ToSetup(id, unit.Team, cell)
-            : throw new ArgumentException($"unknown {unit.Label}.");
+        if (!units.TryGetValue(unit.Unit!, out var definition))
+            throw new ArgumentException($"unknown {unit.Label}.");
+        if (unit.Leader is not null && definition.IsCivilian)
+            throw new ArgumentException($"{unit.Label} is a civilian, it cannot lead minions.");
+        return definition.ToSetup(id, unit.Team, cell) with { MinionsOnFall = unit.Leader };
     }
 }

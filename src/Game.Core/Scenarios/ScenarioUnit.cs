@@ -1,3 +1,5 @@
+using Game.Core.Combat;
+
 namespace Game.Core.Scenarios;
 
 /// <summary>
@@ -12,6 +14,12 @@ public sealed record ScenarioUnit
 
     /// <summary>Identifiant du héros (data/heroes).</summary>
     public string? Hero { get; init; }
+
+    /// <summary>
+    /// Chef de son camp (une unité ennemie, ni héros ni civil ; un seul par camp) : ce que font ses sbires quand il tombe
+    /// (<c>"flee"</c> : ils fuient, <c>"surrender"</c> : ils se rendent).
+    /// </summary>
+    public MinionReaction? Leader { get; init; }
 
     public required int Team { get; init; }
     public required int X { get; init; }

@@ -169,12 +169,14 @@ public sealed partial class CombatSimulation
         SetIntention(unit, null);
     }
 
-    /// <summary>L'unité en fuite quitte le combat par le bord de carte : retirée, mais enfuie et non vaincue.</summary>
+    /// <summary>
+    /// L'unité en fuite quitte le combat par le bord de carte : retirée, mais enfuie et non vaincue. Hors de toute source,
+    /// ce que sa sortie provoque (les sbires d'un chef enfui) part aussitôt.
+    /// </summary>
     private void Escape(Unit unit)
     {
         unit.Escaped = true;
-        TakeOutOfAction(unit, UnitStatus.Removed);
-        RemoveDome(unit);
-        _events.Add(new UnitEscaped(CurrentTick, unit.Id));
+        Withdraw(unit, new UnitEscaped(CurrentTick, unit.Id));
+        FlushReactions();
     }
 }

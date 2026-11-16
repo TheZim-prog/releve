@@ -11,7 +11,10 @@ internal static class ObjectiveRules
         _ => throw new ArgumentOutOfRangeException(nameof(objective), objective.Kind, "Unknown objective kind."),
     };
 
-    /// <summary>Réussi quand il ne reste debout que le camp des joueurs (ennemis vaincus ou enfuis, civils et gadgets à part).</summary>
+    /// <summary>
+    /// Réussi quand il ne reste debout que le camp des joueurs : les ennemis sont vaincus, enfuis ou en fuite (civils et
+    /// gadgets à part).
+    /// </summary>
     private static ObjectiveState Eliminate(CombatSimulation simulation) =>
         simulation.TeamsStillFighting().All(team => team == CombatSimulation.PlayerTeam)
             ? ObjectiveState.Completed

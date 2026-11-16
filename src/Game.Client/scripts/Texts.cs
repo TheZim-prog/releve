@@ -132,6 +132,10 @@ public static class Texts
             UnitRemoved r => $"{N(r.Unit)} est hors de combat",
             UnitEscaped x => sim.FindUnit(x.Unit)?.IsCivilian == true ? $"{N(x.Unit)} est évacué" : $"{N(x.Unit)} s'enfuit !",
             UnitFleeing f => $"{N(f.Unit)} prend la fuite",
+            LeaderFell l => l.Minions == MinionReaction.Surrender
+                ? $"{N(l.Leader)} est tombé : ses hommes se rendent !"
+                : $"{N(l.Leader)} est tombé : ses hommes prennent la fuite !",
+            UnitSurrendered s => $"{N(s.Unit)} se rend",
             UnitRevived r => $"{N(r.By)} relève {N(r.Unit)} ({r.Hp} PV)",
             UnitRescued r => $"{N(r.By)} met {N(r.Unit)} à l'abri",
             StatusApplied s => $"{N(s.Unit)} : {Status(s.Status)}",

@@ -50,6 +50,18 @@ public class EliminationTests
     }
 
     [Fact]
+    public void AnEnemyThatOnlyFlees_NoLongerCounts()
+    {
+        var sim = HeroFacingThug();
+        sim.Get(2).IsFleeing = true; // pas encore au bord : il court
+
+        sim.Tick();
+
+        Assert.True(sim.Outcome);
+        Assert.Equal(UnitStatus.Active, sim.Get(2).Status);
+    }
+
+    [Fact]
     public void WhenEveryHeroIsDown_TheCombatIsLost()
     {
         var sim = HeroFacingThug();

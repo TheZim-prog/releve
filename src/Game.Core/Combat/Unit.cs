@@ -31,7 +31,11 @@ public enum UnitStatus
 /// <param name="InitialGauge">Jauge au début du combat, entre 0 et la capacité.</param>
 /// <param name="Points">Points de stats de ce héros (<c>null</c> : aucun, les stats de son type).</param>
 public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinition Definition, int InitialGauge = 0,
-    StatPoints? Points = null);
+    StatPoints? Points = null)
+{
+    /// <summary>Chef de son camp : ce que font ses sbires quand il tombe (<c>null</c> : pas un chef).</summary>
+    public MinionReaction? MinionsOnFall { get; init; }
+}
 
 /// <summary>
 /// Intention d'une unité IA, fixée avant sa jauge pleine : la compétence prévue (<c>null</c> si aucune n'est
@@ -81,6 +85,7 @@ public sealed class Unit
         OpportunityAttacksLeft = OpportunityAttacksPerCycle;
         Behavior = definition.Behavior;
         Passive = definition.Passive;
+        MinionsOnFall = setup.MinionsOnFall;
         _rules = rules;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -182,11 +187,23 @@ public sealed class Unit
     /// <summary>Civil (neutre) : voir <see cref="UnitDefinition.IsCivilian"/>.</summary>
     public bool IsCivilian => Definition.IsCivilian;
 
-    /// <summary>En fuite (sous son seuil de PV) : ne fait plus que courir vers le bord de carte, jusqu'à la fin du combat.</summary>
+    /// <summary>Chef de son camp : ce que font ses sbires quand il tombe (<c>null</c> : pas un chef).</summary>
+    public MinionReaction? MinionsOnFall { get; }
+
+    /// <summary>Chef déjà tombé une fois : ses sbires ont réagi (une seule fois, même s'il est relevé ensuite).</summary>
+    public bool FellAsLeader { get; internal set; }
+
+    /// <summary>
+    /// En fuite (sous son seuil de PV, ou son chef tombé) : ne fait plus que courir vers le bord de carte, jusqu'à la fin
+    /// du combat.
+    /// </summary>
     public bool IsFleeing { get; internal set; }
 
     /// <summary>Enfuie : a quitté le combat par le bord de carte (retirée, mais pas vaincue).</summary>
     public bool Escaped { get; internal set; }
+
+    /// <summary>Rendue (son chef tombé) : a quitté le combat (retirée, mais pas vaincue).</summary>
+    public bool Surrendered { get; internal set; }
 
     /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
     public int Activations { get; internal set; }

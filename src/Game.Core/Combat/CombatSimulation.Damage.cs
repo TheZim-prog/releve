@@ -302,6 +302,7 @@ public sealed partial class CombatSimulation
         InterruptCharge(unit);
         unit.Intention = null;
         ClearReactions(unit);
+        QueueMinionsReaction(unit);
     }
 
     /// <summary>
@@ -315,12 +316,18 @@ public sealed partial class CombatSimulation
             Dismiss(unit);
     }
 
-    /// <summary>Retire une unité sans qu'elle soit vaincue (gadget remplacé ou épuisé).</summary>
-    private void Dismiss(Unit unit)
+    /// <summary>Retire un gadget remplacé ou épuisé.</summary>
+    private void Dismiss(Unit unit) => Withdraw(unit, new UnitRemoved(CurrentTick, unit.Id));
+
+    /// <summary>
+    /// Retire l'unité du combat sans qu'elle soit vaincue (gadget retiré, unité enfuie ou rendue) ; <paramref name="announcement"/>
+    /// dit comment.
+    /// </summary>
+    private void Withdraw(Unit unit, CombatEvent announcement)
     {
         TakeOutOfAction(unit, UnitStatus.Removed);
         RemoveDome(unit);
-        _events.Add(new UnitRemoved(CurrentTick, unit.Id));
+        _events.Add(announcement);
     }
 
     /// <summary>Soigne une unité debout, sans dépasser son maximum. Renvoie les PV rendus.</summary>
