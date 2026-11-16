@@ -252,4 +252,10 @@ public sealed class Unit
     public int CooldownEndTick(string skillId) => _cooldownEndTicks.GetValueOrDefault(skillId);
 
     internal void StartCooldown(string skillId, int endTick) => _cooldownEndTicks[skillId] = endTick;
+
+    /// <summary>Une de ses compétences est-elle en recharge au tick donné ?</summary>
+    public bool HasCooldownRunning(int tick) => _cooldownEndTicks.Values.Any(end => tick < end);
+
+    /// <summary>Toutes ses recharges en cours prennent fin (Rechargement).</summary>
+    internal void ClearCooldowns() => _cooldownEndTicks.Clear();
 }

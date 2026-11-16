@@ -54,6 +54,8 @@
   // Auras : à cette portée (en cases), Commandement accélère la jauge des alliés et Champ de brouillage ralentit
   // celle des ennemis, en % de leur vitesse normale.
   "auraRange": 2,
+  // Analyse tactique : les intentions des ennemis à cette portée (en cases) du tech sont révélées.
+  "tacticalAnalysisRange": 4,
   "commandFillPercent": 115,
   // Surcadençage : les gadgets du tech remplissent leur jauge 30 % plus vite.
   "overclockingFillPercent": 130,

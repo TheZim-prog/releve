@@ -50,7 +50,9 @@ public sealed partial class CombatSimulation
             case StatusKind.Dominated:
                 InterruptCharge(target);
                 SetIntention(target, null);
-                target.DominatedBy = source.Id;
+                // Commandée comme celle qui la domine ; si celle-ci est elle-même dominée (un tech dominé qui pirate
+                // un robot), comme son propre maître.
+                target.DominatedBy = source.DominatedBy ?? source.Id;
                 ChangeTeam(target, source.Team);
                 break;
         }

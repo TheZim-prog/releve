@@ -48,7 +48,8 @@ public sealed record ScenarioDefinition
     }
 
     /// <summary>
-    /// État initial du combat : la carte, et les unités (identifiants 1, 2, 3… dans l'ordre du scénario, jauges vides),
+    /// État initial du combat : la carte, et les unités (identifiants 1, 2, 3… dans l'ordre du scénario, jauges vides
+    /// sauf Départ canon),
     /// tirées du catalogue <paramref name="units"/> ou, pour les héros, de <paramref name="heroes"/>. Refuse une unité
     /// ou un héros inconnu, ou dont les points de stats portent l'initiative au-delà de la capacité de la jauge.
     /// </summary>
@@ -61,7 +62,7 @@ public sealed record ScenarioDefinition
             throw new ArgumentException($"Scenario '{Id}': the heroes were built from another unit catalog.");
         try
         {
-            var placed = Units.Select((unit, index) => Place(unit, new UnitId(index + 1), units, heroes)).ToList();
+            var placed = Units.Select((unit, index) => Place(unit, new UnitId(index + 1), units, heroes, rules)).ToList();
             foreach (var unit in placed)
             {
                 if (rules.InitiativeWith(unit.Definition.Initiative, unit.Points ?? StatPoints.None) > rules.GaugeCapacity)
@@ -76,13 +77,19 @@ public sealed record ScenarioDefinition
         }
     }
 
-    private static UnitSetup Place(ScenarioUnit unit, UnitId id, IReadOnlyDictionary<string, UnitDefinition> units, HeroCatalog? heroes)
+    /// <summary>
+    /// Une unité du scénario, jauge vide ; un héros avec Départ canon commence jauge pleine (un script de mission peut
+    /// toujours fixer une autre jauge de départ dans le <see cref="UnitSetup"/>).
+    /// </summary>
+    private static UnitSetup Place(ScenarioUnit unit, UnitId id, IReadOnlyDictionary<string, UnitDefinition> units, HeroCatalog? heroes,
+        CombatRules rules)
     {
         var cell = new Cell(unit.X, unit.Y);
         if (unit.Hero is { } heroId)
         {
             var hero = (heroes ?? throw new ArgumentException($"{unit.Label}: this content has no heroes.")).Unit(heroId);
-            return hero.Definition.ToSetup(id, unit.Team, cell, points: hero.Points);
+            var gauge = hero.Definition.Passive == PassiveKind.FlyingStart ? rules.GaugeCapacity : 0;
+            return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points);
         }
         return units.TryGetValue(unit.Unit!, out var definition)
             ? definition.ToSetup(id, unit.Team, cell)

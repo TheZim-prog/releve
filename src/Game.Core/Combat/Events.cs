@@ -137,6 +137,15 @@ public sealed record UnitTaunted(int Tick, UnitId Unit, UnitId By, int Actions) 
 /// <summary>L'unité n'est plus provoquée : elle choisit de nouveau ses cibles.</summary>
 public sealed record TauntEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
 
+/// <summary>
+/// Frappe coordonnée : l'unité porte gratuitement son attaque de base <paramref name="SkillId"/> à la cible désignée. Ce
+/// n'est pas son action (sa jauge ne bouge pas, contrairement à <see cref="SkillUsed"/>) ; les effets suivent.
+/// </summary>
+public sealed record StrikeJoined(int Tick, UnitId Unit, string SkillId, UnitId Target) : CombatEvent(Tick);
+
+/// <summary>Les recharges en cours de l'unité sont annulées (Rechargement) : ses compétences sont toutes disponibles.</summary>
+public sealed record CooldownsReset(int Tick, UnitId Unit) : CombatEvent(Tick);
+
 /// <summary>Les PV temporaires de l'unité ont duré leur temps : ce qu'il en restait disparaît.</summary>
 public sealed record TempHpEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
 

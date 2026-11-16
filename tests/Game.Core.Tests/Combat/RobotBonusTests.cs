@@ -39,11 +39,18 @@ public class RobotBonusTests
     }
 
     [Fact]
-    public void ARobotEffect_IsAHarmfulNonMentalStatus_GivenOnce()
+    public void ARobotEffect_IsAHarmfulStatus_GivenOnce()
     {
         WithRobotEffects(new StatusEffect { Status = StatusKind.Immobilized, DurationMs = 1000 }).Validate();
+        // Un robot piraté : confus (Virus), ou dominé (Piratage), sur une seule cible.
+        WithRobotEffects(new StatusEffect { Status = StatusKind.Confused, DurationMs = 1000 }).Validate();
+        var dominated = WithRobotEffects(new StatusEffect { Status = StatusKind.Dominated, DurationMs = 1000 });
+        dominated.Validate();
+        Assert.Throws<ArgumentException>(() => (dominated with
+        {
+            Range = 0, Zone = new ZoneDefinition { Shape = ZoneShape.Square, Size = 1, ThroughWalls = false },
+        }).Validate());
         Assert.Throws<ArgumentException>(() => WithRobotEffects(new StatusEffect { Status = StatusKind.Hasted, DurationMs = 1000 }).Validate());   // bénéfique
-        Assert.Throws<ArgumentException>(() => WithRobotEffects(new StatusEffect { Status = StatusKind.Confused, DurationMs = 1000 }).Validate()); // mental
         Assert.Throws<ArgumentException>(() => WithRobotEffects(Stun, Stun).Validate());
         // Un état que la compétence pose déjà à tout le monde se rallonge contre les robots, il ne se répète pas.
         Assert.Throws<ArgumentException>(() => (WithRobotEffects(Stun) with { Effects = new[] { Stun } }).Validate());

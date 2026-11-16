@@ -50,6 +50,14 @@ public sealed partial class CombatSimulation
                 Summon(caster, skill.Summon, destination!.Value);
             }
         }
+        else if (skill.RevivesAlly)
+        {
+            ExpressRevive(caster, skill, target!, destination!.Value);
+        }
+        else if (skill.CallsAllyStrikes)
+        {
+            CoordinatedStrike(caster, skill, target!);
+        }
         else if (skill.ShieldsAlly)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));

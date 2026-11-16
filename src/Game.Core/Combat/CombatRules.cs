@@ -63,6 +63,9 @@ public sealed record CombatRules
     /// <summary>Portée, en cases, des auras de Commandement et de Champ de brouillage.</summary>
     public required int AuraRange { get; init; }
 
+    /// <summary>Analyse tactique : portée, en cases, à laquelle les intentions des adversaires du tech sont révélées.</summary>
+    public required int TacticalAnalysisRange { get; init; }
+
     /// <summary>Commandement : vitesse de jauge des alliés proches, en % de la normale (au moins 100).</summary>
     public required int CommandFillPercent { get; init; }
 
@@ -198,6 +201,8 @@ public sealed record CombatRules
         ValidatePercent(SlipstreamGaugeGainPercent, nameof(SlipstreamGaugeGainPercent), max: 100);
         if (AuraRange is < 1 or > 20)
             throw new ArgumentException($"{nameof(AuraRange)} must be between 1 and 20.");
+        if (TacticalAnalysisRange is < 1 or > 20)
+            throw new ArgumentException($"{nameof(TacticalAnalysisRange)} must be between 1 and 20.");
         if (CommandFillPercent is < 100 or > 1000)
             throw new ArgumentException($"{nameof(CommandFillPercent)} must be between 100 and 1000.");
         if (OverclockingFillPercent is < 100 or > 1000)

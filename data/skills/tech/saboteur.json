@@ -23,6 +23,21 @@
     "effects": [ { "status": "immobilized", "durationMs": 3000 } ]
   },
   {
+    // Un robot ennemi passe sous le contrôle du joueur quelques secondes ; un autre ennemi est seulement désarmé.
+    "id": "hacking", "name": "Piratage",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "effects": [ { "status": "disarmed", "durationMs": 3000 } ],
+    "vsRobots": { "statusDurationPercent": 100, "replacesEffects": true, "effects": [ { "status": "dominated", "durationMs": 4000 } ] }
+  },
+  {
+    // Variante du Piratage : le robot n'obéit à personne, il attaque l'unité la plus proche (confus), plus longtemps ;
+    // un autre ennemi est ralenti.
+    "id": "virus", "name": "Virus",
+    "weight": "light", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ],
+    "vsRobots": { "statusDurationPercent": 100, "replacesEffects": true, "effects": [ { "status": "confused", "durationMs": 7000 } ] }
+  },
+  {
     // La cible perd une partie de sa jauge, davantage si c'est un robot (moitié moins sur un boss).
     "id": "jamming", "name": "Brouillage",
     "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,

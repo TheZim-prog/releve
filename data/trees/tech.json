@@ -16,7 +16,7 @@
       "id": "tactician", "name": "Tacticien",
       "tiers": [
         { "actives": [ { "skill": "designation-shot", "variant": "suppression-shot" }, { "skill": "covering-fire", "variant": "close-protection" } ] },
-        { "actives": [ { "skill": "tactical-order", "variant": "reload" } ], "passives": [ { "id": "tacticalAnalysis", "name": "Analyse tactique", "planned": true } ] },
+        { "actives": [ { "skill": "tactical-order", "variant": "reload" } ], "passives": [ { "id": "tacticalAnalysis", "name": "Analyse tactique" } ] },
         { "actives": [ { "skill": "coordinated-strike" } ], "passives": [ { "id": "command", "name": "Commandement" } ] }
       ]
     },
@@ -28,11 +28,5 @@
         { "actives": [ { "skill": "emp" } ], "passives": [ { "id": "energyRecovery", "name": "Récupération d'énergie" } ] }
       ]
     }
-  ],
-  "planned": {
-    "reload": "Rechargement",
-    "coordinated-strike": "Frappe coordonnée",
-    "hacking": "Piratage",
-    "virus": "Virus"
-  }
+  ]
 }

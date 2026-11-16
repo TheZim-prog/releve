@@ -45,6 +45,7 @@ internal static class CombatTestKit
         EnergyRecoveryGaugeGainPercent = 10,
         SlipstreamGaugeGainPercent = 5,
         AuraRange = 2,
+        TacticalAnalysisRange = 3,
         CommandFillPercent = 150,
         OverclockingFillPercent = 200,
         DoubleDeploymentCount = 2,

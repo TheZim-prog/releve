@@ -127,7 +127,8 @@ public sealed record SkillDefinition
     /// <summary>
     /// Le lanceur se déplace en l'utilisant (mouvement spécial, sauvetage, permutation) : impossible quand il est immobilisé.
     /// </summary>
-    public bool MovesCaster => SelfMove is not null || IsRescue || ForcedMove?.Type == ForcedMoveType.Swap || SummonLeftBehind;
+    public bool MovesCaster =>
+        SelfMove is not null || IsRescue || ForcedMove?.Type == ForcedMoveType.Swap || SummonLeftBehind || RevivesAlly;
 
     /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
     public bool IsMental { get; init; }
@@ -181,6 +182,21 @@ public sealed record SkillDefinition
     /// <summary>Lancer de décor, Barricade : la compétence prend un obstacle bas du décor, ou <c>null</c>.</summary>
     public SceneryDefinition? Scenery { get; init; }
 
+    /// <summary>
+    /// Réanimation express : vise un allié <b>à terre</b> à <see cref="Range"/> pas au plus, à pied ; le lanceur court à la
+    /// case libre la plus proche à son contact (sans attaque d'opportunité) et le relève, sans le déplacer.
+    /// </summary>
+    public bool RevivesAlly { get; init; }
+
+    /// <summary>Rechargement : les recharges en cours de l'allié visé sont annulées.</summary>
+    public bool ResetsCooldowns { get; init; }
+
+    /// <summary>
+    /// Frappe coordonnée : la cible désignée reçoit aussitôt l'attaque de base de chaque allié du lanceur qui l'a à
+    /// portée et en vue (debout, ni étourdi ni en train de charger), gratuitement : sans toucher à leur jauge.
+    /// </summary>
+    public bool CallsAllyStrikes { get; init; }
+
     /// <summary>Acharnement : la recharge est annulée si le coup met la cible hors de combat.</summary>
     public bool ResetsCooldownOnKill { get; init; }
 
@@ -211,8 +227,16 @@ public sealed record SkillDefinition
     /// </summary>
     public bool HasHitEffect =>
         DealsDamage || Effects.Count > 0 || GaugeGainPercent > 0 || ForcedMove is not null || Heals || TempHp is not null
-        || TauntActions > 0 || GaugeLossPercent > 0 || InterruptsCharge
+        || TauntActions > 0 || GaugeLossPercent > 0 || InterruptsCharge || ResetsCooldowns
         || VsRobots is { DealsDamage: true } or { Effects.Count: > 0 } or { GaugeLossPercent: > 0 };
+
+    /// <summary>
+    /// La compétence domine-t-elle sa cible ? Par ses propres états, sauf sur un robot adverse dont l'effet renforcé les
+    /// remplace, ou par cet effet renforcé (Piratage). <paramref name="onOpposingRobot"/> : la cible est un robot adverse.
+    /// </summary>
+    public bool Dominates(bool onOpposingRobot) =>
+        (!(onOpposingRobot && VsRobots is { ReplacesEffects: true }) && Effects.Any(e => e.Status == StatusKind.Dominated))
+        || (onOpposingRobot && VsRobots is not null && VsRobots.Effects.Any(e => e.Status == StatusKind.Dominated));
 
     /// <summary>Nom affiché (facultatif ; à défaut, l'identifiant).</summary>
     public string? Name { get; init; }
@@ -359,8 +383,6 @@ public sealed record SkillDefinition
             throw new ArgumentException($"Skill '{Id}': a mental power targets enemies.");
         if (!IsMental && Effects.Any(e => e.Status is StatusKind.Confused or StatusKind.Dominated))
             throw new ArgumentException($"Skill '{Id}': confusion and domination are mental powers (isMental).");
-        if (Effects.Any(e => e.Status == StatusKind.Dominated) && (Zone is not null || SelfMove is not null))
-            throw new ArgumentException($"Skill '{Id}': a domination targets a single unit.");
 
         // Mouvements spéciaux : offensifs, instantanés, sans autre mouvement ; seul le saut a une zone (carrée).
         if (SelfMove is { } selfMove)
@@ -406,6 +428,13 @@ public sealed record SkillDefinition
         if (VsRobots is not null && !VsRobots.DealsDamage && VsRobots.Effects.Count == 0 && VsRobots.GaugeLossPercent == 0
             && (VsRobots.StatusDurationPercent == 100 || Effects.Count == 0))
             throw new ArgumentException($"Skill '{Id}': its robot bonus has no effect (no damage, no status of its own or to lengthen).");
+        // Des états du robot qui remplacent ceux de la compétence : il en faut à remplacer, et rien à rallonger.
+        if (VsRobots is { ReplacesEffects: true } && (Effects.Count == 0 || VsRobots.StatusDurationPercent != 100))
+            throw new ArgumentException($"Skill '{Id}': robot effects replace the skill's own statuses (some needed), which are then not lengthened (100 %).");
+        // Une domination (un robot piraté compris) : une seule cible.
+        if ((Dominates(onOpposingRobot: false) || Dominates(onOpposingRobot: true))
+            && (Zone is not null || SelfMove is not null || Chain is not null))
+            throw new ArgumentException($"Skill '{Id}': a domination targets a single unit.");
         // Un état que la compétence pose déjà à tout le monde se rallonge (statusDurationPercent), il ne se répète pas.
         if (VsRobots is not null && VsRobots.Effects.Any(r => Effects.Any(e => e.Status == r.Status)))
             throw new ArgumentException($"Skill '{Id}': a robot effect repeats a status of the skill (lengthen it instead).");
@@ -460,8 +489,18 @@ public sealed record SkillDefinition
                 || (ResetsCooldownOnKill && (SelfMove is not null || CooldownMs == 0))))
             throw new ArgumentException($"Skill '{Id}': a cooldown reset on a kill (with a cooldown, without self move) or a missing HP bonus belongs to a damaging attack on one enemy.");
 
+        // Réanimation express, Rechargement, Frappe coordonnée : chacune ne fait que ça.
+        if (RevivesAlly && (Target != SkillTargeting.Ally || Range < 1 || HasHitEffect || IsRescue || Summon is not null || CreatesDome))
+            throw new ArgumentException($"Skill '{Id}': an express revive reaches a downed ally on foot and does nothing else.");
+        if (ResetsCooldowns && (Target != SkillTargeting.Ally || ForcedMove is not null || IsRescue || CreatesDome || RevivesAlly))
+            throw new ArgumentException($"Skill '{Id}': a cooldown reset targets an ally, without moving it.");
+        if (CallsAllyStrikes && (Target != SkillTargeting.Enemy || Zone is not null || IsCharged || HasHitEffect || SelfMove is not null
+                                 || Chain is not null || Guard is not null || Watch is not null || Summon is not null
+                                 || CreatesDome || IsRescue || RevivesAlly))
+            throw new ArgumentException($"Skill '{Id}': a coordinated strike designates one enemy at once, and does nothing else.");
+
         if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null && Guard is null && Watch is null
-            && Scenery is null)
+            && Scenery is null && !RevivesAlly && !CallsAllyStrikes)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain, forced move or ground effect).");
     }
 }

@@ -17,20 +17,19 @@
       "tiers": [
         { "actives": [ { "skill": "flash-rescue", "variant": "express-revive" }, { "skill": "clearance", "variant": "trip" } ] },
         { "actives": [ { "skill": "carry", "variant": "swap" } ], "passives": [ { "id": "slipstream", "name": "Sillage" } ] },
-        { "actives": [ { "skill": "collective-surge" } ], "passives": [ { "id": "flyingStart", "name": "Départ canon", "planned": true } ] }
+        { "actives": [ { "skill": "collective-surge" } ], "passives": [ { "id": "flyingStart", "name": "Départ canon" } ] }
       ]
     },
     {
       "id": "disruptor", "name": "Perturbateur",
       "tiers": [
         { "actives": [ { "skill": "whirlwind", "variant": "wind-wall" }, { "skill": "harassment", "variant": "pickpocket" } ] },
-        { "actives": [ { "skill": "afterimage", "variant": "rigged-decoy" } ], "passives": [ { "id": "diversion", "name": "Diversion", "planned": true } ] },
+        { "actives": [ { "skill": "afterimage", "variant": "rigged-decoy" } ], "passives": [ { "id": "diversion", "name": "Diversion" } ] },
         { "actives": [ { "skill": "vortex" } ], "passives": [ { "id": "timeThief", "name": "Voleur de temps" } ] }
       ]
     }
   ],
   "planned": {
-    "express-revive": "Réanimation express",
     "vortex": "Vortex"
   }
 }

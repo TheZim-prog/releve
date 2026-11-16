@@ -202,6 +202,7 @@ public partial class CombatView : Node3D
 
         // Souris sur l'interface : aucune case survolée (le clic irait à l'interface, pas au plateau).
         _hovered = _hoverOverride ?? (GetViewport().GuiGetHoveredControl() is null ? HoveredCell() : null);
+        var revealed = _sim.RevealedIntentions();
         foreach (var unit in _sim.Units)
         {
             if (!_views.TryGetValue(unit.Id, out var view))
@@ -211,7 +212,7 @@ public partial class CombatView : Node3D
                 view.Setup(unit, ColorOf(unit), small: unit.SummonedBy is not null);
                 _views[unit.Id] = view;
             }
-            view.Sync(unit, _data.Rules.GaugeCapacity, unit.Id == _selected, _hovered == unit.Position, IntentionText(unit), delta);
+            view.Sync(unit, _data.Rules.GaugeCapacity, unit.Id == _selected, _hovered == unit.Position, IntentionText(unit, revealed), delta);
         }
 
         if (Selected is not { Status: UnitStatus.Active })

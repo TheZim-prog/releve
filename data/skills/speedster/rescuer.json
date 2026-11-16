@@ -7,6 +7,12 @@
     "rescueDropRadius": 4
   },
   {
+    // Variante du Sauvetage éclair : il court au contact d'un allié à terre (6 cases à pied) et le relève sur place.
+    "id": "express-revive", "name": "Réanimation express",
+    "target": "ally", "weight": "light", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "revivesAlly": true
+  },
+  {
     // Les alliés autour de lui sont accélérés brièvement (pas lui).
     "id": "collective-surge", "name": "Élan collectif",
     "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,

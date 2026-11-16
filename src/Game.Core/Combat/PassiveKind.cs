@@ -100,6 +100,21 @@ public enum PassiveKind
     /// le lancer ou le déplacer).
     /// </summary>
     Unshakable,
+
+    /// <summary>
+    /// Départ canon (speedster) : il commence chaque combat avec la jauge pleine (posée par le scénario, voir
+    /// <see cref="Scenarios.ScenarioDefinition.ToSetup"/>).
+    /// </summary>
+    FlyingStart,
+
+    /// <summary>Diversion (speedster) : les adversaires à son contact ne font plus d'attaques d'opportunité contre ses alliés.</summary>
+    Diversion,
+
+    /// <summary>
+    /// Analyse tactique (tech) : les intentions des adversaires proches de lui sont révélées à son camp
+    /// (<see cref="CombatRules.TacticalAnalysisRange"/>).
+    /// </summary>
+    TacticalAnalysis,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

@@ -85,6 +85,7 @@ public static class Texts
             SkillUsed u => u.Target is { } target && target != u.Unit
                 ? $"{N(u.Unit)} : {S(u.Unit, u.SkillId)} sur {N(target)}"
                 : $"{N(u.Unit)} : {S(u.Unit, u.SkillId)}",
+            StrikeJoined j => $"{N(j.Unit)} frappe {N(j.Target)} (frappe coordonnée)",
             ChargeStarted c => sim.FindUnit(c.Unit)?.FindSkill(c.SkillId)?.HoldsDome == true
                 ? $"{N(c.Unit)} : {S(c.Unit, c.SkillId)}"
                 : $"{N(c.Unit)} charge {S(c.Unit, c.SkillId)}…",
@@ -96,6 +97,7 @@ public static class Texts
             DamageAbsorbed a => $"{N(a.Unit)} encaisse {a.Amount} (PV temporaires : {a.TempHpLeft})",
             TempHpEnded x => $"{N(x.Unit)} perd ses PV temporaires",
             GaugeLost g => $"{N(g.Unit)} perd de la jauge",
+            CooldownsReset c => $"{N(c.Unit)} : recharges terminées",
             ChainExplosion => "Réaction en chaîne !",
             UnitTaunted t => $"{N(t.Unit)} est provoqué par {N(t.By)}",
             TauntEnded t => $"{N(t.Unit)} n'est plus provoqué",

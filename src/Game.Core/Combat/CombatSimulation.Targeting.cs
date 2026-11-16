@@ -57,6 +57,9 @@ public sealed partial class CombatSimulation
         if (skill.IsRescue)
             return PlanRescue(unit, position, skill, use);
 
+        if (skill.RevivesAlly)
+            return PlanExpressRevive(unit, position, skill, use);
+
         if (skill.Summon is not null && skill.SummonLeftBehind)
         {
             // Une case où il peut aller à pied, en Range pas au plus ; l'unité apparaît sur celle qu'il quitte.
@@ -150,29 +153,35 @@ public sealed partial class CombatSimulation
         if (skill.Target == SkillTargeting.Ally && skill.ForcedMove is not null && target.SummonedBy is not null)
             return (null, RejectionReason.InvalidTarget);
         // On ne domine pas un allié (une unité confuse pourrait le viser).
-        if (target.Team == unit.Team && skill.Effects.Any(e => e.Status == StatusKind.Dominated))
+        if (target.Team == unit.Team && skill.Dominates(onOpposingRobot: false))
             return (null, RejectionReason.InvalidTarget);
         if (CheckTarget(unit, position, target, skill) is { } reason)
             return (null, reason);
+        // Une frappe coordonnée sans allié pour frapper ne ferait rien.
+        if (skill.CallsAllyStrikes && !AlliesStriking(unit, target).Any())
+            return (null, RejectionReason.NoEffect);
         if (places && !CanPlace(unit, position, target, use.Cell!.Value, skill.ForcedMove!.Distance))
             return (null, RejectionReason.InvalidDestination);
         return (new PlannedAction(skill, target, null, use.Cell), null);
     }
 
     /// <summary>
-    /// Immunités : les robots aux pouvoirs mentaux, les boss à la domination. Une cible directe immunisée est refusée ;
+    /// Immunités : les robots aux pouvoirs mentaux, les boss à la domination (un boss robot au Piratage aussi). Une cible
+    /// directe immunisée est refusée ;
     /// dans une zone, elle résiste. (Un civil ne peut pas être visé, et une domination ne se fait jamais en zone.)
     /// </summary>
     private static bool IsImmune(SkillDefinition skill, Unit target) =>
         (skill.IsMental && target.Definition.IsRobot)
-        || (target.Definition.IsBoss && skill.Effects.Any(e => e.Status == StatusKind.Dominated));
+        || (target.Definition.IsBoss && skill.Dominates(onOpposingRobot: target.Definition.IsRobot));
 
     /// <summary>
     /// Une compétence de soutien aurait-elle un effet sur cette cible ? Un état ou un déplacement en a toujours ;
-    /// des PV temporaires et une surveillance aussi ; un soin, si la cible est blessée ; un gain de jauge, si sa jauge n'est ni pleine ni bloquée par une charge.
+    /// des PV temporaires, un dôme et une surveillance aussi ; un soin, si la cible est blessée ; un gain de jauge, si sa
+    /// jauge n'est ni pleine ni bloquée par une charge ; un rechargement, si une de ses compétences est en recharge.
     /// </summary>
-    private static bool HasSupportEffect(SkillDefinition skill, Unit target) =>
+    private bool HasSupportEffect(SkillDefinition skill, Unit target) =>
         skill.Effects.Count > 0
+        || (skill.ResetsCooldowns && target.HasCooldownRunning(CurrentTick))
         || skill.ForcedMove is not null
         || (skill.Heals && target.Hp < target.MaxHp)
         || skill.TempHp is not null

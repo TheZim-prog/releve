@@ -32,6 +32,12 @@ public sealed record RobotBonusDefinition
         init => _effects = value is null ? null! : CombatSetup.ReadOnlyCopy(value);
     }
 
+    /// <summary>
+    /// Les états du robot (<see cref="Effects"/>) remplacent ceux de la compétence au lieu de s'y ajouter (ex. Piratage :
+    /// un robot est commandé, un autre ennemi seulement désarmé).
+    /// </summary>
+    public bool ReplacesEffects { get; init; }
+
     public void Validate(string skillId)
     {
         if (StatusDurationPercent is < 100 or > 1000)
@@ -44,9 +50,12 @@ public sealed record RobotBonusDefinition
             throw new ArgumentException($"Skill '{skillId}' has a null robot effect.");
         foreach (var effect in Effects)
             effect.Validate(skillId);
-        // Les robots sont insensibles aux pouvoirs mentaux ; un état bénéfique n'a rien à faire sur un adversaire.
-        if (Effects.Any(e => !e.Status.IsHarmful() || e.Status is StatusKind.Confused or StatusKind.Dominated))
-            throw new ArgumentException($"Skill '{skillId}': a robot effect is a harmful, non-mental status.");
+        // Un état bénéfique n'a rien à faire sur un adversaire. Confus ou dominé : un robot piraté, pas un pouvoir
+        // mental (la compétence n'en est pas un, voir SkillDefinition).
+        if (Effects.Any(e => !e.Status.IsHarmful()))
+            throw new ArgumentException($"Skill '{skillId}': a robot effect is a harmful status.");
+        if (ReplacesEffects && Effects.Count == 0)
+            throw new ArgumentException($"Skill '{skillId}': robot effects that replace the skill's need at least one status.");
         if (Effects.Select(e => e.Status).Distinct().Count() != Effects.Count)
             throw new ArgumentException($"Skill '{skillId}' applies the same status twice to robots.");
     }

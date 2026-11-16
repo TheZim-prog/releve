@@ -80,13 +80,17 @@ public sealed partial class CombatSimulation
             Heal(target, attacker.HealWith(_random.NextInt(skill.MinHeal, skill.MaxHeal)));
         if (skill.TempHp is { } tempHp)
             GrantTempHp(attacker, target, tempHp);
-        foreach (var effect in skill.Effects)
+        // Les états de la compétence, sauf sur un robot dont l'effet renforcé les remplace (Piratage), puis ceux du robot.
+        var effects = robotBonus is { ReplacesEffects: true } ? Array.Empty<StatusEffect>() : skill.Effects;
+        foreach (var effect in effects)
             ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
         // Un état qu'elle ignore (Inébranlable) : on le dit, pour un coup (pas pour un sol qui le reposerait sans cesse).
-        if (skill.Effects.Any(e => ResistsStatus(target, e.Status)))
+        if (effects.Any(e => ResistsStatus(target, e.Status)))
             _events.Add(new UnitResisted(CurrentTick, target.Id));
         foreach (var effect in robotBonus?.Effects ?? [])
             ApplyStatus(target, effect, attacker);
+        if (skill.ResetsCooldowns)
+            ResetCooldowns(target);
         StatusPassivesOnHit(attacker, skill, target);
         if (skill.TauntActions > 0 && AreOpponents(target, attacker))
             Taunt(target, attacker, skill.TauntActions);

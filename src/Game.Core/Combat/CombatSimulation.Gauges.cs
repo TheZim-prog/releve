@@ -82,14 +82,18 @@ public sealed partial class CombatSimulation
         }
         if (_auraBearers.Count == 0 || unit.IsCivilian)
             yield break;
-        bool Near(Unit bearer, PassiveKind passive) =>
-            bearer != unit && bearer.HasPassive(passive) && bearer.Position.DistanceTo(unit.Position) <= Rules.AuraRange;
-
-        if (_auraBearers.Any(b => b.Team == unit.Team && Near(b, PassiveKind.Command)))
+        if (_auraBearers.Any(b => b.Team == unit.Team && IsNear(b, unit, PassiveKind.Command, Rules.AuraRange)))
             yield return Rules.CommandFillPercent;
-        if (_auraBearers.Any(b => AreOpponents(b, unit) && Near(b, PassiveKind.JammingField)))
+        if (_auraBearers.Any(b => AreOpponents(b, unit) && IsNear(b, unit, PassiveKind.JammingField, Rules.AuraRange)))
             yield return Rules.JammingFieldFillPercent;
     }
+
+    /// <summary>
+    /// Un porteur de ce passif (une aura, l'Analyse tactique) agit-il sur <paramref name="unit"/> : autre qu'elle, à
+    /// <paramref name="range"/> cases au plus, sans ligne de vue ?
+    /// </summary>
+    private static bool IsNear(Unit bearer, Unit unit, PassiveKind passive, int range) =>
+        bearer != unit && bearer.HasPassive(passive) && bearer.Position.DistanceTo(unit.Position) <= range;
 
     // Lanceurs debout qui ont le Surcadençage, relevés avec les porteurs d'aura.
     private readonly HashSet<UnitId> _overclockers = new();

@@ -87,9 +87,11 @@ public partial class CombatView
         return total <= 0 || left <= 0 ? 0f : Math.Min(1f, (float)left / total);
     }
 
-    private string? IntentionText(Unit unit)
+    /// <param name="revealed">Les unités dont l'Analyse tactique d'un tech proche révèle l'intention.</param>
+    private string? IntentionText(Unit unit, IReadOnlySet<UnitId> revealed)
     {
-        if (!_showIntentions || unit.Intention is not { } intention || unit.Status != UnitStatus.Active)
+        // Révélées pour toutes (touche de débogage), ou par l'Analyse tactique.
+        if (unit.Intention is not { } intention || unit.Status != UnitStatus.Active || !(_showIntentions || revealed.Contains(unit.Id)))
             return null;
         if (intention.SkillId is null && intention.Target == unit.Id)
             return "→ fuit";

@@ -105,7 +105,7 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// <paramref name="enemy"/> peut punir <paramref name="mover"/> qui va en <paramref name="next"/> : le pas sort
     /// de sa portée, et c'est un ennemi debout, non étourdi, pas en train de charger, avec une attaque de base et
-    /// une attaque d'opportunité restante.
+    /// une attaque d'opportunité restante, qu'aucune Diversion ne retient.
     /// </summary>
     private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell next) =>
         enemy != mover
@@ -117,7 +117,8 @@ public sealed partial class CombatSimulation
         && enemy.OpportunityAttacksLeft > 0
         && ControllerOf(enemy) != Behaviors.FleeInstance // en fuite, elle ne fait que courir
         && IsInMeleeReach(enemy, mover.Position)
-        && !IsInMeleeReach(enemy, next);
+        && !IsInMeleeReach(enemy, next)
+        && !IsDistracted(enemy, mover);
 
     /// <summary>
     /// Case que l'unité peut frapper au contact : adjacente, libre, sans coupe d'angle par un mur (règle de la vue :

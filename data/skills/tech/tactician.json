@@ -7,6 +7,18 @@
     "gaugeGainPercent": 50
   },
   {
+    // Variante de l'Ordre tactique : annule les recharges en cours de l'allié au lieu de remplir sa jauge.
+    "id": "reload", "name": "Rechargement",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
+    "resetsCooldowns": true
+  },
+  {
+    // Il désigne une cible : chaque allié qui l'a à portée et en vue lui porte aussitôt son attaque de base, gratuitement.
+    "id": "coordinated-strike", "name": "Frappe coordonnée",
+    "weight": "heavy", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "callsAllyStrikes": true
+  },
+  {
     // Dégâts à distance, et la cible devient vulnérable aux dégâts de tous.
     "id": "designation-shot", "name": "Tir de désignation",
     "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,

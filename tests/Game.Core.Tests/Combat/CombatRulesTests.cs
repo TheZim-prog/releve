@@ -39,6 +39,7 @@ public class CombatRulesTests
           "energyRecoveryGaugeGainPercent": 10,
           "slipstreamGaugeGainPercent": 5,
           "auraRange": 2,
+          "tacticalAnalysisRange": 4,
           "commandFillPercent": 115,
           "overclockingFillPercent": 130,
           "doubleDeploymentCount": 2,

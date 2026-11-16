@@ -61,7 +61,9 @@
     "id": "trial-tech", "archetype": "tech", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
     "learned": ["turret", "nano-heal", "trap", "overclocking", "combat-drone", "doubleDeployment",
-                "designation-shot", "covering-fire", "tactical-order", "electroshock", "jamming", "hacking"],
+                "designation-shot", "covering-fire", "tactical-order", "electroshock", "jamming", "hacking", "tacticalAnalysis"],
+    // À essayer aussi : hacking (variante : virus) contre un robot, tactical-order (variante : reload), et le passif
+    // tacticalAnalysis (les intentions des ennemis proches s'affichent).
     "equipped": ["combat-drone", "suppression-turret", "covering-fire", "explosive-trap"],
     "passive": "overclocking"
   },
