@@ -1,3 +1,5 @@
+using Game.Core.Grids;
+
 namespace Game.Core.Objectives;
 
 /// <summary>
@@ -15,6 +17,9 @@ public sealed record ObjectiveDefinition
     /// <summary>Sauvetage : nombre minimum de civils à évacuer (au moins 1). Les autres types n'en ont pas.</summary>
     public int? Minimum { get; init; }
 
+    /// <summary>Poursuite : les cases par où le vilain poursuivi quitte le combat (au moins une). Les autres types n'en ont pas.</summary>
+    public IReadOnlyList<Cell>? Exits { get; init; }
+
     /// <summary>Objectifs d'un scénario qui n'en décrit pas : éliminer tous les ennemis.</summary>
     public static IReadOnlyList<ObjectiveDefinition> Default { get; } =
         Array.AsReadOnly(new[] { new ObjectiveDefinition { Kind = ObjectiveKind.Eliminate } });
@@ -27,17 +32,10 @@ public sealed record ObjectiveDefinition
             throw new ArgumentException("A rescue objective needs a minimum of evacuated civilians (at least 1).");
         if (Kind != ObjectiveKind.Rescue && Minimum is not null)
             throw new ArgumentException($"Only a rescue objective takes a minimum (not {Kind}).");
-    }
-
-    /// <summary>
-    /// Les objectifs sont-ils réalisables dans un combat qui compte <paramref name="civilians"/> civils ? (Un sauvetage
-    /// n'en demande pas plus qu'il n'y en a.)
-    /// </summary>
-    public static void ValidateAgainst(IReadOnlyList<ObjectiveDefinition> objectives, int civilians)
-    {
-        ArgumentNullException.ThrowIfNull(objectives);
-        if (objectives.FirstOrDefault(o => o.Minimum > civilians) is { } rescue)
-            throw new ArgumentException($"A rescue objective asks for {rescue.Minimum} civilians, the combat only has {civilians}.");
+        if (Kind == ObjectiveKind.Pursuit && Exits is not { Count: > 0 })
+            throw new ArgumentException("A pursuit objective needs at least one exit cell.");
+        if (Kind != ObjectiveKind.Pursuit && Exits is not null)
+            throw new ArgumentException($"Only a pursuit objective takes exits (not {Kind}).");
     }
 
     /// <summary>

@@ -50,7 +50,11 @@ ne dépend de ce que ces héros équipent.
 moins un objectif principal. Sans liste, le combat est une élimination de tous les ennemis. Dans tous les cas, perdre
 tous les héros est une défaite. Types disponibles : `eliminate` (plus aucun ennemi debout : ceux qui sont enfuis ou en fuite ne comptent plus) ;
 `rescue` avec `"minimum": 2` (évacuer au moins 2 civils ; raté dès qu'il n'en reste plus assez ; quand plus aucun
-ennemi n'est en lice, et à la victoire, les civils encore sur la carte comptent comme évacués).
+ennemi n'est en lice, et à la victoire, les civils encore sur la carte comptent comme évacués) ;
+`pursuit` avec `"exits": [ { "x": 17, "y": 0 } ]` (le vilain marqué `"pursued": true` dans les unités court dès le
+début vers ces sorties, qui ne doivent pas être sa case de départ ; réussi s'il est vaincu, à terre ou rendu, raté s'il
+en atteint une ou s'il court encore à la victoire ; une seule poursuite et un seul vilain poursuivi par combat). Les
+sorties sont surlignées en violet au sol.
 
 **Désigner le chef d'une bande** : ajouter `"leader": "flee"` ou `"leader": "surrender"` à une unité du scénario (pas un
 héros ; un seul chef par camp). Quand il tombe (vaincu, à terre ou enfui), les autres unités de son camp prennent la

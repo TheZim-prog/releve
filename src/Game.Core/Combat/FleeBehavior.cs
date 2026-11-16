@@ -4,7 +4,8 @@ namespace Game.Core.Combat;
 
 /// <summary>
 /// Fuite : son intention est de fuir (aucune compétence, elle-même pour cible) ; elle n'attaque pas et se rapproche à
-/// pied du bord de carte le plus proche. Quitter le combat en l'atteignant est géré par la simulation.
+/// pied de la sortie la plus proche (le bord de carte, ou les sorties de la mission pour le vilain poursuivi). Quitter
+/// le combat en l'atteignant est géré par la simulation.
 /// </summary>
 internal sealed class FleeBehavior : IUnitBehavior
 {
@@ -20,13 +21,19 @@ internal sealed class FleeBehavior : IUnitBehavior
             return null;
         Occupant OccupantFor(Cell cell) => sim.OccupantFor(unit, cell);
 
-        // Le bord le plus proche à pied, puis la case atteignable qui s'en rapproche le plus.
+        // La sortie libre la plus proche à pied, puis la case atteignable qui s'en rapproche le plus. Le vilain poursuivi
+        // dont toutes les sorties sont tenues s'approche quand même de la plus proche, pour s'y glisser dès qu'elle se libère.
         var fromUnit = Pathfinder.ReachableCells(sim.Grid, unit.Position, int.MaxValue, OccupantFor);
-        var exits = fromUnit.Where(c => sim.Grid.IsEdge(c.Key)).ToList();
-        if (exits.Count == 0)
+        var exits = fromUnit.Where(c => sim.IsExitFor(unit, c.Key)).ToList();
+        IReadOnlyDictionary<Cell, int>? toExit = exits.Count > 0
+            ? Pathfinder.ReachableCells(sim.Grid, exits.MinBy(c => c.Value).Key, int.MaxValue, OccupantFor)
+            : unit.IsPursued
+                ? sim.PursuitExits.Select(exit => Pathfinder.ReachableCells(sim.Grid, exit, int.MaxValue, OccupantFor))
+                    .Where(paths => paths.ContainsKey(unit.Position))
+                    .MinBy(paths => paths[unit.Position])
+                : null;
+        if (toExit is null)
             return null;
-        var exit = exits.MinBy(c => c.Value).Key;
-        var toExit = Pathfinder.ReachableCells(sim.Grid, exit, int.MaxValue, OccupantFor);
 
         var best = Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Reach, OccupantFor).Keys
             .Where(c => c != unit.Position && toExit.ContainsKey(c))

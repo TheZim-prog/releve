@@ -21,6 +21,9 @@ public sealed record ScenarioUnit
     /// </summary>
     public MinionReaction? Leader { get; init; }
 
+    /// <summary>Vilain poursuivi (une unité ennemie) : il fuit dès le début vers les sorties de l'objectif Poursuite.</summary>
+    public bool Pursued { get; init; }
+
     public required int Team { get; init; }
     public required int X { get; init; }
     public required int Y { get; init; }

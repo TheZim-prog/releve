@@ -60,8 +60,7 @@ public sealed record ScenarioDefinition
             if (!taken.Add(cell))
                 throw new ArgumentException($"Scenario '{Id}': two units on {cell}.");
             if (unit.Leader is not null && (unit.Hero is not null || unit.Team == CombatSimulation.PlayerTeam))
-                throw new ArgumentException($"Scenario '{Id}': {unit.Label} cannot lead minions (only an enemy unit can, not a hero).");
-        }
+                throw new ArgumentException($"Scenario '{Id}': {unit.Label} cannot lead minions (only an enemy unit can, not a hero).");        }
         if (Units.Where(u => u.Leader is not null).GroupBy(u => u.Team).FirstOrDefault(g => g.Count() > 1) is { } team)
             throw new ArgumentException($"Scenario '{Id}': team {team.Key} has more than one leader.");
     }
@@ -113,12 +112,13 @@ public sealed record ScenarioDefinition
         {
             var hero = (heroes ?? throw new ArgumentException($"{unit.Label}: this content has no heroes.")).Unit(heroId);
             var gauge = hero.Definition.Passive == PassiveKind.FlyingStart ? rules.GaugeCapacity : 0;
-            return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points);
+            // Un héros n'est jamais poursuivi : la marque passe pour que la vérification des objectifs le refuse.
+            return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points) with { IsPursued = unit.Pursued };
         }
         if (!units.TryGetValue(unit.Unit!, out var definition))
             throw new ArgumentException($"unknown {unit.Label}.");
         if (unit.Leader is not null && definition.IsCivilian)
             throw new ArgumentException($"{unit.Label} is a civilian, it cannot lead minions.");
-        return definition.ToSetup(id, unit.Team, cell) with { MinionsOnFall = unit.Leader };
+        return definition.ToSetup(id, unit.Team, cell) with { MinionsOnFall = unit.Leader, IsPursued = unit.Pursued };
     }
 }

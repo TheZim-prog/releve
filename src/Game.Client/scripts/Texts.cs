@@ -76,11 +76,12 @@ public static class Texts
         _ => reason.ToString(),
     };
 
-    /// <summary>Ce que demande un objectif : « Éliminer tous les ennemis ».</summary>
-    public static string Objective(ObjectiveDefinition objective) => objective.Kind switch
+    /// <summary>Ce que demande un objectif : « Éliminer tous les ennemis », « Arrêter Le caïd avant qu'il s'échappe ».</summary>
+    public static string Objective(ObjectiveDefinition objective, CombatSimulation sim) => objective.Kind switch
     {
         ObjectiveKind.Eliminate => "Éliminer tous les ennemis",
         ObjectiveKind.Rescue => objective.Minimum == 1 ? "Évacuer un civil" : $"Évacuer au moins {objective.Minimum} civils",
+        ObjectiveKind.Pursuit => $"Arrêter {sim.PursuedUnit?.Definition.Name ?? "le fuyard"} avant qu'il s'échappe",
         _ => objective.Kind.ToString(),
     };
 
@@ -97,7 +98,7 @@ public static class Texts
             ObjectiveState.Failed => " : raté",
             _ => Progress(objective.Definition, sim),
         };
-        return $"- {Objective(objective.Definition)}{secondary}{state}";
+        return $"- {Objective(objective.Definition, sim)}{secondary}{state}";
     }
 
     /// <summary>Où en est un objectif en cours, s'il se compte : « (1 évacué, 1 perdu) ».</summary>
@@ -114,7 +115,7 @@ public static class Texts
     {
         string N(UnitId id) => sim.FindUnit(id)?.Definition.Name ?? $"#{id.Value}";
         string S(UnitId unit, string skill) => sim.FindUnit(unit)?.FindSkill(skill)?.DisplayName ?? skill;
-        string O(int index) => Objective(sim.Objectives[index].Definition);
+        string O(int index) => Objective(sim.Objectives[index].Definition, sim);
 
         return e switch
         {

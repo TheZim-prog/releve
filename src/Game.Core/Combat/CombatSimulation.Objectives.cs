@@ -1,3 +1,4 @@
+using Game.Core.Grids;
 using Game.Core.Objectives;
 
 namespace Game.Core.Combat;
@@ -19,12 +20,26 @@ public sealed partial class CombatSimulation
     /// </summary>
     public bool? Outcome { get; private set; }
 
+    /// <summary>Sorties de la poursuite (vide sans poursuite) : seul le vilain poursuivi s'enfuit par là.</summary>
+    public IReadOnlySet<Cell> PursuitExits { get; private set; } = new HashSet<Cell>();
+
+    /// <summary>Le vilain poursuivi (objectif Poursuite), ou <c>null</c> sans poursuite.</summary>
+    public Unit? PursuedUnit { get; private set; }
+
     private void SetUpObjectives(CombatSetup setup)
     {
         setup.ValidateObjectives();
         _objectives.AddRange(setup.Objectives.Select(o => new Objective(o)));
         Objectives = _objectives.AsReadOnly();
+        PursuitExits = setup.Objectives.SelectMany(o => o.Exits ?? Array.Empty<Cell>()).ToHashSet();
+        PursuedUnit = _units.SingleOrDefault(u => u.IsPursued);
     }
+
+    /// <summary>
+    /// Une unité en fuite quitte le combat sur cette case : une sortie de la poursuite pour le vilain poursuivi, le bord
+    /// de carte pour les autres.
+    /// </summary>
+    internal bool IsExitFor(Unit unit, Cell cell) => unit.IsPursued ? PursuitExits.Contains(cell) : _grid.IsEdge(cell);
 
     /// <summary>
     /// Fin de tick : défaite si tous les héros sont hors de combat (rien ne se réussit alors, même au même tick) ; sinon

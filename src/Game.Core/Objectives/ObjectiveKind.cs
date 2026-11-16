@@ -11,4 +11,10 @@ public enum ObjectiveKind
     /// (trop de civils perdus).
     /// </summary>
     Rescue,
+
+    /// <summary>
+    /// Poursuite : le vilain poursuivi court dès le début vers les sorties (<see cref="ObjectiveDefinition.Exits"/>).
+    /// Réussi s'il est vaincu, mis à terre ou rendu ; raté s'il atteint une sortie.
+    /// </summary>
+    Pursuit,
 }

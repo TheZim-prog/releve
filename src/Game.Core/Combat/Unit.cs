@@ -35,6 +35,9 @@ public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinitio
 {
     /// <summary>Chef de son camp : ce que font ses sbires quand il tombe (<c>null</c> : pas un chef).</summary>
     public MinionReaction? MinionsOnFall { get; init; }
+
+    /// <summary>Vilain poursuivi (objectif Poursuite) : il fuit dès le début, vers les sorties de la mission.</summary>
+    public bool IsPursued { get; init; }
 }
 
 /// <summary>
@@ -86,6 +89,8 @@ public sealed class Unit
         Behavior = definition.Behavior;
         Passive = definition.Passive;
         MinionsOnFall = setup.MinionsOnFall;
+        IsPursued = setup.IsPursued;
+        IsFleeing = setup.IsPursued;
         _rules = rules;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -194,10 +199,13 @@ public sealed class Unit
     public bool FellAsLeader { get; internal set; }
 
     /// <summary>
-    /// En fuite (sous son seuil de PV, ou son chef tombé) : ne fait plus que courir vers le bord de carte, jusqu'à la fin
-    /// du combat.
+    /// En fuite (sous son seuil de PV, son chef tombé, ou poursuivi dès le début) : ne fait plus que courir vers le bord
+    /// de carte (vers les sorties de la mission, s'il est poursuivi), jusqu'à la fin du combat.
     /// </summary>
     public bool IsFleeing { get; internal set; }
+
+    /// <summary>Vilain poursuivi (objectif Poursuite) : il fuit dès le début, vers les sorties de la mission.</summary>
+    public bool IsPursued { get; }
 
     /// <summary>Enfuie : a quitté le combat par le bord de carte (retirée, mais pas vaincue).</summary>
     public bool Escaped { get; internal set; }

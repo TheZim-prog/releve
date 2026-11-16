@@ -1,5 +1,6 @@
 using Game.Core.Combat;
 using Game.Core.Grids;
+using Game.Core.Objectives;
 using Godot;
 
 namespace Game.Client;
@@ -13,6 +14,9 @@ public partial class CombatView
         _board.SetLayer("charges", _sim.Units.Where(u => u.Charge is { Zone: not null, Skill.HoldsDome: false }).SelectMany(u => u.Charge!.Zone!),
             new Color(1f, 0.15f, 0.1f, 0.45f), 0.01f);
         _board.SetLayer("domes", _sim.DomeCells, new Color(0.3f, 0.6f, 1f, 0.35f), 0.015f);
+        // Les sorties du vilain poursuivi, tant que la poursuite et le combat durent.
+        var chasing = _sim.Outcome is null && _sim.Objectives.Any(o => o is { Definition.Kind: ObjectiveKind.Pursuit, State: ObjectiveState.InProgress });
+        _board.SetLayer("exits", chasing ? _sim.PursuitExits : Array.Empty<Cell>(), new Color(0.75f, 0.3f, 1f, 0.5f), 0.011f);
         ShowGroundZones();
         // Surveillances : la zone, ou la case de l'allié protégé (il bouge avec lui).
         _board.SetLayer("watches", _sim.Watches.SelectMany(w => w.Cells

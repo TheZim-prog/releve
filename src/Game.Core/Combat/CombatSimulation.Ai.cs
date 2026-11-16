@@ -88,8 +88,8 @@ public sealed partial class CombatSimulation
     /// </summary>
     private void RunAi(Unit unit, IUnitBehavior behavior)
     {
-        // Une unité en fuite déjà au bord quitte le combat au lieu d'agir (sauf immobilisée : elle est retenue).
-        if (behavior == Behaviors.FleeInstance && unit.CanMove && _grid.IsEdge(unit.Position))
+        // Une unité en fuite déjà sur une sortie quitte le combat au lieu d'agir (sauf immobilisée : elle est retenue).
+        if (behavior == Behaviors.FleeInstance && unit.CanMove && IsExitFor(unit, unit.Position))
         {
             Escape(unit);
             return;
@@ -115,8 +115,8 @@ public sealed partial class CombatSimulation
             throw new InvalidOperationException($"{behavior.GetType().Name} produced an invalid command ({reason}) for unit {unit.Id}: {command}.");
         ApplyActivation(plan);
 
-        // En fuite (déjà, ou depuis une attaque d'opportunité en chemin) et arrivée au bord : elle s'enfuit aussitôt.
-        if (unit.Status == UnitStatus.Active && unit.CanMove && ControllerOf(unit) == Behaviors.FleeInstance && _grid.IsEdge(unit.Position))
+        // En fuite (déjà, ou depuis une attaque d'opportunité en chemin) et arrivée sur une sortie : elle s'enfuit aussitôt.
+        if (unit.Status == UnitStatus.Active && unit.CanMove && ControllerOf(unit) == Behaviors.FleeInstance && IsExitFor(unit, unit.Position))
             Escape(unit);
     }
 

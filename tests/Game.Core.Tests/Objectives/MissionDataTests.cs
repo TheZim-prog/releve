@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Game.Core.Combat;
+using Game.Core.Grids;
 using Game.Core.Objectives;
 using Game.Core.Scenarios;
 using static Game.Core.Tests.Combat.CombatTestKit;
@@ -98,6 +99,20 @@ public class MissionDataTests
     public void InvalidObjectives_AreRejected(string objectives)
     {
         Assert.ThrowsAny<Exception>(() => WithObjectives(objectives));
+    }
+
+    [Fact]
+    public void APursuit_ReadsItsExits_AndMarksThePursuedVillain()
+    {
+        var json = Scenario.Replace("OBJECTIVES", """, "objectives": [ { "kind": "pursuit", "exits": [ { "x": 2, "y": 0 } ] } ]""")
+            .Replace("\"unit\": \"thug\",", "\"unit\": \"thug\", \"pursued\": true,");
+
+        var setup = ScenarioDefinition.FromJson(json).ToSetup(Rules, Catalog);
+
+        Assert.Equal(new[] { new Cell(2, 0) }, Assert.Single(setup.Objectives).Exits);
+        Assert.Equal(new[] { false, true }, setup.Units.Select(u => u.IsPursued));
+        var heroPursued = json.Replace("\"pursued\": true,", "").Replace(Hero, """{ "unit": "hero", "pursued": true, "team": 0,""");
+        Assert.Throws<ArgumentException>(() => ScenarioDefinition.FromJson(heroPursued).ToSetup(Rules, Catalog));
     }
 
     [Fact]
