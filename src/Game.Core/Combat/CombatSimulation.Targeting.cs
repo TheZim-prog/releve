@@ -142,14 +142,15 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Une compétence de soutien aurait-elle un effet sur cette cible ? Un état ou un déplacement en a toujours ;
-    /// des PV temporaires aussi ; un soin, si la cible est blessée ; un gain de jauge, si sa jauge n'est ni pleine ni bloquée par une charge.
+    /// des PV temporaires et une surveillance aussi ; un soin, si la cible est blessée ; un gain de jauge, si sa jauge n'est ni pleine ni bloquée par une charge.
     /// </summary>
     private static bool HasSupportEffect(SkillDefinition skill, Unit target) =>
         skill.Effects.Count > 0
         || skill.ForcedMove is not null
         || (skill.Heals && target.Hp < target.MaxHp)
         || skill.TempHp is not null
-        || (skill.GaugeGainPercent > 0 && !target.IsGaugeFull && target.Charge is null);
+        || (skill.GaugeGainPercent > 0 && !target.IsGaugeFull && target.Charge is null)
+        || skill.Watch is not null;
 
     /// <summary>
     /// Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur ; une télékinésie,

@@ -139,6 +139,17 @@ public sealed partial class CombatSimulation
         ChainReaction(caster, hit, wereOpponents);
     }
 
+    /// <summary>
+    /// Le lanceur d'un mouvement spécial se déplace (sans attaque d'opportunité) : comme un déplacement forcé, plus les
+    /// surveillances de zone qu'il croise en chemin (<paramref name="course"/>, ou seulement l'arrivée).
+    /// </summary>
+    private void SelfDisplace(Unit unit, Cell to, IReadOnlyList<Cell>? course = null)
+    {
+        var from = unit.Position;
+        Displace(unit, to, course);
+        TriggerZoneWatchesAlong(unit, from, course ?? new[] { to });
+    }
+
     /// <summary>Permutation : les deux unités échangent leurs cases.</summary>
     private void Swap(Unit caster, Unit target)
     {

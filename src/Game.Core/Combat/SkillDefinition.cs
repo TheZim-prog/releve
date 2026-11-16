@@ -135,6 +135,12 @@ public sealed record SkillDefinition
     /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge, Ruée…), ou <c>null</c>.</summary>
     public SelfMoveType? SelfMove { get; init; }
 
+    /// <summary>Garde donnée au lanceur (Parade, Déviation, Maître d'armes), ou <c>null</c>.</summary>
+    public GuardDefinition? Guard { get; init; }
+
+    /// <summary>Surveillance d'une zone ou d'un allié (Tir de couverture, Protection rapprochée), ou <c>null</c>.</summary>
+    public WatchDefinition? Watch { get; init; }
+
     /// <summary>Chaîne : le coup rebondit sur les ennemis proches (ex. Frappe en chaîne), ou <c>null</c>.</summary>
     public ChainDefinition? Chain { get; init; }
 
@@ -387,7 +393,19 @@ public sealed record SkillDefinition
         if (Raises is not null && (HasHitEffect || Ground is not null || ClearsSmoke || IsCharged || Range < 1))
             throw new ArgumentException($"Skill '{Id}': raising obstacles is instant, in range, and does nothing else.");
 
-        if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null)
+        // Garde : pour le lanceur, posée par une compétence sur lui ou par une zone autour de lui (ex. Maître d'armes).
+        Guard?.Validate(Id);
+        if (Guard is not null && (IsCharged || !(Target == SkillTargeting.Self || (Zone is not null && Range == 0 && SelfMove is null))))
+            throw new ArgumentException($"Skill '{Id}': a guard is raised at once by a skill on its caster, or by a zone around it.");
+        // Surveillance : une zone (offensive) ou un allié, et rien d'autre ; c'est le tir qui fait l'effet.
+        Watch?.Validate(Id);
+        if (Watch is not null
+            && (IsCharged || HasHitEffect || Guard is not null || Ground is not null || Raises is not null || ClearsSmoke || CreatesDome
+                || Summon is not null || SelfMove is not null || IsRescue || Chain is not null
+                || !(Zone is { Shape: ZoneShape.Square } && IsOffensive || Zone is null && Target == SkillTargeting.Ally)))
+            throw new ArgumentException($"Skill '{Id}': a watch covers a square zone or an ally, at once, and does nothing else.");
+
+        if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null && Guard is null && Watch is null)
             throw new ArgumentException($"Skill '{Id}' has no effect (no damage, status, gauge gain, forced move or ground effect).");
     }
 }

@@ -95,7 +95,7 @@ public sealed partial class CombatSimulation
             {
                 if (!caster.CanMove)
                     return;
-                Displace(caster, link.From);
+                SelfDisplace(caster, link.From);
             }
             if (!CanStillAct(caster))
                 return;

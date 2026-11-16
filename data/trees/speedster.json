@@ -9,7 +9,7 @@
       "tiers": [
         { "actives": [ { "skill": "breakthrough", "variant": "slalom" }, { "skill": "round-trip", "variant": "running-strike" } ] },
         { "actives": [ { "skill": "chain-strike", "variant": "ricochet" } ], "passives": [ { "id": "ignoresOpportunityAttacks", "name": "Insaisissable" } ] },
-        { "actives": [ { "skill": "hyperspeed" } ], "passives": [ { "id": "reflexes", "name": "Réflexes", "planned": true } ] }
+        { "actives": [ { "skill": "hyperspeed" } ], "passives": [ { "id": "reflexes", "name": "Réflexes" } ] }
       ]
     },
     {

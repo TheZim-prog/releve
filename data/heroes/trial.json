@@ -8,9 +8,10 @@
     "id": "trial-colossus", "archetype": "colossus", "level": 20,
     "points": { "hp": 12, "power": 5, "initiative": 2 },
     "learned": ["dome", "provocation", "steel-skin", "leap", "hammer-blow", "throw-scenery", "rage", "shockwave", "projection",
-                "arm-lock", "catapult", "vigilance"],
+                "arm-lock", "catapult", "vigilance", "bodyguard"],
+    // Passif : Garde du corps (autres : vigilance, rage).
     "equipped": ["crush", "reversal", "catapult", "shockwave"],
-    "passive": "vigilance"
+    "passive": "bodyguard"
   },
   {
     // Éclair et Sauveteur : Aller-retour (variante : running-strike), Dégagement (variante : trip) et Transport
@@ -18,11 +19,12 @@
     "id": "trial-speedster", "archetype": "speedster", "level": 20,
     "points": { "hp": 4, "power": 3, "initiative": 12 },
     "learned": ["whirlwind", "harassment", "flash-rescue", "clearance", "carry", "slipstream", "collective-surge",
-                "breakthrough", "round-trip", "ignoresOpportunityAttacks", "chain-strike"],
+                "breakthrough", "round-trip", "ignoresOpportunityAttacks", "chain-strike", "reflexes"],
     // Mur de vent (variante de whirlwind ; remettre whirlwind pour dissiper le Fumigène du combattant).
     // Frappe en chaîne (variante : ricochet).
     "equipped": ["chain-strike", "wind-wall", "clearance", "collective-surge"],
-    "passive": "ignoresOpportunityAttacks"
+    // Passif : Réflexes (autres : ignoresOpportunityAttacks, slipstream).
+    "passive": "reflexes"
   },
   {
     // La Ruée (variante : retreat), les variantes Balayage (Coup étourdissant) et Volée (Lames de jet).
@@ -31,10 +33,11 @@
     "id": "trial-fighter", "archetype": "fighter", "level": 20,
     "points": { "hp": 6, "power": 8, "initiative": 5 },
     "learned": ["stunning-blow", "parry", "disarm", "throwing-blades", "smoke-bomb", "precise-strike", "rush", "relentless", "weakPoint",
-                "execution", "trap"],
+                "execution", "trap", "riposte", "weapon-master"],
     // Fumigène (variante : tear-gas) et Piège (variante : explosive-trap).
-    "equipped": ["smoke-bomb", "trap", "rush", "execution"],
-    "passive": "weakPoint"
+    // Parade (variante : deflection), Maître d'armes, passif Riposte.
+    "equipped": ["parry", "smoke-bomb", "trap", "weapon-master"],
+    "passive": "riposte"
   },
   {
     // Brasier et Glace : Onde de recul (variante de nova), Propulsion (variante : comet), Éclat de glace, Zéro absolu.
@@ -57,7 +60,8 @@
     "learned": ["turret", "nano-heal", "designation-shot", "covering-fire", "tactical-order", "tacticalAnalysis",
                 "electroshock", "jamming", "hacking", "jammingField", "emp", "energyRecovery", "trap"],
     // Le Piège explosif (variante de trap, partagé avec le combattant).
-    "equipped": ["explosive-trap", "designation-shot", "electroshock", "emp"],
+    // Tir de couverture (variante : close-protection).
+    "equipped": ["covering-fire", "explosive-trap", "designation-shot", "emp"],
     "passive": "jammingField"
   },
   {

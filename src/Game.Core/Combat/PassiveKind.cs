@@ -76,6 +76,18 @@ public enum PassiveKind
 
     /// <summary>Carapace de givre (énergétique) : un ennemi qui le frappe au contact est ralenti (<see cref="CombatRules.FrostShellDurationMs"/>).</summary>
     FrostShell,
+
+    /// <summary>Garde du corps : il prend à la place d'un allié adjacent une attaque ciblée, une fois par cycle.</summary>
+    Bodyguard,
+
+    /// <summary>Réflexes : il esquive la première attaque ciblée qui le vise à chaque cycle (pas les zones).</summary>
+    Reflexes,
+
+    /// <summary>Riposte : attaqué au contact, il contre-attaque avec son attaque de base, une fois par cycle.</summary>
+    Riposte,
+
+    /// <summary>Coup d'arrêt : ses attaques d'opportunité qui touchent arrêtent net le déplacement de la cible.</summary>
+    StoppingBlow,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

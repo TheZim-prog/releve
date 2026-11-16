@@ -42,11 +42,12 @@ public sealed partial class CombatSimulation
 
         // Tombée, ou arrêtée net (étourdie, immobilisée) : elle recule sur sa dernière case libre si elle partageait la sienne.
         // Immobilisée en posant le pied sur sa destination (<paramref name="arrived"/>), elle est arrivée : son action suit.
-        bool IsHalted(bool arrived = false)
+        // Arrêtée par un Coup d'arrêt (<paramref name="stopped"/>), elle s'arrête là où elle est.
+        bool IsHalted(bool arrived = false, bool stopped = false)
         {
             if (unit.Status != UnitStatus.Active)
                 return true;
-            if (!unit.HasStatus(StatusKind.Stunned) && (unit.CanMove || arrived))
+            if (!stopped && !unit.HasStatus(StatusKind.Stunned) && (unit.CanMove || arrived))
                 return false;
             if (IsOccupiedByOther(unit, unit.Position))
                 unit.Position = lastFreeCell;
@@ -65,10 +66,11 @@ public sealed partial class CombatSimulation
                 var attack = enemy.BasicAttack!;
                 enemy.OpportunityAttacksLeft--;
                 _events.Add(new OpportunityAttack(CurrentTick, enemy.Id, unit.Id, attack.Id));
-                ResolveHit(enemy, attack, unit, DamageFactorOf(enemy), lastFreeCell);
+                var landed = ResolveHit(enemy, attack, unit, DamageFactorOf(enemy), lastFreeCell);
                 EndSource(); // chaque attaque d'opportunité est une source à part
+                FlushReactions();
                 FlushGauge(enemy);
-                if (IsHalted())
+                if (IsHalted(stopped: landed && enemy.HasPassive(PassiveKind.StoppingBlow)))
                     return false;
             }
 
@@ -78,12 +80,20 @@ public sealed partial class CombatSimulation
             if (!IsOccupiedByOther(unit, next))
                 lastFreeCell = next;
 
-            // Un piège ou un sol gelé sur cette case : une source à part, comme une attaque d'opportunité.
-            if (GroundAwaits(unit, from, next))
+            // Un piège ou un sol gelé sur cette case, puis une surveillance sur ce pas (qui entre, sort ou bouge dans sa
+            // zone) : chacun est une source à part, comme une attaque d'opportunité.
+            var ground = GroundAwaits(unit, from, next);
+            var watched = HasZoneWatchOn(unit, from, next);
+            if (ground || watched)
             {
                 FlushSegment();
-                EnterGround(unit, from, next, lastFreeCell);
-                EndSource();
+                if (ground)
+                {
+                    EnterGround(unit, from, next, lastFreeCell);
+                    EndSource();
+                }
+                if (watched)
+                    TriggerZoneWatches(unit, from, next, lastFreeCell);
                 if (IsHalted(arrived: next == path[^1]))
                     return false;
             }

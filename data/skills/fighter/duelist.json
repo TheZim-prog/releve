@@ -26,5 +26,26 @@
     "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
     "gaugeLossPercent": 30,
     "interruptsCharge": true
+  },
+  {
+    // Se met en garde : la prochaine attaque au contact qui le vise est parée (jusqu'à sa prochaine action).
+    "id": "parry", "name": "Parade",
+    "target": "self", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 8000,
+    "guard": { "against": "melee" }
+  },
+  {
+    // Variante de la Parade : c'est la prochaine attaque à distance qui le vise qui est déviée.
+    "id": "deflection", "name": "Déviation",
+    "target": "self", "weight": "light", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 8000,
+    "guard": { "against": "ranged" }
+  },
+  {
+    // Provoque les ennemis à son contact (leur prochaine action), puis pare toutes les attaques au contact pendant 5 s
+    // et riposte à chacune. Les tirs et les zones passent.
+    "id": "weapon-master", "name": "Maître d'armes",
+    "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 25000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
+    "tauntActions": 1,
+    "guard": { "against": "melee", "durationMs": 5000, "blocksAll": true, "ripostes": true }
   }
 ]

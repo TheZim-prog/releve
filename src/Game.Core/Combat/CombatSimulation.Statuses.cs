@@ -99,6 +99,7 @@ public sealed partial class CombatSimulation
     {
         if (unit.Team == team)
             return;
+        ClearReactions(unit); // ce qu'elle avait préparé pour son ancien camp ne sert plus
         unit.Team = team;
         _events.Add(new TeamChanged(CurrentTick, unit.Id, team));
     }

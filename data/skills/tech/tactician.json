@@ -17,5 +17,19 @@
     "id": "suppression-shot", "name": "Tir de suppression",
     "weight": "light", "range": 5, "minDamage": 8, "maxDamage": 11, "cooldownMs": 8000,
     "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
+  },
+  {
+    // Surveille une zone : le premier ennemi qui y bouge ou y agit prend un tir (s'il est à 7 cases et en vue).
+    // Jusqu'à la prochaine action du tech.
+    "id": "covering-fire", "name": "Tir de couverture",
+    "weight": "light", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" },
+    "watch": { "shotRange": 7, "minDamage": 10, "maxDamage": 13 }
+  },
+  {
+    // Variante du Tir de couverture : il surveille un allié ; le premier ennemi qui l'attaque prend un tir.
+    "id": "close-protection", "name": "Protection rapprochée",
+    "target": "ally", "weight": "light", "range": 6, "minDamage": 0, "maxDamage": 0, "cooldownMs": 10000,
+    "watch": { "shotRange": 7, "minDamage": 10, "maxDamage": 13 }
   }
 ]

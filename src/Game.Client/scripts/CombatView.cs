@@ -254,6 +254,12 @@ public partial class CombatView : Node3D
             case DomeRaised or DomeEnded:
                 TrackDome(e);
                 break;
+            case AttackParried p:
+                Float(p.Unit, "paré", Protected);
+                break;
+            case AttackDodged d:
+                Float(d.Unit, "esquive", Protected);
+                break;
             case CoverDestroyed c:
                 _board.RemoveObstacle(c.Cell);
                 break;

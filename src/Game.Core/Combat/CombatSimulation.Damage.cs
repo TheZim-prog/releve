@@ -23,12 +23,20 @@ public sealed partial class CombatSimulation
         // Tombée plus tôt dans la même compétence (une Réaction en chaîne au milieu d'une zone) : elle n'est pas refrappée.
         if (target.Status != UnitStatus.Active)
             return false;
-        if (IsBlockedByDome(skill, target))
+        // Prise par un garde du corps, esquivée ou parée : la cible ne la reçoit pas.
+        if (AvertedBeforeHit(attacker, skill, target, damageFactor, origin))
             return false;
+        // Bloquée par un dôme ou sans effet sur elle : elle a quand même été attaquée (riposte).
+        if (IsBlockedByDome(skill, target))
+        {
+            AttackedBy(attacker, skill, target);
+            return false;
+        }
         // Immunisée (robot face à un pouvoir mental, prise dans une zone : une cible directe est refusée avant).
         if (IsImmune(skill, target))
         {
             _events.Add(new UnitResisted(CurrentTick, target.Id));
+            AttackedBy(attacker, skill, target);
             return false;
         }
 
@@ -88,7 +96,15 @@ public sealed partial class CombatSimulation
         }
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
+        AttackedBy(attacker, skill, target);
         return true;
+    }
+
+    /// <summary>La cible a été attaquée par un adversaire, que le coup ait porté ou non : elle peut riposter.</summary>
+    private void AttackedBy(Unit attacker, SkillDefinition skill, Unit target)
+    {
+        if (AreOpponents(target, attacker))
+            QueueRiposte(attacker, skill, target);
     }
 
     /// <summary>Multiplicateur des dégâts infligés par l'unité, en dix-millièmes (voir <see cref="Unit.DamageFactor"/>).</summary>
@@ -223,6 +239,7 @@ public sealed partial class CombatSimulation
             EndStatus(unit, effect);
         InterruptCharge(unit);
         unit.Intention = null;
+        ClearReactions(unit);
     }
 
     /// <summary>

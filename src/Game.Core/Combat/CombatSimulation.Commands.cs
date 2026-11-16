@@ -197,6 +197,7 @@ public sealed partial class CombatSimulation
         RemoveDome(unit); // et son dôme éventuel tombe (un nouveau peut être posé par cette action)
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
         unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue
+        ResetReactions(unit); // ses réactions aussi ; sa garde et sa surveillance tombent
 
         // Tombée, étourdie ou immobilisée en chemin par une attaque d'opportunité : le reste du trajet et l'action
         // sont annulés. Encore debout, elle a quand même bougé : sa jauge repart comme après un déplacement seul.
@@ -205,6 +206,18 @@ public sealed partial class CombatSimulation
             if (unit.Status == UnitStatus.Active)
                 SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
             return;
+        }
+
+        // Elle agit dans une zone surveillée : le tir part avant son action ; tombée ou étourdie, elle ne la fait pas.
+        if ((action is not null || interaction is not null) && HasZoneWatchOn(unit, unit.Position, unit.Position))
+        {
+            TriggerZoneWatches(unit, unit.Position, unit.Position);
+            if (!CanStillAct(unit))
+            {
+                if (unit.Status == UnitStatus.Active)
+                    SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
+                return;
+            }
         }
 
         // Interagir (poids en données). Seul un joueur interagit : si l'unité ne lui obéit plus après son trajet

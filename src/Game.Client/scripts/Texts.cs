@@ -33,6 +33,9 @@ public static class Texts
     /// <summary>Ce qu'affiche une unité provoquée, avec le nombre d'activations qu'il lui reste à subir s'il y en a plusieurs.</summary>
     public static string Taunted(Unit unit) => unit.TauntActionsLeft > 1 ? $"provoqué ({unit.TauntActionsLeft})" : "provoqué";
 
+    public static string Guard(GuardAgainst against) =>
+        against == GuardAgainst.Melee ? "en garde (corps à corps)" : "en garde (tirs)";
+
     public static string Status(StatusKind status) => status switch
     {
         StatusKind.Stunned => "étourdi",
@@ -106,6 +109,11 @@ public static class Texts
             HitCovered c => $"{N(c.Unit)} est à couvert (−{c.Absorbed})",
             CoverDestroyed => "Un obstacle est détruit",
             TrapTriggered t => $"{N(t.Unit)} déclenche le piège de {N(t.Owner)}",
+            AttackParried p => $"{N(p.Unit)} pare l'attaque de {N(p.Attacker)}",
+            AttackDodged d => $"{N(d.Unit)} esquive l'attaque de {N(d.Attacker)}",
+            AttackIntercepted i => $"{N(i.Guard)} s'interpose devant {N(i.Ally)}",
+            CounterAttack c => $"{N(c.Unit)} riposte contre {N(c.Target)}",
+            WatchFired w => $"{N(w.Owner)} tire sur {N(w.Target)} (surveillance)",
             UnitResisted r => $"{N(r.Unit)} résiste",
             UnitSummoned s => $"{N(s.Owner)} pose : {N(s.Unit)}",
             TeamChanged t => $"{N(t.Unit)} change de camp",

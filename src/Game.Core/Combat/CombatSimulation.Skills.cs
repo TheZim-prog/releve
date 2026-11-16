@@ -65,7 +65,13 @@ public sealed partial class CombatSimulation
             if (skill.Ground is not null)
                 LayGround(caster, skill, zone);
         }
+        // Ce que la compétence prépare pour plus tard : une garde pour le lanceur, une surveillance.
+        if (skill.Guard is { } guard)
+            RaiseGuard(caster, guard);
+        if (skill.Watch is not null)
+            SetWatch(caster, skill, zone, zone is null ? target : null);
         EndSource();
+        FlushReactions();
     }
 
     /// <summary>

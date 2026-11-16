@@ -8,7 +8,7 @@
       "id": "bulwark", "name": "Rempart",
       "tiers": [
         { "actives": [ { "skill": "dome", "variant": "personal-shield" }, { "skill": "provocation", "variant": "challenge" } ] },
-        { "actives": [ { "skill": "steel-skin", "variant": "aegis" } ], "passives": [ { "id": "bodyguard", "name": "Garde du corps", "planned": true } ] },
+        { "actives": [ { "skill": "steel-skin", "variant": "aegis" } ], "passives": [ { "id": "bodyguard", "name": "Garde du corps" } ] },
         { "actives": [ { "skill": "fortress" } ], "passives": [ { "id": "unshakable", "name": "Inébranlable", "planned": true } ] }
       ]
     },
@@ -25,7 +25,7 @@
       "tiers": [
         { "actives": [ { "skill": "projection", "variant": "reversal" }, { "skill": "arm-lock", "variant": "dismantle" } ] },
         { "actives": [ { "skill": "catapult", "variant": "cannonball" } ], "passives": [ { "id": "vigilance", "name": "Vigilance" } ] },
-        { "actives": [ { "skill": "spin-throw" } ], "passives": [ { "id": "stoppingBlow", "name": "Coup d'arrêt", "planned": true } ] }
+        { "actives": [ { "skill": "spin-throw" } ], "passives": [ { "id": "stoppingBlow", "name": "Coup d'arrêt" } ] }
       ]
     }
   ],

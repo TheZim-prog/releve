@@ -208,7 +208,7 @@ public sealed partial class CombatSimulation
     private void ReturnToStart(Unit caster, Cell start)
     {
         if (CanStillAct(caster) && caster.CanMove && caster.Position != start && IsFreeFor(caster, start))
-            Displace(caster, start);
+            SelfDisplace(caster, start);
     }
 
     /// <summary>Après son mouvement, le lanceur peut-il encore frapper : debout, et pas étourdi par le sol où il arrive ?</summary>
@@ -255,7 +255,7 @@ public sealed partial class CombatSimulation
                 var hit = _units.Where(u => u != caster && u.Status == UnitStatus.Active && !u.IsCivilian
                                             && crossed.Contains(u.Position)
                                             && (!options.EnemiesOnly || AreOpponents(u, caster))).ToList();
-                Displace(caster, destination);
+                SelfDisplace(caster, destination);
                 if (!CanStillAct(caster))
                     break; // tombé ou figé par le sol à l'arrivée
                 foreach (var unit in hit)
@@ -264,7 +264,7 @@ public sealed partial class CombatSimulation
             }
             case SelfMoveType.Leap:
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, null, cells));
-                Displace(caster, destination);
+                SelfDisplace(caster, destination);
                 if (!CanStillAct(caster))
                     break;
                 foreach (var unit in UnitsAffectedBy(caster, skill, cells!))
@@ -279,7 +279,7 @@ public sealed partial class CombatSimulation
                     var course = ChargeCourse(caster, start, destination);
                     if (course[^1] != destination)
                         struck = null;
-                    Displace(caster, course[^1], course);
+                    SelfDisplace(caster, course[^1], course);
                 }
                 if (struck is not null && CanStillAct(caster))
                     ResolveHit(caster, skill, struck, damageFactor);
@@ -291,7 +291,7 @@ public sealed partial class CombatSimulation
                 var steps = options.DamagePercentPerCell == 0 ? 0
                     : WalkableWithin(caster, start, skill.Range).GetValueOrDefault(destination, start.DistanceTo(destination));
                 if (destination != start)
-                    Displace(caster, destination);
+                    SelfDisplace(caster, destination);
                 if (!CanStillAct(caster))
                     break;
                 var factor = (int)((long)damageFactor * (100 + options.DamagePercentPerCell * steps) / 100);
@@ -306,7 +306,7 @@ public sealed partial class CombatSimulation
                 _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, struck!.Id));
                 ResolveHit(caster, skill, struck, damageFactor);
                 if (caster.Status == UnitStatus.Active)
-                    Displace(caster, destination);
+                    SelfDisplace(caster, destination);
                 break;
         }
     }

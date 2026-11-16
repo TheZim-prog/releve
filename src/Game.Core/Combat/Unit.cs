@@ -147,6 +147,15 @@ public sealed class Unit
     /// <summary>Attaques d'opportunité restantes ; rechargées quand l'unité rejoue.</summary>
     public int OpportunityAttacksLeft { get; internal set; }
 
+    /// <summary>Réactions limitées à une par cycle déjà utilisées ; rechargées quand l'unité rejoue.</summary>
+    public CycleReactions SpentReactions { get; internal set; }
+
+    /// <summary>Garde en cours (Parade, Déviation, Maître d'armes), ou <c>null</c>.</summary>
+    public GuardDefinition? Guard { get; internal set; }
+
+    /// <summary>Tick où la garde tombe, ou <c>null</c> pour une garde qui tient jusqu'à la prochaine action.</summary>
+    public int? GuardEndTick { get; internal set; }
+
     public bool IsGaugeFull => Gauge >= _rules.GaugeCapacity;
 
     /// <summary>

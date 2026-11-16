@@ -16,7 +16,7 @@
       "id": "duelist", "name": "Duelliste",
       "tiers": [
         { "actives": [ { "skill": "stunning-blow", "variant": "sweep" }, { "skill": "parry", "variant": "deflection" } ] },
-        { "actives": [ { "skill": "disarm", "variant": "offbeat" } ], "passives": [ { "id": "riposte", "name": "Riposte", "planned": true } ] },
+        { "actives": [ { "skill": "disarm", "variant": "offbeat" } ], "passives": [ { "id": "riposte", "name": "Riposte" } ] },
         { "actives": [ { "skill": "weapon-master" } ], "passives": [ { "id": "aloneAgainstAll", "name": "Seul contre tous" } ] }
       ]
     },
@@ -32,9 +32,6 @@
   "planned": {
     "relentless": "Acharnement",
     "finishing-blow": "Coup de grâce",
-    "parry": "Parade",
-    "deflection": "Déviation",
-    "weapon-master": "Maître d'armes",
     "deadly-throw": "Lancer mortel"
   }
 }

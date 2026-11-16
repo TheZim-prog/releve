@@ -113,6 +113,7 @@ public sealed partial class CombatSimulation
         ExpireStatuses();
         ExpireTempHp();
         ExpireGround();
+        ExpireGuards();
         RenewGroundEffects();
         ReleaseCharges();
 
@@ -187,6 +188,16 @@ public sealed partial class CombatSimulation
         Add(_lastGroundZoneId);
         foreach (var zone in _groundZones)
             Add(zone.Id);
+        foreach (var watch in _watches)
+        {
+            Add(watch.Owner.Value);
+            Add(watch.Ally?.Value ?? -1);
+            foreach (var cell in watch.Cells ?? Array.Empty<Cell>())
+            {
+                Add(cell.X);
+                Add(cell.Y);
+            }
+        }
         foreach (var (cell, endTick) in _raisedObstacles)
         {
             Add(cell.X);
@@ -206,6 +217,9 @@ public sealed partial class CombatSimulation
             Add(unit.PendingGauge);
             Add((int)unit.Status);
             Add(unit.Team);
+            Add((int)unit.SpentReactions);
+            Add(unit.Guard is null ? 0 : 1 + (int)unit.Guard.Against);
+            Add(unit.GuardEndTick ?? -1);
         }
         return hash;
     }

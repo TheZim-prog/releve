@@ -13,6 +13,10 @@ public partial class CombatView
             new Color(1f, 0.15f, 0.1f, 0.45f), 0.01f);
         _board.SetLayer("domes", _domes.Values.SelectMany(c => c), new Color(0.3f, 0.6f, 1f, 0.35f), 0.015f);
         ShowGroundZones();
+        // Surveillances : la zone, ou la case de l'allié protégé (il bouge avec lui).
+        _board.SetLayer("watches", _sim.Watches.SelectMany(w => w.Cells
+                ?? (w.Ally is { } ally && _sim.FindUnit(ally) is { } protectedAlly ? new[] { protectedAlly.Position } : Array.Empty<Cell>())),
+            new Color(1f, 0.85f, 0.2f, 0.3f), 0.013f);
 
         var unit = Selected is { Status: UnitStatus.Active } selected ? selected : null;
         var from = _ghost ?? unit?.Position;

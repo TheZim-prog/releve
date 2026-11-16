@@ -31,8 +31,13 @@ public partial class CombatView
         var header = $"{unit.Definition.Name} — {Texts.Hp(unit)} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
                      + (HasOrder(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : "")
                      + (_ghost is not null ? " — déplacement prévu" : "");
-        if (unit.StatusEndTicks.Count > 0)
-            header += "\n" + string.Join(", ", unit.StatusEndTicks.Keys.Select(Texts.Status));
+        var states = unit.StatusEndTicks.Keys.Select(Texts.Status).ToList();
+        if (unit.Guard is { } guard)
+            states.Add(Texts.Guard(guard.Against));
+        if (_sim.Watches.Any(w => w.Owner == unit.Id))
+            states.Add("en surveillance");
+        if (states.Count > 0)
+            header += "\n" + string.Join(", ", states);
 
         var actions = new List<ActionButton>();
         for (var i = 0; i < unit.Skills.Count; i++)
