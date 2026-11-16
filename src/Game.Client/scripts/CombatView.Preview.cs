@@ -113,8 +113,7 @@ public partial class CombatView
                 aim.AddRange(preview.Cells ?? []);
                 if (preview.Destination is { } destination)
                     aim.Add(destination);
-                if (preview.Target is { } t && _sim.FindUnit(t) is { } struck)
-                    target.Add(struck.Position);
+                target.AddRange(StruckCells(preview));
             }
             else if (command.Interaction is { } interaction && _sim.FindUnit(interaction.Target) is { } other)
             {
@@ -163,8 +162,7 @@ public partial class CombatView
         {
             var preview = _sim.PreviewAction(unit.Id, origin, use);
             aim = preview.Cells ?? none;
-            if (preview.Target is { } t && _sim.FindUnit(t) is { } struck)
-                target = target.Append(struck.Position);
+            target = target.Concat(StruckCells(preview));
             if (preview.Destination is { } destination)
                 aim = aim.Append(destination);
         }
@@ -194,6 +192,13 @@ public partial class CombatView
         _board.SetLayer("ground-status", Of(g => !g.IsTrap && g.Effects.Count > 0), new Color(0.45f, 0.8f, 1f, 0.45f), 0.012f);
         _board.SetLayer("ground-trap", Of(g => g.IsTrap), new Color(1f, 0.6f, 0.1f, 0.7f), 0.012f);
     }
+
+    /// <summary>Les cases des unités qu'une action frapperait : sa cible, ou toutes celles d'une chaîne.</summary>
+    private IEnumerable<Cell> StruckCells(ActionPreview preview) =>
+        (preview.Chain ?? (preview.Target is { } t ? new[] { t } : Array.Empty<UnitId>()))
+            .Select(_sim.FindUnit)
+            .OfType<Unit>()
+            .Select(u => u.Position);
 
     private IEnumerable<Cell> Cells(Func<Cell, bool> predicate)
     {

@@ -11,13 +11,18 @@ public sealed partial class CombatSimulation
     /// unité tombée en cours de route, par une Réaction en chaîne, n'est plus touchée).
     /// <paramref name="damageFactor"/> : multiplicateur de dégâts du lanceur, en dix-millièmes (voir <see cref="DamageFactorOf"/>).
     /// <paramref name="destination"/> : case où une télékinésie pose sa cible ; <paramref name="zoneOrigin"/> : d'où part
-    /// une zone ordinaire (pour la couverture ; une attaque ciblée part du lanceur).
+    /// une zone ordinaire (pour la couverture ; une attaque ciblée part du lanceur) ; <paramref name="chain"/> : les
+    /// maillons d'une chaîne planifiée.
     /// </summary>
     private void Execute(Unit caster, SkillDefinition skill, Unit? target, IReadOnlyList<Cell>? zone, int damageFactor,
-        Cell? destination = null, Cell? zoneOrigin = null)
+        Cell? destination = null, Cell? zoneOrigin = null, IReadOnlyList<ChainLink>? chain = null)
     {
         // Une compétence exécutée est une « source » : un dôme bloque toute la source, pour tous ses protégés.
-        if (skill.SelfMove is { } selfMove)
+        if (chain is not null)
+        {
+            ExecuteChain(caster, skill, chain, damageFactor);
+        }
+        else if (skill.SelfMove is { } selfMove)
         {
             ExecuteSelfMove(caster, skill, selfMove, target, zone!, destination!.Value, damageFactor);
         }

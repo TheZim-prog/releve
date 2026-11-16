@@ -20,16 +20,25 @@ public sealed partial class CombatSimulation
         var (action, reason) = PlanAction(unit, from, skill, use);
         return action is null
             ? new ActionPreview(reason)
-            : new ActionPreview(null, action.Target?.Id, action.Zone, action.Destination);
+            : new ActionPreview(null, action.Target?.Id, action.Zone ?? ChainStops(action), action.Destination,
+                action.Chain?.Select(l => l.Target.Id).ToList());
     }
+
+    /// <summary>Les cases où s'arrête une chaîne à pied pour frapper (vide pour une chaîne à distance), ou <c>null</c>.</summary>
+    private static IReadOnlyList<Cell>? ChainStops(PlannedAction action) =>
+        action.Chain is not { } chain ? null
+        : action.Skill.SelfMove is null ? Array.Empty<Cell>()
+        : chain.Select(l => l.From).Distinct().ToList();
+
 
     /// <summary>
     /// Action validée : sur une unité (<paramref name="Target"/>) ou sur des cases (<paramref name="Zone"/>) ;
     /// <paramref name="Destination"/> : case où la télékinésie pose sa cible ; <paramref name="Origin"/> : d'où part une
-    /// zone ordinaire (centre d'un carré, lanceur pour une ligne), pour la couverture.
+    /// zone ordinaire (centre d'un carré, lanceur pour une ligne), pour la couverture ; <paramref name="Chain"/> : les
+    /// maillons d'une chaîne, la première cible comprise.
     /// </summary>
     internal sealed record PlannedAction(SkillDefinition Skill, Unit? Target, IReadOnlyList<Cell>? Zone, Cell? Destination = null,
-        Cell? Origin = null);
+        Cell? Origin = null, IReadOnlyList<ChainLink>? Chain = null);
 
     /// <summary>
     /// Valide la cible d'une compétence utilisée depuis <paramref name="position"/> (case d'arrivée du lanceur).
@@ -38,6 +47,9 @@ public sealed partial class CombatSimulation
     /// </summary>
     internal (PlannedAction? Action, RejectionReason? Reason) PlanAction(Unit unit, Cell position, SkillDefinition skill, SkillUse use)
     {
+        if (skill.Chain is not null)
+            return PlanChain(unit, position, skill, use);
+
         if (skill.SelfMove is { } selfMove)
             return PlanSelfMove(unit, position, skill, use, selfMove);
 

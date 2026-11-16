@@ -135,6 +135,9 @@ public sealed record SkillDefinition
     /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge, Ruée…), ou <c>null</c>.</summary>
     public SelfMoveType? SelfMove { get; init; }
 
+    /// <summary>Chaîne : le coup rebondit sur les ennemis proches (ex. Frappe en chaîne), ou <c>null</c>.</summary>
+    public ChainDefinition? Chain { get; init; }
+
     /// <summary>Réglages du mouvement spécial (facultatifs).</summary>
     public SelfMoveOptions? SelfMoveOptions { get; init; }
 
@@ -362,6 +365,15 @@ public sealed record SkillDefinition
         // Un état que la compétence pose déjà à tout le monde se rallonge (statusDurationPercent), il ne se répète pas.
         if (VsRobots is not null && VsRobots.Effects.Any(r => Effects.Any(e => e.Status == r.Status)))
             throw new ArgumentException($"Skill '{Id}': a robot effect repeats a status of the skill (lengthen it instead).");
+
+        // Chaîne : une attaque instantanée sur un ennemi, sans zone ; à pied (une ruée) ou à distance.
+        Chain?.Validate(Id);
+        if (Chain is not null
+            && (Target != SkillTargeting.Enemy || Zone is not null || IsCharged || ForcedMove is not null || Summon is not null
+                || SelfMove is not (null or SelfMoveType.Dash) || MoveOptions.DamagePercentPerCell != 0
+                || ExecuteAtOrBelowPercent > 0 || FlankDamagePercent != 0 || (!DealsDamage && Effects.Count == 0)
+                || IsMental || Range < 1))
+            throw new ArgumentException($"Skill '{Id}': a chain is an instant, non-mental attack on enemies in range, on foot (dash) or from afar, without zone or forced move.");
 
         // Sur le terrain : une zone au sol, un obstacle dressé, la fumée dissipée. Toujours sur les cases d'une zone.
         Ground?.Validate(Id);

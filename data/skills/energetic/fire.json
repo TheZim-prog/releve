@@ -32,5 +32,13 @@
     // Très gros dégâts sur une seule cible à distance, longue recharge.
     "id": "fire-lance", "name": "Lance de feu",
     "weight": "light", "range": 6, "minDamage": 20, "maxDamage": 26, "cooldownMs": 14000
+  },
+  {
+    // Variante de la Lance de feu : un éclair qui rebondit sur les ennemis proches (3 cases au plus, jusqu'à 4 cibles),
+    // moins de dégâts par cible, court étourdissement.
+    "id": "chain-lightning", "name": "Chaîne d'éclairs",
+    "weight": "light", "range": 6, "minDamage": 8, "maxDamage": 11, "cooldownMs": 14000,
+    "chain": { "maxTargets": 4, "bounceRange": 3 },
+    "effects": [ { "status": "stunned", "durationMs": 700 } ]
   }
 ]

@@ -133,10 +133,13 @@ public sealed partial class CombatSimulation
     /// cible au contact ; la plus proche à pied (à égalité, la première dans l'ordre d'exploration des chemins). Sa
     /// propre case si elle y est déjà.
     /// </summary>
-    private Cell? DashEnd(Unit unit, Cell position, Unit target, int steps)
+    private Cell? DashEnd(Unit unit, Cell position, Unit target, int steps) =>
+        DashEndIn(WalkableWithin(unit, position, steps), target);
+
+    /// <summary>Fin d'une ruée parmi des cases atteignables déjà calculées (énumérées par distance croissante).</summary>
+    private Cell? DashEndIn(IReadOnlyDictionary<Cell, int> walkable, Unit target)
     {
-        // Les cases atteignables sont énumérées par distance croissante.
-        foreach (var cell in WalkableWithin(unit, position, steps).Keys)
+        foreach (var cell in walkable.Keys)
         {
             if (IsInMeleeReach(cell, target.Position))
                 return cell;
@@ -196,6 +199,16 @@ public sealed partial class CombatSimulation
             || Pathfinder.FindPath(_grid, position, end, skill.MoveOptions.RetreatDistance, cell => OccupantFor(unit, cell)) is null)
             return (null, RejectionReason.InvalidDestination);
         return (new PlannedAction(skill, target, null, end), null);
+    }
+
+    /// <summary>
+    /// Retour d'un Aller-retour ou d'un Ricochet : le lanceur revient sur sa case de départ s'il peut encore agir et
+    /// bouger, et si elle est libre (une unité à terre a pu y être poussée entre-temps).
+    /// </summary>
+    private void ReturnToStart(Unit caster, Cell start)
+    {
+        if (CanStillAct(caster) && caster.CanMove && caster.Position != start && IsFreeFor(caster, start))
+            Displace(caster, start);
     }
 
     /// <summary>Après son mouvement, le lanceur peut-il encore frapper : debout, et pas étourdi par le sol où il arrive ?</summary>
@@ -285,8 +298,8 @@ public sealed partial class CombatSimulation
                 var landed = ResolveHit(caster, skill, struck, factor);
                 if (landed && struck.Status == UnitStatus.Active && skill.ForcedMove is { } move)
                     ApplyForcedMove(caster, skill, struck, move, damageFactor, null);
-                if (options.ReturnsToStart && caster.Status == UnitStatus.Active && caster.Position != start)
-                    Displace(caster, start);
+                if (options.ReturnsToStart)
+                    ReturnToStart(caster, start);
                 break;
             }
             case SelfMoveType.Retreat:

@@ -29,5 +29,20 @@
     "id": "running-strike", "name": "Coup d'élan",
     "weight": "light", "range": 6, "minDamage": 6, "maxDamage": 8, "cooldownMs": 6000,
     "selfMove": "dash", "selfMoveOptions": { "damagePercentPerCell": 20 }
+  },
+  {
+    // Court frapper un ennemi (4 pas), puis rebondit sur le plus proche pas encore touché (3 cases au plus du
+    // précédent), jusqu'à 4 cibles ; ennemis seulement, sans attaque d'opportunité. Il finit au contact de la dernière.
+    "id": "chain-strike", "name": "Frappe en chaîne",
+    "weight": "light", "range": 4, "minDamage": 5, "maxDamage": 7, "cooldownMs": 10000,
+    "selfMove": "dash",
+    "chain": { "maxTargets": 4, "bounceRange": 3 }
+  },
+  {
+    // Variante de la Frappe en chaîne : une cible de moins, mais il revient à sa case de départ.
+    "id": "ricochet", "name": "Ricochet",
+    "weight": "light", "range": 4, "minDamage": 5, "maxDamage": 7, "cooldownMs": 10000,
+    "selfMove": "dash", "selfMoveOptions": { "returnsToStart": true },
+    "chain": { "maxTargets": 3, "bounceRange": 3 }
   }
 ]

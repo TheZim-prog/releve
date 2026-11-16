@@ -22,7 +22,7 @@ public sealed record SkillUse(string SkillId, UnitId? Target, Cell? Cell = null)
 /// dépôt, gadget).
 /// </summary>
 public sealed record ActionPreview(RejectionReason? Reason, UnitId? Target = null, IReadOnlyList<Cell>? Cells = null,
-    Cell? Destination = null)
+    Cell? Destination = null, IReadOnlyList<UnitId>? Chain = null)
 {
     public bool IsValid => Reason is null;
 }

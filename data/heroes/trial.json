@@ -18,9 +18,10 @@
     "id": "trial-speedster", "archetype": "speedster", "level": 20,
     "points": { "hp": 4, "power": 3, "initiative": 12 },
     "learned": ["whirlwind", "harassment", "flash-rescue", "clearance", "carry", "slipstream", "collective-surge",
-                "breakthrough", "round-trip", "ignoresOpportunityAttacks"],
+                "breakthrough", "round-trip", "ignoresOpportunityAttacks", "chain-strike"],
     // Mur de vent (variante de whirlwind ; remettre whirlwind pour dissiper le Fumigène du combattant).
-    "equipped": ["wind-wall", "round-trip", "clearance", "collective-surge"],
+    // Frappe en chaîne (variante : ricochet).
+    "equipped": ["chain-strike", "wind-wall", "clearance", "collective-surge"],
     "passive": "ignoresOpportunityAttacks"
   },
   {
@@ -44,7 +45,8 @@
     "learned": ["beam", "blast", "fire-lance", "piercing", "ice-shard", "ice-wall", "black-ice", "frost", "absolute-zero",
                 "nova", "propulsion", "melting-point"],
     // Mur de glace (variante : ice-pillar) et Verglas (variante : frostbite).
-    "equipped": ["ice-wall", "black-ice", "recoil-wave", "absolute-zero"],
+    // Chaîne d'éclairs (variante de fire-lance).
+    "equipped": ["ice-wall", "black-ice", "chain-lightning", "absolute-zero"],
     "passive": "piercing"
   },
   {

@@ -251,7 +251,7 @@ public sealed partial class CombatSimulation
             return;
         }
 
-        Execute(unit, actionSkill, action.Target, action.Zone, DamageFactorOf(unit), action.Destination, action.Origin);
+        Execute(unit, actionSkill, action.Target, action.Zone, DamageFactorOf(unit), action.Destination, action.Origin, action.Chain);
         SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(actionSkill)));
         AfterAction(unit);
     }
