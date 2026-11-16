@@ -121,6 +121,24 @@ public enum PassiveKind
     /// mais l'obstacle qui couvre sa cible s'use plus vite (<see cref="CombatRules.ExcessCoverWearPercent"/>).
     /// </summary>
     Excess,
+
+    /// <summary>
+    /// Contagion (télépathe) : un adversaire qu'il a étourdi ou rendu confus, qui tombe, passe cet état (durée restante)
+    /// à l'adversaire le plus proche.
+    /// </summary>
+    Contagion,
+
+    /// <summary>Impact (télépathe) : un ennemi qu'il déplace de force prend des dégâts à l'arrivée (<see cref="CombatRules.ImpactMinDamage"/>).</summary>
+    Impact,
+
+    /// <summary>Présence (télépathe) : après chacune de ses actions, ses alliés proches récupèrent un peu de PV (<see cref="CombatRules.PresenceRange"/>).</summary>
+    Presence,
+
+    /// <summary>
+    /// Ange gardien (télépathe) : une fois par combat, un allié proche qui devrait tomber reste à 1 PV
+    /// (<see cref="CombatRules.GuardianAngelRange"/>).
+    /// </summary>
+    GuardianAngel,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

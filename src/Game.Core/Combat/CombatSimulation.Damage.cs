@@ -226,11 +226,17 @@ public sealed partial class CombatSimulation
         return before - target.Hp;
     }
 
-    /// <summary>La cible perd des PV ; à 0, elle est mise hors de combat (à terre ou retirée).</summary>
+    /// <summary>
+    /// La cible perd des PV ; à 0, elle est mise hors de combat (à terre ou retirée), sauf si un Ange gardien la retient
+    /// à 1 PV. En tombant, elle passe ses états contagieux à l'adversaire le plus proche (Contagion).
+    /// </summary>
     private void LoseHp(Unit target, int amount, Cell? fallbackCell)
     {
-        target.Hp = Math.Max(0, target.Hp - amount);
+        var angel = target.Hp - amount <= 0 ? GuardianAngelFor(target) : null;
+        target.Hp = angel is null ? Math.Max(0, target.Hp - amount) : 1;
         _events.Add(new UnitDamaged(CurrentTick, target.Id, amount, target.Hp));
+        if (angel is not null)
+            SavedByGuardianAngel(target, angel);
         if (target.Hp > 0)
         {
             if (!target.IsFleeing && target.Definition.FleeAtHpPercent is { } percent
@@ -239,6 +245,17 @@ public sealed partial class CombatSimulation
             return;
         }
 
+        var contagious = ContagiousStatuses(target);
+        Fall(target, fallbackCell);
+        SpreadContagion(target, contagious);
+    }
+
+    /// <summary>
+    /// La cible, à 0 PV, est mise hors de combat : retirée (et elle explose, si elle le fait), ou à terre sur sa case.
+    /// <paramref name="fallbackCell"/> : où elle tombe si elle partage sa case (en traversant un allié).
+    /// </summary>
+    private void Fall(Unit target, Cell? fallbackCell)
+    {
         // Son dôme éventuel tombe à la fin de la source en cours (EndSource).
         TakeOutOfAction(target, target.OnDefeat == DefeatOutcome.Downed ? UnitStatus.Downed : UnitStatus.Removed);
 

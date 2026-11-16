@@ -146,6 +146,15 @@ public sealed record StrikeJoined(int Tick, UnitId Unit, string SkillId, UnitId 
 /// <summary>Les recharges en cours de l'unité sont annulées (Rechargement) : ses compétences sont toutes disponibles.</summary>
 public sealed record CooldownsReset(int Tick, UnitId Unit) : CombatEvent(Tick);
 
+/// <summary>
+/// Contagion : l'état <paramref name="Status"/> de l'unité <paramref name="From"/>, qui vient de tomber, saute sur
+/// <paramref name="To"/> (un <see cref="StatusApplied"/> suit).
+/// </summary>
+public sealed record StatusSpread(int Tick, UnitId From, UnitId To, StatusKind Status) : CombatEvent(Tick);
+
+/// <summary>Ange gardien : l'unité, qui devait tomber, reste à 1 PV grâce à <paramref name="By"/>.</summary>
+public sealed record GuardianAngelSaved(int Tick, UnitId Unit, UnitId By) : CombatEvent(Tick);
+
 /// <summary>Les PV temporaires de l'unité ont duré leur temps : ce qu'il en restait disparaît.</summary>
 public sealed record TempHpEnded(int Tick, UnitId Unit) : CombatEvent(Tick);
 

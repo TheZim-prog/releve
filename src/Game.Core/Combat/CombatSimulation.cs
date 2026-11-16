@@ -221,6 +221,13 @@ public sealed partial class CombatSimulation
             Add((int)unit.SpentReactions);
             Add(unit.Guard is null ? 0 : 1 + (int)unit.Guard.Against);
             Add(unit.GuardEndTick ?? -1);
+            Add(unit.GuardianAngelUsed ? 1 : 0);
+            foreach (var (status, endTick) in unit.StatusEndTicks)
+            {
+                Add((int)status);
+                Add(endTick);
+                Add(unit.StatusSource(status)?.Value ?? 0);
+            }
         }
         foreach (var dome in _domes)
         {

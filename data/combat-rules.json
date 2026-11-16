@@ -51,6 +51,16 @@
   "furnaceMaxDamage": 5,
   "chainReactionMinDamage": 8,
   "chainReactionMaxDamage": 12,
+  // Impact (télépathe) : dégâts d'un ennemi qu'il déplace de force, à l'arrivée (multipliés par la puissance).
+  "impactMinDamage": 4,
+  "impactMaxDamage": 6,
+  // Présence (télépathe) : après chacune de ses actions, ses alliés à cette portée (en cases) récupèrent ces PV
+  // (multipliés par la puissance, comme un soin).
+  "presenceRange": 3,
+  "presenceMinHeal": 2,
+  "presenceMaxHeal": 4,
+  // Ange gardien (télépathe) : une fois par combat, un allié à cette portée (en cases) qui devrait tomber reste à 1 PV.
+  "guardianAngelRange": 3,
   "frostDurationMs": 1500,
   "frostShellDurationMs": 2000,
 

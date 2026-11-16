@@ -117,6 +117,24 @@ public sealed record CombatRules
     /// <summary>Réaction en chaîne : dégâts maximum.</summary>
     public required int ChainReactionMaxDamage { get; init; }
 
+    /// <summary>Impact : dégâts (avant la puissance) d'un ennemi qu'il déplace de force, à l'arrivée.</summary>
+    public required int ImpactMinDamage { get; init; }
+
+    /// <summary>Impact : dégâts maximum.</summary>
+    public required int ImpactMaxDamage { get; init; }
+
+    /// <summary>Présence : portée, en cases, à laquelle ses alliés récupèrent des PV après chacune de ses actions.</summary>
+    public required int PresenceRange { get; init; }
+
+    /// <summary>Présence : PV rendus (avant la puissance) à chaque allié proche.</summary>
+    public required int PresenceMinHeal { get; init; }
+
+    /// <summary>Présence : PV rendus maximum.</summary>
+    public required int PresenceMaxHeal { get; init; }
+
+    /// <summary>Ange gardien : portée, en cases, à laquelle il retient un allié qui devrait tomber.</summary>
+    public required int GuardianAngelRange { get; init; }
+
     /// <summary>Givre : durée du ralentissement posé par son attaque de base, en millisecondes.</summary>
     public required int FrostDurationMs { get; init; }
 
@@ -244,6 +262,10 @@ public sealed record CombatRules
             throw new ArgumentException("Furnace and chain reaction need 0 <= min damage <= max damage.");
         if (FrostDurationMs <= 0 || FrostShellDurationMs <= 0)
             throw new ArgumentException("Frost durations must be positive.");
+        if (ImpactMinDamage < 0 || ImpactMaxDamage < ImpactMinDamage || PresenceMinHeal < 0 || PresenceMaxHeal < PresenceMinHeal)
+            throw new ArgumentException("Impact and presence need 0 <= min <= max.");
+        if (PresenceRange is < 1 or > 20 || GuardianAngelRange is < 1 or > 20)
+            throw new ArgumentException("Presence and guardian angel ranges must be between 1 and 20.");
     }
 
     // Pour les reprises de jauge, 100 % est exclu (max 99 par défaut) : l'unité serait de nouveau

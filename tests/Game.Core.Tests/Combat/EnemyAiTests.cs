@@ -209,7 +209,7 @@ public class EnemyAiTests
         sim.Tick();
 
         var fleeing = sim.Get(2);
-        fleeing.SetStatus(StatusKind.Confused, int.MaxValue);
+        fleeing.SetStatus(StatusKind.Confused, int.MaxValue, source: null);
 
         Assert.Same(Behaviors.ConfusedInstance, sim.ControllerOf(fleeing));
     }

@@ -109,11 +109,12 @@ public sealed partial class CombatSimulation
         }
     }
 
-    /// <summary>Ce qui suit une action réellement faite (pas un déplacement seul) : Sillage et Fournaise.</summary>
+    /// <summary>Ce qui suit une action réellement faite (pas un déplacement seul) : Sillage, Fournaise et Présence.</summary>
     private void AfterAction(Unit unit)
     {
         Slipstream(unit);
         Furnace(unit);
+        Presence(unit);
     }
 
     /// <summary>Fournaise : après chacune de ses actions, les adversaires debout à son contact prennent de petits dégâts.</summary>

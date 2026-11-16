@@ -7,28 +7,41 @@ namespace Game.Core.Combat;
 public sealed partial class CombatSimulation
 {
     /// <summary>
-    /// Applique le déplacement forcé d'une compétence à sa cible. <paramref name="destination"/> : la case choisie,
-    /// pour une pose ; vers laquelle un tourniquet lance ; vers laquelle un vortex attire (le centre de sa zone, sinon le
-    /// lanceur). Une projection part du lanceur ; celle d'une zone, de son centre (voir <see cref="PushFromZone"/>).
+    /// Applique le déplacement forcé d'une compétence à sa cible (projection, renversement, tourniquet, vortex,
+    /// télékinésie, permutation) : c'est là que joue l'Impact du lanceur. Un sauvetage ou un transport (des alliés) n'y
+    /// passe pas ; une compétence qui déplacerait un ennemi autrement devrait y passer. <paramref name="point"/> : la case de référence du déplacement : pour une pose, la
+    /// case choisie ; pour un tourniquet, celle vers laquelle il lance ; pour un vortex, le centre vers lequel il attire
+    /// (sinon le lanceur) ; pour une projection, d'où elle part (le centre de sa zone, sinon le lanceur).
     /// </summary>
     private void ApplyForcedMove(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor,
-        Cell? destination)
+        Cell? point)
+    {
+        var before = target.Position;
+        MoveByForce(caster, skill, target, move, damageFactor, point);
+        ImpactOnArrival(caster, skill, target, before, damageFactor);
+    }
+
+    private void MoveByForce(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor,
+        Cell? point)
     {
         switch (move.Type)
         {
-            case ForcedMoveType.Push or ForcedMoveType.Throw:
+            case ForcedMoveType.Push:
+                Push(caster, skill, target, move, damageFactor, from: point ?? caster.Position);
+                break;
+            case ForcedMoveType.Throw:
                 Push(caster, skill, target, move, damageFactor, from: caster.Position);
                 break;
             case ForcedMoveType.Spin:
-                Push(caster, skill, target, move, damageFactor, from: caster.Position, toward: destination);
+                Push(caster, skill, target, move, damageFactor, from: caster.Position, toward: point);
                 break;
             case ForcedMoveType.Pull:
-                Pull(caster, target, move, center: destination ?? caster.Position);
+                Pull(caster, target, move, center: point ?? caster.Position);
                 break;
             case ForcedMoveType.Place:
                 if (ResistsForcedMove(caster, target))
                     break;
-                Displace(target, destination!.Value);
+                Displace(target, point!.Value);
                 LandingImpact(caster, skill, target, move, damageFactor);
                 break;
             case ForcedMoveType.Swap:
@@ -49,7 +62,7 @@ public sealed partial class CombatSimulation
         foreach (var unit in hit.OrderByDescending(u => u.Position.DistanceTo(center)).ToList())
         {
             if (unit.Status == UnitStatus.Active)
-                Push(caster, skill, unit, move, damageFactor, center);
+                ApplyForcedMove(caster, skill, unit, move, damageFactor, point: center);
         }
     }
 

@@ -187,7 +187,7 @@ public class MentalTests
     public void ConfusedTelepath_CannotDominateItsOwnAlly()
     {
         var sim = Simulation(new Grid(8, 1), TelepathAt(0, 0), Unit(2, team: 0, 2, 0));
-        sim.Get(1).SetStatus(StatusKind.Confused, endTick: 100);
+        sim.Get(1).SetStatus(StatusKind.Confused, endTick: 100, source: null);
 
         var (plan, reason) = sim.ValidateActivation(Cast("domination", 2));
 

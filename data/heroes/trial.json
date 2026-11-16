@@ -80,7 +80,8 @@
     "learned": ["paralysis", "telepathic-strike", "confusion", "grip", "domination", "telekinesis", "projectile", "vise", "siphon",
                 "stimulation", "clarity", "kineticScreen", "force-wave"],
     "equipped": ["telepathic-strike", "siphon", "clarity", "force-wave"],
-    // Passif : Emprise (autre : kineticScreen).
+    // Passif : Emprise (autre : kineticScreen). Impact s'achète avec les points déjà mis dans Kinésiste (à la place d'une
+    // autre case) ; Contagion, Présence et Ange gardien demandent de compléter leur branche.
     "passive": "grip"
   }
 ]

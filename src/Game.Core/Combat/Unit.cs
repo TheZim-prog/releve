@@ -55,6 +55,7 @@ public sealed class Unit
     private readonly CombatRules _rules;
     private readonly Dictionary<string, int> _cooldownEndTicks = new();
     private readonly SortedDictionary<StatusKind, int> _statusEndTicks = new();
+    private readonly SortedDictionary<StatusKind, UnitId> _statusSources = new();
 
     /// <param name="powerPercent">Puissance imposée (gadget : celle de l'unité qui le pose), sinon celle de ses points.</param>
     internal Unit(UnitSetup setup, CombatRules rules, int? powerPercent = null)
@@ -230,9 +231,30 @@ public sealed class Unit
     /// <summary>Jauge promise par un passif pendant ce qu'elle est en train de faire, donnée dès qu'elle a fini.</summary>
     internal int PendingGauge { get; set; }
 
-    internal void SetStatus(StatusKind status, int endTick) => _statusEndTicks[status] = endTick;
+    /// <summary>
+    /// Pose (ou prolonge) un état ; <paramref name="source"/> : l'unité dont vient sa durée actuelle, toujours donnée par
+    /// la simulation (<c>null</c> seulement pour un état posé à la main par un test : il n'a pas d'auteur).
+    /// </summary>
+    internal void SetStatus(StatusKind status, int endTick, UnitId? source)
+    {
+        _statusEndTicks[status] = endTick;
+        if (source is { } id)
+            _statusSources[status] = id;
+        else
+            _statusSources.Remove(status);
+    }
 
-    internal void ClearStatus(StatusKind status) => _statusEndTicks.Remove(status);
+    internal void ClearStatus(StatusKind status)
+    {
+        _statusEndTicks.Remove(status);
+        _statusSources.Remove(status);
+    }
+
+    /// <summary>L'unité qui lui a posé cet état (celle dont vient sa durée actuelle), ou <c>null</c> s'il n'est pas là.</summary>
+    public UnitId? StatusSource(StatusKind status) => _statusSources.TryGetValue(status, out var source) ? source : null;
+
+    /// <summary>Ange gardien : ce passif a déjà sauvé un allié dans ce combat (une fois par combat).</summary>
+    public bool GuardianAngelUsed { get; internal set; }
 
     public SkillDefinition? FindSkill(string skillId) => Skills.FirstOrDefault(s => s.Id == skillId);
 

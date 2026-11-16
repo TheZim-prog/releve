@@ -99,6 +99,8 @@ public static class Texts
             TempHpEnded x => $"{N(x.Unit)} perd ses PV temporaires",
             GaugeLost g => $"{N(g.Unit)} perd de la jauge",
             CooldownsReset c => $"{N(c.Unit)} : recharges terminées",
+            StatusSpread s => $"Contagion : {N(s.To)} est {Status(s.Status)} à son tour",
+            GuardianAngelSaved g => $"{N(g.Unit)} tient debout grâce à {N(g.By)} (ange gardien)",
             ChainExplosion => "Réaction en chaîne !",
             UnitTaunted t => $"{N(t.Unit)} est provoqué par {N(t.By)}",
             TauntEnded t => $"{N(t.Unit)} n'est plus provoqué",

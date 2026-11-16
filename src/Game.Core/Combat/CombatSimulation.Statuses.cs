@@ -4,15 +4,12 @@ namespace Game.Core.Combat;
 public sealed partial class CombatSimulation
 {
     /// <summary>
-    /// Applique un état posé par <paramref name="source"/> ; s'il est déjà là, garde la plus longue des deux durées.
-    /// Emprise : un état néfaste posé par une unité qui a ce passif dure plus longtemps.
-    /// Étourdi ou désarmé : interrompt la charge. Confus ou dominé : l'unité change de décisions (et de camp, si
-    /// dominée). Désarmé : dure moins longtemps sur un boss.
+    /// Applique un état posé par <paramref name="source"/>, pour sa durée (voir <see cref="PutStatus"/>).
+    /// Emprise : un état néfaste posé par une unité qui a ce passif dure plus longtemps. Désarmé : dure moins longtemps
+    /// sur un boss.
     /// </summary>
     private void ApplyStatus(Unit target, StatusEffect effect, Unit source, int durationPercent = 100)
     {
-        if (ResistsStatus(target, effect.Status))
-            return;
         // Tous les multiplicateurs de durée (robot, Emprise) en une seule division.
         long durationMs = (long)effect.DurationMs * durationPercent, scale = 100;
         if (effect.Status.IsHarmful() && source.HasPassive(PassiveKind.Grip))
@@ -26,19 +23,29 @@ public sealed partial class CombatSimulation
             scale *= 100;
         }
         durationMs /= scale;
-        var endTick = CurrentTick + Rules.MillisecondsToTicks((int)durationMs);
-        if (target.StatusEndTicks.TryGetValue(effect.Status, out var currentEnd))
-            endTick = Math.Max(endTick, currentEnd);
+        PutStatus(target, effect.Status, CurrentTick + Rules.MillisecondsToTicks((int)durationMs), source);
+    }
 
-        var isNew = !target.HasStatus(effect.Status);
-        target.SetStatus(effect.Status, endTick);
-        _events.Add(new StatusApplied(CurrentTick, target.Id, effect.Status, endTick));
+    /// <summary>
+    /// Pose un état jusqu'à <paramref name="endTick"/>, sauf s'il ne prend pas sur elle (Inébranlable, Sérénité) ; s'il
+    /// est déjà là, garde la plus longue des deux durées (et l'unité dont elle vient ; à égalité, la nouvelle). Étourdi ou désarmé : interrompt
+    /// la charge. Confus ou dominé : l'unité change de décisions (et de camp, si dominée).
+    /// </summary>
+    private void PutStatus(Unit target, StatusKind status, int endTick, Unit source)
+    {
+        if (ResistsStatus(target, status))
+            return;
+        // À durée égale, l'état est désormais celui de la nouvelle source.
+        var isNew = !target.StatusEndTicks.TryGetValue(status, out var currentEnd);
+        if (isNew || endTick >= currentEnd)
+            target.SetStatus(status, endTick, source.Id);
+        _events.Add(new StatusApplied(CurrentTick, target.Id, status, target.StatusEndTicks[status]));
         // Récupération d'énergie : pour un ennemi (pas un gadget) qu'il étourdit, pas pour un étourdissement prolongé.
-        if (isNew && effect.Status == StatusKind.Stunned && source.HasPassive(PassiveKind.EnergyRecovery)
+        if (isNew && status == StatusKind.Stunned && source.HasPassive(PassiveKind.EnergyRecovery)
             && AreOpponents(target, source) && target.SummonedBy is null)
             PromiseGauge(source, Rules.EnergyRecoveryGaugeGainPercent);
 
-        switch (effect.Status)
+        switch (status)
         {
             case StatusKind.Stunned or StatusKind.Disarmed:
                 InterruptCharge(target);
@@ -50,10 +57,11 @@ public sealed partial class CombatSimulation
             case StatusKind.Dominated:
                 InterruptCharge(target);
                 SetIntention(target, null);
-                // Commandée comme celle qui la domine ; si celle-ci est elle-même dominée (un tech dominé qui pirate
-                // un robot), comme son propre maître.
-                target.DominatedBy = source.DominatedBy ?? source.Id;
-                ChangeTeam(target, source.Team);
+                // Commandée comme celle dont vient la domination en cours (une plus courte, posée par-dessus, ne change
+                // rien) ; si celle-ci est elle-même dominée (un tech dominé qui pirate un robot), comme son propre maître.
+                var master = target.StatusSource(status) is { } masterId && FindUnit(masterId) is { } holder ? holder : source;
+                target.DominatedBy = master.DominatedBy ?? master.Id;
+                ChangeTeam(target, master.Team);
                 break;
         }
 

@@ -108,7 +108,7 @@ public class ExecutionAndWeakPointTests
         var sim = Simulation(Grid.FromRows("..#"),
             Unit(1, team: 0, 0, 0, gauge: Capacity, skills: new[] { projection }),
             Unit(2, team: 1, 1, 0));
-        sim.Get(2).SetStatus(StatusKind.Exposed, endTick: 100);
+        sim.Get(2).SetStatus(StatusKind.Exposed, endTick: 100, source: null);
 
         sim.Submit(Use(Fighter, Target, "projection"));
 
@@ -122,8 +122,8 @@ public class ExecutionAndWeakPointTests
         var sim = Simulation(new Grid(3, 1),
             Unit(1, team: 0, 0, 0, gauge: Capacity, skills: new[] { thirteen }),
             Unit(2, team: 1, 1, 0));
-        sim.Get(1).SetStatus(StatusKind.Empowered, endTick: 100);
-        sim.Get(2).SetStatus(StatusKind.Exposed, endTick: 100);
+        sim.Get(1).SetStatus(StatusKind.Empowered, endTick: 100, source: null);
+        sim.Get(2).SetStatus(StatusKind.Exposed, endTick: 100, source: null);
 
         sim.Submit(Use(Fighter, Target, "strike"));
 

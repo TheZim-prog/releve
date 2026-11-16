@@ -9,7 +9,7 @@
       "tiers": [
         { "actives": [ { "skill": "paralysis", "variant": "torpor" }, { "skill": "telepathic-strike", "variant": "psychic-scream" } ] },
         { "actives": [ { "skill": "confusion", "variant": "panic" } ], "passives": [ { "id": "grip", "name": "Emprise" } ] },
-        { "actives": [ { "skill": "domination" } ], "passives": [ { "id": "contagion", "name": "Contagion", "planned": true } ] }
+        { "actives": [ { "skill": "domination" } ], "passives": [ { "id": "contagion", "name": "Contagion" } ] }
       ]
     },
     {
@@ -17,15 +17,15 @@
       "tiers": [
         { "actives": [ { "skill": "telekinesis", "variant": "shove" }, { "skill": "projectile", "variant": "telekinetic-throw" } ] },
         { "actives": [ { "skill": "vise", "variant": "wrench" } ], "passives": [ { "id": "kineticScreen", "name": "Écran cinétique" } ] },
-        { "actives": [ { "skill": "force-wave" } ], "passives": [ { "id": "impact", "name": "Impact", "planned": true } ] }
+        { "actives": [ { "skill": "force-wave" } ], "passives": [ { "id": "impact", "name": "Impact" } ] }
       ]
     },
     {
       "id": "empath", "name": "Empathe",
       "tiers": [
         { "actives": [ { "skill": "siphon", "variant": "transfusion" }, { "skill": "stimulation", "variant": "focus" } ] },
-        { "actives": [ { "skill": "clarity", "variant": "serenity" } ], "passives": [ { "id": "presence", "name": "Présence", "planned": true } ] },
-        { "actives": [ { "skill": "awakening" } ], "passives": [ { "id": "guardianAngel", "name": "Ange gardien", "planned": true } ] }
+        { "actives": [ { "skill": "clarity", "variant": "serenity" } ], "passives": [ { "id": "presence", "name": "Présence" } ] },
+        { "actives": [ { "skill": "awakening" } ], "passives": [ { "id": "guardianAngel", "name": "Ange gardien" } ] }
       ]
     }
   ],

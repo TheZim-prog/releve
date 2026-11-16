@@ -44,8 +44,7 @@ public sealed partial class CombatSimulation
         if (drained <= 0)
             return;
         var ally = _units
-            .Where(u => u != caster && u.IsStandingCombatant && u.Team == caster.Team && u.DominatedBy is null && u.Hp < u.MaxHp
-                        && u.Position.DistanceTo(caster.Position) <= range)
+            .Where(u => IsHeroAllyOf(caster, u) && u.Hp < u.MaxHp && u.Position.DistanceTo(caster.Position) <= range)
             .OrderByDescending(u => u.MaxHp - u.Hp)
             .FirstOrDefault();
         if (ally is not null)
