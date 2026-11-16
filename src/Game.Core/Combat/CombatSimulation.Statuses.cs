@@ -63,9 +63,12 @@ public sealed partial class CombatSimulation
             SetIntention(target, null);
     }
 
-    /// <summary>Inébranlable : jamais déséquilibré, d'où que ça vienne (un gaz allié compris).</summary>
+    /// <summary>
+    /// Inébranlable : jamais déséquilibré, d'où que ça vienne (un gaz allié compris). Serein : aucun état néfaste ne prend.
+    /// </summary>
     private static bool ResistsStatus(Unit target, StatusKind status) =>
-        status == StatusKind.OffBalance && target.HasPassive(PassiveKind.Unshakable);
+        (status == StatusKind.OffBalance && target.HasPassive(PassiveKind.Unshakable))
+        || (status.IsHarmful() && target.HasStatus(StatusKind.Serene));
 
     /// <summary>
     /// Les états arrivés à échéance prennent fin. C'est une source à part : une forteresse lâchée par une fin d'état

@@ -160,9 +160,12 @@ public sealed partial class CombatSimulation
     /// Au contact : pas de coupe d'angle par un mur, mais seul le décor compte (règle du corps à corps).
     /// Au-delà : ligne de vue, bloquée par les murs, les ennemis debout de l'attaquant et les zones au sol qui la
     /// coupent (fumée ; pare-tirs pour le tir <paramref name="skill"/>). Les obstacles bas ne gênent jamais la vue.
+    /// Une compétence qui se passe de ligne de vue (Frappe télépathique) voit toujours.
     /// </summary>
     private bool HasLineOfSight(Unit attacker, Cell from, Cell to, SkillDefinition? skill = null)
     {
+        if (skill is { IgnoresLineOfSight: true }) // il sent les esprits à travers les murs
+            return true;
         if (from.IsAdjacentTo(to))
             return LineOfSight.IsClear(_grid, from, to);
         if (GroundBlocksLine(from, to, skill))

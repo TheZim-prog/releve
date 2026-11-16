@@ -130,8 +130,39 @@ public sealed record SkillDefinition
     public bool MovesCaster =>
         SelfMove is not null || IsRescue || ForcedMove?.Type == ForcedMoveType.Swap || SummonLeftBehind || RevivesAlly;
 
-    /// <summary>Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles.</summary>
+    /// <summary>
+    /// Pouvoir mental (Paralysie, Confusion, Domination) : les robots y sont insensibles, et rien ne vole jusqu'à la
+    /// cible, donc pas de couverture.
+    /// </summary>
     public bool IsMental { get; init; }
+
+    /// <summary>
+    /// Pouvoir mental qui sent les esprits à travers les murs (Frappe télépathique) : sa cible (ou la case visée) est à
+    /// portée, sans ligne de vue.
+    /// </summary>
+    public bool IgnoresLineOfSight { get; init; }
+
+    /// <summary>
+    /// Siphon : les PV que le coup fait perdre à sa cible sont rendus à l'allié le plus blessé (le plus de PV manquants)
+    /// à ce nombre de cases du lanceur au plus ; <c>null</c> : pas de siphon.
+    /// </summary>
+    public int? SiphonRange { get; init; }
+
+    /// <summary>
+    /// Transfusion : le soin est pris sur les PV du lanceur, qui perd ce que l'allié gagne (il garde au moins 1 PV).
+    /// </summary>
+    public bool GivesOwnHp { get; init; }
+
+    /// <summary>Clarté : les états néfastes de l'allié visé prennent fin.</summary>
+    public bool ClearsHarmfulStatuses { get; init; }
+
+    /// <summary>
+    /// Éveil : la zone (réservée aux alliés) relève aussi les alliés à terre qui s'y trouvent, comme l'action « relever ».
+    /// </summary>
+    public bool RevivesDowned { get; init; }
+
+    /// <summary>Domination sur un boss, qu'elle ne peut pas dominer : ce qu'elle lui fait à la place, ou <c>null</c> (refusée).</summary>
+    public BossShakeDefinition? VsBosses { get; init; }
 
     /// <summary>Mouvement spécial du lanceur (Percée, Saut, Charge, Ruée…), ou <c>null</c>.</summary>
     public SelfMoveType? SelfMove { get; init; }
@@ -227,8 +258,8 @@ public sealed record SkillDefinition
     /// </summary>
     public bool HasHitEffect =>
         DealsDamage || Effects.Count > 0 || GaugeGainPercent > 0 || ForcedMove is not null || Heals || TempHp is not null
-        || TauntActions > 0 || GaugeLossPercent > 0 || InterruptsCharge || ResetsCooldowns
-        || VsRobots is { DealsDamage: true } or { Effects.Count: > 0 } or { GaugeLossPercent: > 0 };
+        || TauntActions > 0 || GaugeLossPercent > 0 || InterruptsCharge || ResetsCooldowns || ClearsHarmfulStatuses
+        || RevivesDowned || VsRobots is { DealsDamage: true } or { Effects.Count: > 0 } or { GaugeLossPercent: > 0 };
 
     /// <summary>
     /// La compétence domine-t-elle sa cible ? Par ses propres états, sauf sur un robot adverse dont l'effet renforcé les
@@ -500,6 +531,22 @@ public sealed record SkillDefinition
                                  || Chain is not null || Guard is not null || Watch is not null || Summon is not null
                                  || CreatesDome || IsRescue || RevivesAlly))
             throw new ArgumentException($"Skill '{Id}': a coordinated strike designates one enemy at once, and does nothing else.");
+
+        // Pouvoirs du télépathe : sentir les esprits sans les voir, siphonner, donner ses PV, apaiser, éveiller, secouer un boss.
+        if (IgnoresLineOfSight && (!IsMental || Range < 2 || SelfMove is not null || Chain is not null))
+            throw new ArgumentException($"Skill '{Id}': only a mental power at range (2 or more) ignores line of sight.");
+        if (SiphonRange is { } siphon
+            && (siphon is < 1 or > 20 || !IsOffensive || Zone is not null || !DealsDamage || SelfMove is not null || Chain is not null))
+            throw new ArgumentException($"Skill '{Id}': a siphon (range 1 to 20) belongs to a damaging attack on one enemy.");
+        if (GivesOwnHp && (!Heals || Target != SkillTargeting.Ally))
+            throw new ArgumentException($"Skill '{Id}': giving one's own HP is a heal on an ally.");
+        if (ClearsHarmfulStatuses && (Target != SkillTargeting.Ally || ForcedMove is not null || IsRescue || CreatesDome || RevivesAlly))
+            throw new ArgumentException($"Skill '{Id}': clearing statuses targets an ally, without moving it.");
+        if (RevivesDowned && Zone?.Affects != ZoneTargets.Allies)
+            throw new ArgumentException($"Skill '{Id}': reviving the downed needs an allies-only zone.");
+        VsBosses?.Validate(Id);
+        if (VsBosses is not null && !Dominates(onOpposingRobot: false))
+            throw new ArgumentException($"Skill '{Id}': a boss effect belongs to a domination.");
 
         if (!HasHitEffect && !CreatesDome && Summon is null && !IsRescue && Ground is null && Raises is null && Guard is null && Watch is null
             && Scenery is null && !RevivesAlly && !CallsAllyStrikes)

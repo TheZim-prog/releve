@@ -36,5 +36,12 @@
     "id": "shove", "name": "Poussée",
     "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
     "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 9, "collisionMaxDamage": 13 }
+  },
+  {
+    // Repousse toutes les unités autour de lui (alliés compris), loin de lui ; dégâts s'ils percutent quelque chose.
+    "id": "force-wave", "name": "Onde de force",
+    "weight": "heavy", "range": 0, "minDamage": 0, "maxDamage": 0, "cooldownMs": 20000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false },
+    "forcedMove": { "type": "push", "distance": 3, "collisionMinDamage": 10, "collisionMaxDamage": 14 }
   }
 ]

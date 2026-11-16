@@ -46,17 +46,9 @@ public sealed record RobotBonusDefinition
             throw new ArgumentException($"Skill '{skillId}' needs 0 <= robot minDamage <= robot maxDamage.");
         if (GaugeLossPercent is < 0 or > 100)
             throw new ArgumentException($"Skill '{skillId}' needs a robot gauge loss between 0 and 100 %.");
-        if (Effects is null || Effects.Any(e => e is null))
-            throw new ArgumentException($"Skill '{skillId}' has a null robot effect.");
-        foreach (var effect in Effects)
-            effect.Validate(skillId);
-        // Un état bénéfique n'a rien à faire sur un adversaire. Confus ou dominé : un robot piraté, pas un pouvoir
-        // mental (la compétence n'en est pas un, voir SkillDefinition).
-        if (Effects.Any(e => !e.Status.IsHarmful()))
-            throw new ArgumentException($"Skill '{skillId}': a robot effect is a harmful status.");
+        // Confus ou dominé sont permis : un robot piraté, pas un pouvoir mental (la compétence n'en est pas un, voir SkillDefinition).
+        StatusEffect.ValidateAgainst(Effects, skillId, "robot");
         if (ReplacesEffects && Effects.Count == 0)
             throw new ArgumentException($"Skill '{skillId}': robot effects that replace the skill's need at least one status.");
-        if (Effects.Select(e => e.Status).Distinct().Count() != Effects.Count)
-            throw new ArgumentException($"Skill '{skillId}' applies the same status twice to robots.");
     }
 }

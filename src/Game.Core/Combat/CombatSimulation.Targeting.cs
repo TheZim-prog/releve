@@ -142,7 +142,7 @@ public sealed partial class CombatSimulation
         if (target is null || !IsRightSide(unit, target, skill))
             return (null, RejectionReason.InvalidTarget);
         // Remplir une jauge déjà pleine, ou bloquée à 0 par une charge, ne servirait à rien.
-        if (!skill.IsOffensive && !HasSupportEffect(skill, target))
+        if (!skill.IsOffensive && !HasSupportEffect(unit, skill, target))
             return (null, RejectionReason.NoEffect);
         if (IsImmune(skill, target))
             return (null, RejectionReason.NoEffect);
@@ -166,24 +166,26 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Immunités : les robots aux pouvoirs mentaux, les boss à la domination (un boss robot au Piratage aussi). Une cible
-    /// directe immunisée est refusée ;
-    /// dans une zone, elle résiste. (Un civil ne peut pas être visé, et une domination ne se fait jamais en zone.)
+    /// Immunités : les robots aux pouvoirs mentaux, les boss à la domination (un boss robot au Piratage aussi), sauf
+    /// une domination qui secoue les boss (<see cref="SkillDefinition.VsBosses"/>). Une cible directe immunisée est
+    /// refusée ; dans une zone, elle résiste. (Un civil ne peut pas être visé, et une domination ne se fait jamais en zone.)
     /// </summary>
     private static bool IsImmune(SkillDefinition skill, Unit target) =>
         (skill.IsMental && target.Definition.IsRobot)
-        || (target.Definition.IsBoss && skill.Dominates(onOpposingRobot: target.Definition.IsRobot));
+        || (target.Definition.IsBoss && skill.VsBosses is null && skill.Dominates(onOpposingRobot: target.Definition.IsRobot));
 
     /// <summary>
     /// Une compétence de soutien aurait-elle un effet sur cette cible ? Un état ou un déplacement en a toujours ;
-    /// des PV temporaires, un dôme et une surveillance aussi ; un soin, si la cible est blessée ; un gain de jauge, si sa
-    /// jauge n'est ni pleine ni bloquée par une charge ; un rechargement, si une de ses compétences est en recharge.
+    /// des PV temporaires, un dôme et une surveillance aussi ; un soin, si la cible est blessée (et, pris sur les PV du
+    /// lanceur, s'il lui en reste plus d'un) ; un gain de jauge, si sa jauge n'est ni pleine ni bloquée par une charge ;
+    /// un rechargement, si une de ses compétences est en recharge ; une Clarté, si elle a un état à retirer.
     /// </summary>
-    private bool HasSupportEffect(SkillDefinition skill, Unit target) =>
+    private bool HasSupportEffect(Unit caster, SkillDefinition skill, Unit target) =>
         skill.Effects.Count > 0
         || (skill.ResetsCooldowns && target.HasCooldownRunning(CurrentTick))
+        || (skill.ClearsHarmfulStatuses && ClearableStatuses(target).Any())
         || skill.ForcedMove is not null
-        || (skill.Heals && target.Hp < target.MaxHp)
+        || (skill.Heals && target.Hp < target.MaxHp && (!skill.GivesOwnHp || caster.Hp > 1))
         || skill.TempHp is not null
         || (skill.GaugeGainPercent > 0 && !target.IsGaugeFull && target.Charge is null)
         || skill.Watch is not null

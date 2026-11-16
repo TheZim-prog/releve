@@ -243,8 +243,10 @@ public sealed partial class CombatSimulation
         }
 
         // Passée en fuite en chemin (attaque d'opportunité) : elle ne fait plus que courir, l'action est annulée. De même
-        // si un état reçu en chemin lui interdit la compétence prévue (désarmée : seule son attaque de base passerait).
-        if (action is null || ControllerOf(unit) == Behaviors.FleeInstance || unit.StatusBlocking(action.Skill) is not null)
+        // si un état reçu en chemin lui interdit la compétence prévue (désarmée : seule son attaque de base passerait),
+        // ou si elle n'a plus de PV à donner (Transfusion, après une attaque d'opportunité).
+        if (action is null || ControllerOf(unit) == Behaviors.FleeInstance || unit.StatusBlocking(action.Skill) is not null
+            || (action.Skill.GivesOwnHp && unit.Hp <= 1))
         {
             SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
             return;

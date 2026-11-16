@@ -11,5 +11,36 @@
     "id": "focus", "name": "Concentration",
     "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 15000,
     "effects": [ { "status": "empowered", "durationMs": 6000 } ]
+  },
+  {
+    // Dégâts sur un ennemi (mental) ; l'allié le plus blessé à 5 cases du télépathe récupère les PV perdus.
+    "id": "siphon", "name": "Siphon",
+    "weight": "light", "range": 5, "minDamage": 6, "maxDamage": 9, "cooldownMs": 8000, "isMental": true,
+    "siphonRange": 5
+  },
+  {
+    // Variante du Siphon : pas de dégâts ; il donne ses propres PV à un allié (il en garde au moins un).
+    "id": "transfusion", "name": "Transfusion",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 8000,
+    "minHeal": 15, "maxHeal": 20, "givesOwnHp": true
+  },
+  {
+    // Retire les états néfastes d'un allié.
+    "id": "clarity", "name": "Clarté",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "clearsHarmfulStatuses": true
+  },
+  {
+    // Variante de la Clarté : l'allié devient insensible aux états néfastes quelques secondes (ceux qu'il a restent).
+    "id": "serenity", "name": "Sérénité",
+    "target": "ally", "weight": "light", "range": 5, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
+    "effects": [ { "status": "serene", "durationMs": 4000 } ]
+  },
+  {
+    // Grande zone : soigne les alliés debout et relève ceux qui sont à terre (avec les PV de l'action « relever »).
+    "id": "awakening", "name": "Éveil",
+    "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 40000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "allies" },
+    "minHeal": 12, "maxHeal": 16, "revivesDowned": true
   }
 ]

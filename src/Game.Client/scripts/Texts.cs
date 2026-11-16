@@ -47,6 +47,7 @@ public static class Texts
         StatusKind.Dominated => "dominé",
         StatusKind.Immobilized => "immobilisé",
         StatusKind.Disarmed => "désarmé",
+        StatusKind.Serene => "serein",
         _ => status.ToString(),
     };
 

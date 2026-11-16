@@ -83,7 +83,7 @@ public sealed class ContentLoaderTests : IDisposable
     {
         CopyOfTheRealData();
         Rewrite("heroes/prologue.json", "\"equipped\": [\"dome\", \"leap\", \"projection\", \"shockwave\"]",
-            "\"equipped\": [\"dome\", \"leap\", \"projection\", \"force-wave\"]"); // pas à lui, et pas encore codée
+            "\"equipped\": [\"dome\", \"leap\", \"projection\", \"force-wave\"]"); // pas à lui (au télépathe)
         Assert.Contains("prologue-colossus", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
 
         Dispose();
@@ -96,16 +96,13 @@ public sealed class ContentLoaderTests : IDisposable
     public void ASkillAddedToTheLibrary_MustLeaveThePlannedListOfItsTree()
     {
         CopyOfTheRealData();
-        // « force-wave » est codée (ici : un coup quelconque), mais l'arbre du télépathe la dit encore « à venir ».
-        Rewrite("skills/telepath/kinetic.json", "\n]", """
-            ,
-              { "id": "force-wave", "name": "Onde de force", "weight": "heavy", "range": 1, "minDamage": 3, "maxDamage": 4, "cooldownMs": 0 }
-            ]
-            """);
+        // « force-wave » est codée, mais l'arbre du télépathe la dirait encore « à venir ».
+        const string planned = "\"planned\": {", stillPlanned = "\"planned\": { \"force-wave\": \"Onde de force\"";
+        Rewrite("trees/telepath.json", planned, stillPlanned);
 
         Assert.Contains("force-wave", Assert.Throws<ArgumentException>(() => GameContent.Load(_directory)).Message);
 
-        Rewrite("trees/telepath.json", "    \"force-wave\": \"Onde de force\",\n", "");
+        Rewrite("trees/telepath.json", stillPlanned, planned);
         Assert.True(GameContent.Load(_directory).Skills.ContainsKey("force-wave"));
     }
 }

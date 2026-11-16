@@ -71,14 +71,16 @@
     "passive": "overclocking"
   },
   {
-    // Poussée (variante de telekinesis), les variantes de zone Torpeur (Paralysie) et Panique (Confusion), et l'Étau
-    // (variante : wrench). À essayer aussi : projectile.
-    // À essayer aussi : stimulation (variante : focus), déjà achetée.
+    // Frappe télépathique (variante : psychic-scream, sans ligne de vue elle aussi), Siphon (variante : transfusion),
+    // Clarté (variante : serenity) et Onde de force. Domination secoue un boss.
+    // À essayer aussi : paralysis (variante : torpor), confusion (panic), domination, telekinesis (shove), projectile
+    // (telekinetic-throw), vise (wrench), stimulation (focus).
     "id": "trial-telepath", "archetype": "telepath", "level": 20,
     "points": { "hp": 5, "power": 7, "initiative": 7 },
     "learned": ["paralysis", "telepathic-strike", "confusion", "grip", "domination", "telekinesis", "projectile", "vise", "siphon",
-                "stimulation"],
-    "equipped": ["torpor", "panic", "shove", "vise"],
+                "stimulation", "clarity", "kineticScreen", "force-wave"],
+    "equipped": ["telepathic-strike", "siphon", "clarity", "force-wave"],
+    // Passif : Emprise (autre : kineticScreen).
     "passive": "grip"
   }
 ]

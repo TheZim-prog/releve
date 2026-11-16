@@ -13,10 +13,24 @@
     "effects": [ { "status": "confused", "durationMs": 4000 } ]
   },
   {
-    // Prend le contrôle d'un ennemi (hors boss) quelques secondes.
+    // Dégâts sur une cible à portée, sans ligne de vue : il sent les esprits à travers les murs.
+    "id": "telepathic-strike", "name": "Frappe télépathique",
+    "weight": "light", "range": 5, "minDamage": 7, "maxDamage": 10, "cooldownMs": 5000, "isMental": true,
+    "ignoresLineOfSight": true
+  },
+  {
+    // Variante de la Frappe télépathique : touche aussi les ennemis autour de la case visée, avec moins de dégâts.
+    "id": "psychic-scream", "name": "Cri psychique",
+    "weight": "light", "range": 5, "minDamage": 4, "maxDamage": 6, "cooldownMs": 6000, "isMental": true,
+    "ignoresLineOfSight": true,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false, "affects": "enemies" }
+  },
+  {
+    // Prend le contrôle d'un ennemi quelques secondes. Un boss n'est pas dominé, mais secoué : gros dégâts, ralenti.
     "id": "domination", "name": "Domination",
     "weight": "heavy", "range": 4, "minDamage": 0, "maxDamage": 0, "cooldownMs": 30000, "isMental": true,
-    "effects": [ { "status": "dominated", "durationMs": 5000 } ]
+    "effects": [ { "status": "dominated", "durationMs": 5000 } ],
+    "vsBosses": { "minDamage": 20, "maxDamage": 26, "effects": [ { "status": "offBalance", "durationMs": 3000 } ] }
   },
   {
     // Variante de la Paralysie : ralentit tous les ennemis d'une petite zone au lieu d'en étourdir un.

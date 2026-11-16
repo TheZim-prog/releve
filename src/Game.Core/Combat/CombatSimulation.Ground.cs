@@ -109,12 +109,13 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Le sol de <paramref name="to"/> arrêterait-il une unité lancée dessus (poussée, Charge) : un piège qui l'attend,
-    /// ou une zone qui l'immobilise ou l'étourdit à l'entrée ?
+    /// ou une zone qui l'immobilise ou l'étourdit à l'entrée (si l'état prend sur elle : pas sur une unité sereine) ?
     /// </summary>
     private bool GroundHalts(Unit unit, Cell from, Cell to) =>
         _groundZones.Any(z => Awaits(z, unit, from, to)
                               && (z.Definition.IsTrap
-                                  || z.Definition.Effects.Any(e => e.Status is StatusKind.Immobilized or StatusKind.Stunned)));
+                                  || z.Definition.Effects.Any(e => e.Status is StatusKind.Immobilized or StatusKind.Stunned
+                                                                   && !ResistsStatus(unit, e.Status))));
 
     /// <summary>
     /// L'unité vient d'entrer sur <paramref name="to"/> (à pied ou de force) : les pièges s'y déclenchent, les autres

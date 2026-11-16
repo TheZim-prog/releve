@@ -18,8 +18,14 @@ public sealed partial class CombatSimulation
     /// Renvoie faux si un dôme a bloqué le coup (il n'a alors aucun effet).
     /// </summary>
     private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damageFactor, Cell? fallbackCell = null,
-        Cell? origin = null)
+        Cell? origin = null) =>
+        ResolveHit(attacker, skill, target, damageFactor, out _, fallbackCell, origin);
+
+    /// <summary>Le même coup ; <paramref name="hpLost"/> : les PV que la cible a réellement perdus (pour un Siphon).</summary>
+    private bool ResolveHit(Unit attacker, SkillDefinition skill, Unit target, int damageFactor, out int hpLost,
+        Cell? fallbackCell = null, Cell? origin = null)
     {
+        hpLost = 0;
         // Tombée plus tôt dans la même compétence (une Réaction en chaîne au milieu d'une zone) : elle n'est pas refrappée.
         if (target.Status != UnitStatus.Active)
             return false;
@@ -40,10 +46,8 @@ public sealed partial class CombatSimulation
             return false;
         }
 
-        // Contre un robot adverse, l'effet renforcé de la compétence (dégâts en plus, états plus longs) ; pas sur ses
-        // propres gadgets pris dans son IEM, étourdis comme les ennemis ordinaires.
-        var robotBonus = target.Definition.IsRobot && AreOpponents(target, attacker) ? skill.VsRobots : null;
-        if (skill.DealsDamage || robotBonus is { DealsDamage: true })
+        var profile = HitProfileOn(attacker, skill, target);
+        if (profile.DealsDamage)
         {
             int dealt;
             var ignoresProtections = skill.IgnoresProtections;
@@ -55,16 +59,18 @@ public sealed partial class CombatSimulation
             }
             else
             {
-                var roll = skill.DealsDamage ? _random.NextInt(skill.MinDamage, skill.MaxDamage) : 0;
-                if (robotBonus is { DealsDamage: true })
-                    roll += _random.NextInt(robotBonus.MinDamage, robotBonus.MaxDamage);
+                var roll = profile.Damage is { } damage ? _random.NextInt(damage.Min, damage.Max) : 0;
+                if (profile.ExtraDamage is { } extra)
+                    roll += _random.NextInt(extra.Min, extra.Max);
                 var factor = WithDamagePassives(WithSkillBonuses(damageFactor, attacker, skill, target), attacker, skill, target);
                 dealt = Scaled(roll, factor, target);
-                if (origin is { } from && !attacker.HasPassive(PassiveKind.Piercing) && CoverFor(from, target.Position) is { } cover)
+                // Un pouvoir mental ne vole pas jusqu'à sa cible : pas de couverture.
+                if (origin is { } from && !skill.IsMental && !attacker.HasPassive(PassiveKind.Piercing)
+                    && CoverFor(from, target.Position) is { } cover)
                     dealt = AbsorbByCover(attacker, target, cover, dealt);
             }
             var wereOpponents = AreOpponents(target, attacker); // avant le coup : une unité dominée qui tombe retrouve son camp
-            var lost = Damage(target, dealt, fallbackCell, ignoresProtections);
+            var lost = hpLost = Damage(target, dealt, fallbackCell, ignoresProtections);
 
             // Point faible : un coup qui a vraiment entamé les PV d'un ennemi le rend vulnérable (pas un coup
             // entièrement encaissé par ses PV temporaires).
@@ -77,17 +83,17 @@ public sealed partial class CombatSimulation
         if (target.Status != UnitStatus.Active)
             return true;
         if (skill.Heals)
-            Heal(target, attacker.HealWith(_random.NextInt(skill.MinHeal, skill.MaxHeal)));
+            HealFrom(attacker, skill, target);
         if (skill.TempHp is { } tempHp)
             GrantTempHp(attacker, target, tempHp);
-        // Les états de la compétence, sauf sur un robot dont l'effet renforcé les remplace (Piratage), puis ceux du robot.
-        var effects = robotBonus is { ReplacesEffects: true } ? Array.Empty<StatusEffect>() : skill.Effects;
-        foreach (var effect in effects)
-            ApplyStatus(target, effect, attacker, robotBonus?.StatusDurationPercent ?? 100);
-        // Un état qu'elle ignore (Inébranlable) : on le dit, pour un coup (pas pour un sol qui le reposerait sans cesse).
-        if (effects.Any(e => ResistsStatus(target, e.Status)))
+        if (skill.ClearsHarmfulStatuses)
+            ClearHarmfulStatuses(target);
+        foreach (var effect in profile.Effects)
+            ApplyStatus(target, effect, attacker, profile.DurationPercent);
+        // Un état qu'elle ignore (Inébranlable, Sérénité) : on le dit, pour un coup (pas pour un sol qui le reposerait sans cesse).
+        if (profile.Effects.Any(e => ResistsStatus(target, e.Status)))
             _events.Add(new UnitResisted(CurrentTick, target.Id));
-        foreach (var effect in robotBonus?.Effects ?? [])
+        foreach (var effect in profile.ExtraEffects)
             ApplyStatus(target, effect, attacker);
         if (skill.ResetsCooldowns)
             ResetCooldowns(target);
@@ -98,14 +104,24 @@ public sealed partial class CombatSimulation
         {
             if (skill.InterruptsCharge)
                 InterruptCharge(target);
-            if (skill.GaugeLossPercent + (robotBonus?.GaugeLossPercent ?? 0) is > 0 and var gaugeLoss)
-                LoseGauge(target, gaugeLoss);
+            if (profile.GaugeLossPercent > 0)
+                LoseGauge(target, profile.GaugeLossPercent);
         }
         if (skill.GaugeGainPercent > 0)
             GainGauge(target, Rules.GaugeAt(skill.GaugeGainPercent));
         AttackedBy(attacker, skill, target);
         return true;
     }
+
+    /// <summary>
+    /// Ce que le coup fait à cette cible (voir <see cref="HitProfile"/>) : l'effet renforcé de la compétence contre un
+    /// robot adverse (pas contre les gadgets du lanceur pris dans son IEM, étourdis comme les ennemis ordinaires) ; ce
+    /// qu'une domination fait à un boss.
+    /// </summary>
+    private HitProfile HitProfileOn(Unit attacker, SkillDefinition skill, Unit target) =>
+        HitProfile.For(skill,
+            robot: target.Definition.IsRobot && AreOpponents(target, attacker) ? skill.VsRobots : null,
+            boss: target.Definition.IsBoss ? skill.VsBosses : null);
 
     /// <summary>La cible a été attaquée par un adversaire, que le coup ait porté ou non : elle peut riposter.</summary>
     private void AttackedBy(Unit attacker, SkillDefinition skill, Unit target)
@@ -290,13 +306,14 @@ public sealed partial class CombatSimulation
         _events.Add(new UnitRemoved(CurrentTick, unit.Id));
     }
 
-    /// <summary>Soigne une unité debout, sans dépasser son maximum.</summary>
-    private void Heal(Unit unit, int amount)
+    /// <summary>Soigne une unité debout, sans dépasser son maximum. Renvoie les PV rendus.</summary>
+    private int Heal(Unit unit, int amount)
     {
         var healed = Math.Min(amount, unit.MaxHp - unit.Hp);
         if (healed <= 0)
-            return;
+            return 0;
         unit.Hp += healed;
         _events.Add(new UnitHealed(CurrentTick, unit.Id, healed, unit.Hp));
+        return healed;
     }
 }

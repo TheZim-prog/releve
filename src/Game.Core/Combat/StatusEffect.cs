@@ -32,6 +32,9 @@ public enum StatusKind
 
     /// <summary>Ne peut plus utiliser que son attaque de base ; sa charge en cours est interrompue.</summary>
     Disarmed,
+
+    /// <summary>Insensible aux états néfastes : aucun ne prend sur elle (Sérénité) ; ceux qu'elle avait déjà restent.</summary>
+    Serene,
 }
 
 public static class StatusKindExtensions
@@ -44,7 +47,7 @@ public static class StatusKindExtensions
     {
         StatusKind.Stunned or StatusKind.OffBalance or StatusKind.Exposed or StatusKind.Confused or StatusKind.Dominated
             or StatusKind.Immobilized or StatusKind.Disarmed => true,
-        StatusKind.Hasted or StatusKind.Empowered => false,
+        StatusKind.Hasted or StatusKind.Empowered or StatusKind.Serene => false,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Status not classified as harmful or beneficial."),
     };
 }
@@ -61,5 +64,21 @@ public sealed record StatusEffect
             throw new ArgumentException($"Skill '{skillId}' has an unknown status.");
         if (DurationMs <= 0)
             throw new ArgumentException($"Skill '{skillId}': status {Status} needs a positive duration.");
+    }
+
+    /// <summary>
+    /// États qu'une compétence pose à une sorte de cible en particulier (<paramref name="targets"/> : « robot »,
+    /// « boss ») : non nuls, valides, néfastes (ils visent un adversaire), chacun une seule fois.
+    /// </summary>
+    internal static void ValidateAgainst(IReadOnlyList<StatusEffect>? effects, string skillId, string targets)
+    {
+        if (effects is null || effects.Any(e => e is null))
+            throw new ArgumentException($"Skill '{skillId}' has a null {targets} effect.");
+        foreach (var effect in effects)
+            effect.Validate(skillId);
+        if (effects.Any(e => !e.Status.IsHarmful()))
+            throw new ArgumentException($"Skill '{skillId}': a {targets} effect is a harmful status.");
+        if (effects.Select(e => e.Status).Distinct().Count() != effects.Count)
+            throw new ArgumentException($"Skill '{skillId}' applies the same status twice to a {targets}.");
     }
 }

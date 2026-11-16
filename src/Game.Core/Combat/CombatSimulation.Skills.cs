@@ -66,7 +66,9 @@ public sealed partial class CombatSimulation
         else if (zone is null)
         {
             _events.Add(new SkillUsed(CurrentTick, caster.Id, skill.Id, target!.Id));
-            var landed = ResolveHit(caster, skill, target, damageFactor, origin: caster.Position);
+            var landed = ResolveHit(caster, skill, target, damageFactor, out var drained, origin: caster.Position);
+            if (landed && skill.SiphonRange is { } siphonRange)
+                Siphon(caster, siphonRange, drained);
             if (landed && target.Status != UnitStatus.Active && skill.ResetsCooldownOnKill)
                 caster.StartCooldown(skill.Id, CurrentTick);
             if (landed && target.Status == UnitStatus.Active && skill.ForcedMove is { } move)
@@ -119,6 +121,9 @@ public sealed partial class CombatSimulation
             {
                 PushFromZone(caster, skill, hit, push, damageFactor, zoneOrigin ?? caster.Position);
             }
+            // Éveil : après avoir soigné les alliés debout, il relève ceux qui sont à terre.
+            if (skill.RevivesDowned)
+                ReviveDownedIn(caster, zone);
         }
         // Ce que la zone laisse sur le terrain, après ses coups : la fumée dissipée, puis sa propre zone au sol.
         if (skill.ClearsSmoke)
