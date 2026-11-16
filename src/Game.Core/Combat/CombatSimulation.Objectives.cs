@@ -19,17 +19,18 @@ public sealed partial class CombatSimulation
     /// </summary>
     public bool? Outcome { get; private set; }
 
-    private void SetUpObjectives(IReadOnlyList<ObjectiveDefinition> objectives)
+    private void SetUpObjectives(CombatSetup setup)
     {
-        ObjectiveDefinition.ValidateList(objectives);
-        _objectives.AddRange(objectives.Select(o => new Objective(o)));
+        setup.ValidateObjectives();
+        _objectives.AddRange(setup.Objectives.Select(o => new Objective(o)));
         Objectives = _objectives.AsReadOnly();
     }
 
     /// <summary>
     /// Fin de tick : défaite si tous les héros sont hors de combat (rien ne se réussit alors, même au même tick) ; sinon
     /// chaque objectif en cours peut être réussi ou raté, puis l'issue tombe : défaite si un objectif principal est raté,
-    /// victoire quand tous les principaux sont réussis. Un combat sans objectif (tests, outils) ne se termine jamais.
+    /// victoire quand tous les principaux sont réussis (les secondaires encore en cours se règlent alors, cf.
+    /// <see cref="ObjectiveRules.SettleAtVictory"/>). Un combat sans objectif (tests, outils) ne se termine jamais.
     /// </summary>
     private void UpdateObjectives()
     {
@@ -41,23 +42,31 @@ public sealed partial class CombatSimulation
             return;
         }
 
+        UpdateEach(ObjectiveRules.Evaluate);
+        var main = _objectives.Where(o => !o.Definition.Secondary);
+        if (main.Any(o => o.State == ObjectiveState.Failed))
+            EndCombat(victory: false);
+        else if (main.All(o => o.State == ObjectiveState.Completed))
+        {
+            UpdateEach(ObjectiveRules.SettleAtVictory);
+            EndCombat(victory: true);
+        }
+    }
+
+    /// <summary>Chaque objectif en cours prend l'état que donne <paramref name="rule"/> ; un changement s'annonce.</summary>
+    private void UpdateEach(Func<ObjectiveDefinition, CombatSimulation, ObjectiveState> rule)
+    {
         for (var i = 0; i < _objectives.Count; i++)
         {
             var objective = _objectives[i];
             if (objective.State != ObjectiveState.InProgress)
                 continue;
-            objective.State = ObjectiveRules.Evaluate(objective.Definition, this);
+            objective.State = rule(objective.Definition, this);
             if (objective.State == ObjectiveState.Completed)
                 _events.Add(new ObjectiveCompleted(CurrentTick, i));
             else if (objective.State == ObjectiveState.Failed)
                 _events.Add(new ObjectiveFailed(CurrentTick, i));
         }
-
-        var main = _objectives.Where(o => !o.Definition.Secondary);
-        if (main.Any(o => o.State == ObjectiveState.Failed))
-            EndCombat(victory: false);
-        else if (main.All(o => o.State == ObjectiveState.Completed))
-            EndCombat(victory: true);
     }
 
     private void EndCombat(bool victory)

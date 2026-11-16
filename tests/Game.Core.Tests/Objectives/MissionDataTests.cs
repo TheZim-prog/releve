@@ -94,8 +94,21 @@ public class MissionDataTests
     [InlineData("""[ { "kind": "infiltrate" } ]""")]                // type inconnu
     [InlineData("""[ { "secondary": true } ]""")]                    // type manquant
     [InlineData("[ null ]")]
+    [InlineData("""[ { "kind": "rescue" } ]""")]                    // sauvetage sans minimum
     public void InvalidObjectives_AreRejected(string objectives)
     {
         Assert.ThrowsAny<Exception>(() => WithObjectives(objectives));
+    }
+
+    [Fact]
+    public void ARescue_ReadsItsMinimum_AndNeedsThatManyCivilians()
+    {
+        var rescue = """[ { "kind": "rescue", "minimum": 1 } ]""";
+
+        Assert.Equal(1, Assert.Single(WithObjectives(rescue).Objectives!).Minimum);
+        Assert.Throws<ArgumentException>(() => WithObjectives(rescue).ToSetup(Rules, Catalog)); // aucun civil placé
+        var withCivilian = Scenario.Replace("OBJECTIVES", $", \"objectives\": {rescue}")
+            .Replace("""{ "unit": "thug",""", """{ "unit": "civilian", "team": 2, "x": 1, "y": 0 }, { "unit": "thug",""");
+        Assert.Single(ScenarioDefinition.FromJson(withCivilian).ToSetup(Rules, Catalog).Units, u => u.Definition.IsCivilian);
     }
 }

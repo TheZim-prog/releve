@@ -48,7 +48,9 @@ ne dépend de ce que ces héros équipent.
 **Donner des objectifs à un combat** : une liste `"objectives"` dans le scénario, par exemple
 `[ { "kind": "eliminate" } ]`. Ajouter `"secondary": true` à un objectif qui ne compte que pour le bilan ; il faut au
 moins un objectif principal. Sans liste, le combat est une élimination de tous les ennemis. Dans tous les cas, perdre
-tous les héros est une défaite. Types disponibles : `eliminate` (plus aucun ennemi debout : ceux qui sont enfuis ou en fuite ne comptent plus).
+tous les héros est une défaite. Types disponibles : `eliminate` (plus aucun ennemi debout : ceux qui sont enfuis ou en fuite ne comptent plus) ;
+`rescue` avec `"minimum": 2` (évacuer au moins 2 civils ; raté dès qu'il n'en reste plus assez ; quand plus aucun
+ennemi n'est en lice, et à la victoire, les civils encore sur la carte comptent comme évacués).
 
 **Désigner le chef d'une bande** : ajouter `"leader": "flee"` ou `"leader": "surrender"` à une unité du scénario (pas un
 héros ; un seul chef par camp). Quand il tombe (vaincu, à terre ou enfui), les autres unités de son camp prennent la

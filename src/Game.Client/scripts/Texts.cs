@@ -80,20 +80,33 @@ public static class Texts
     public static string Objective(ObjectiveDefinition objective) => objective.Kind switch
     {
         ObjectiveKind.Eliminate => "Éliminer tous les ennemis",
+        ObjectiveKind.Rescue => objective.Minimum == 1 ? "Évacuer un civil" : $"Évacuer au moins {objective.Minimum} civils",
         _ => objective.Kind.ToString(),
     };
 
-    /// <summary>Un objectif et où il en est, pour le panneau d'état : « Éliminer tous les ennemis : réussi ».</summary>
-    public static string ObjectiveLine(Objective objective)
+    /// <summary>
+    /// Un objectif et où il en est, pour le panneau d'état : « Évacuer au moins 2 civils (1 évacué, 1 perdu) », puis
+    /// « Évacuer au moins 2 civils : réussi ».
+    /// </summary>
+    public static string ObjectiveLine(Objective objective, CombatSimulation sim)
     {
         var secondary = objective.Definition.Secondary ? " (secondaire)" : "";
         var state = objective.State switch
         {
             ObjectiveState.Completed => " : réussi",
             ObjectiveState.Failed => " : raté",
-            _ => "",
+            _ => Progress(objective.Definition, sim),
         };
         return $"- {Objective(objective.Definition)}{secondary}{state}";
+    }
+
+    /// <summary>Où en est un objectif en cours, s'il se compte : « (1 évacué, 1 perdu) ».</summary>
+    private static string Progress(ObjectiveDefinition objective, CombatSimulation sim)
+    {
+        if (objective.Kind != ObjectiveKind.Rescue)
+            return "";
+        var tally = RescueTally.Of(sim);
+        return $" ({tally.Evacuated} évacué{(tally.Evacuated > 1 ? "s" : "")}, {tally.Lost} perdu{(tally.Lost > 1 ? "s" : "")})";
     }
 
     /// <summary>Ligne de journal pour un événement, ou <c>null</c> pour ceux qui ne méritent pas d'y figurer.</summary>

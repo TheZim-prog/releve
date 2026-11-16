@@ -7,16 +7,35 @@ internal static class ObjectiveRules
 {
     public static ObjectiveState Evaluate(ObjectiveDefinition objective, CombatSimulation simulation) => objective.Kind switch
     {
-        ObjectiveKind.Eliminate => Eliminate(simulation),
+        ObjectiveKind.Eliminate => NoEnemyLeft(simulation) ? ObjectiveState.Completed : ObjectiveState.InProgress,
+        ObjectiveKind.Rescue => Rescue(objective.Minimum!.Value, RescueTally.Of(simulation), safe: NoEnemyLeft(simulation)),
         _ => throw new ArgumentOutOfRangeException(nameof(objective), objective.Kind, "Unknown objective kind."),
     };
 
     /// <summary>
-    /// Réussi quand il ne reste debout que le camp des joueurs : les ennemis sont vaincus, enfuis ou en fuite (civils et
-    /// gadgets à part).
+    /// À la victoire, ce qui est encore en cours se règle : un sauvetage compte les civils encore sur la carte, hors de
+    /// danger. Les autres types restent où ils en sont.
     /// </summary>
-    private static ObjectiveState Eliminate(CombatSimulation simulation) =>
-        simulation.TeamsStillFighting().All(team => team == CombatSimulation.PlayerTeam)
-            ? ObjectiveState.Completed
+    public static ObjectiveState SettleAtVictory(ObjectiveDefinition objective, CombatSimulation simulation) =>
+        objective.Kind == ObjectiveKind.Rescue
+            ? Rescue(objective.Minimum!.Value, RescueTally.Of(simulation), safe: true)
             : ObjectiveState.InProgress;
+
+    /// <summary>
+    /// Il ne reste debout que le camp des joueurs : les ennemis sont vaincus, enfuis ou en fuite (civils et gadgets à part).
+    /// </summary>
+    private static bool NoEnemyLeft(CombatSimulation simulation) =>
+        simulation.TeamsStillFighting().All(team => team == CombatSimulation.PlayerTeam);
+
+    /// <summary>
+    /// Réussi quand assez de civils sont évacués ; raté quand il n'en reste plus assez pour y arriver. Hors de danger
+    /// (<paramref name="safe"/> : plus d'ennemi en lice, ou la victoire), ceux encore sur la carte comptent comme évacués.
+    /// </summary>
+    private static ObjectiveState Rescue(int minimum, RescueTally tally, bool safe)
+    {
+        var reachable = tally.Evacuated + tally.OnMap;
+        return (safe ? reachable : tally.Evacuated) >= minimum ? ObjectiveState.Completed
+            : reachable < minimum ? ObjectiveState.Failed
+            : ObjectiveState.InProgress;
+    }
 }

@@ -11,7 +11,7 @@ public partial class CombatView
         var seconds = _sim.CurrentTick / (double)_data.Rules.TicksPerSecond;
         var speed = _session.IsNetwork ? "" : $"   Vitesse : {Speeds[_speed]} %";
         var status = $"Temps : {seconds:0.0} s{speed}{(_session.IsPaused ? "   — PAUSE —" : "")}";
-        var objectives = "Objectifs :\n" + string.Join('\n', _sim.Objectives.Select(Texts.ObjectiveLine));
+        var objectives = "Objectifs :\n" + string.Join('\n', _sim.Objectives.Select(o => Texts.ObjectiveLine(o, _sim)));
         _hud.SetStatus(status + (_showIntentions ? "\nIntentions ennemies révélées" : "") + "\n\n" + objectives);
         if (_won is null)
             _hud.SetBanner(_session.IsPaused ? _session.PauseText : "", Colors.White);

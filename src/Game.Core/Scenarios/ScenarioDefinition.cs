@@ -88,10 +88,12 @@ public sealed record ScenarioDefinition
                     throw new ArgumentException(
                         $"'{unit.Definition.Id}' has an initiative above the gauge capacity ({rules.GaugeCapacity}) with its stat points.");
             }
-            return new CombatSetup(rules, Grid.FromRows(Map.ToArray()), placed, Seed)
+            var setup = new CombatSetup(rules, Grid.FromRows(Map.ToArray()), placed, Seed)
             {
                 Objectives = Objectives ?? ObjectiveDefinition.Default,
             };
+            setup.ValidateObjectives(); // dès le chargement des données, pas au lancement du combat
+            return setup;
         }
         catch (ArgumentException e)
         {

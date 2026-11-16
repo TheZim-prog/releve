@@ -64,7 +64,7 @@ public sealed partial class CombatSimulation
             Validate(unit);
             _units.Add(new Unit(unit, Rules));
         }
-        SetUpObjectives(setup.Objectives);
+        SetUpObjectives(setup);
     }
 
     public CombatRules Rules { get; }

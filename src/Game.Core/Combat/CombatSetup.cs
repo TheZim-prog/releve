@@ -29,6 +29,13 @@ public sealed record CombatSetup(CombatRules Rules, Grid Grid, IReadOnlyList<Uni
         init => _objectives = ReadOnlyCopy(value);
     }
 
+    /// <summary>Objectifs valides et réalisables avec ces unités (un sauvetage ne demande pas plus de civils qu'il n'y en a).</summary>
+    public void ValidateObjectives()
+    {
+        ObjectiveDefinition.ValidateList(Objectives);
+        ObjectiveDefinition.ValidateAgainst(Objectives, civilians: Units.Count(u => u.Definition.IsCivilian));
+    }
+
     internal static IReadOnlyList<T> ReadOnlyCopy<T>(IReadOnlyList<T> items)
     {
         ArgumentNullException.ThrowIfNull(items);
