@@ -197,18 +197,16 @@ public class ContentTests
         var setup = new CombatSetup(Rules, Arena, units, Seed: 2026);
         var sim = new CombatSimulation(setup);
         var maxTicks = Rules.TicksPerSecond * 60 * 10;
-        while (sim.CurrentTick < maxTicks && StandingTeams(sim).Count > 1)
+        while (sim.CurrentTick < maxTicks && sim.Outcome is null)
             sim.Tick();
 
-        var winners = StandingTeams(sim);
-        _output.WriteLine($"[{name}] durée : {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, équipe(s) debout : {string.Join(",", winners)}");
+        var outcome = sim.Outcome switch { true => "victoire", false => "défaite", null => "en cours" };
+        _output.WriteLine($"[{name}] durée : {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, {outcome}");
         foreach (var unit in sim.Units)
             _output.WriteLine($"  {unit.Definition.Name,-12} équipe {unit.Team}  {unit.Status,-8} {unit.Hp,4}/{unit.MaxHp} PV{(unit.IsFleeing ? " en fuite" : "")}{(unit.Escaped ? ", enfui" : "")}");
 
-        Assert.True(winners.Count <= 1, $"Combat '{name}' still running after {maxTicks} ticks.");
+        Assert.True(sim.Outcome is not null, $"Combat '{name}' still running after {maxTicks} ticks.");
         var replayed = CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick);
         Assert.Equal(sim.EventLog, replayed.EventLog);
     }
-
-    private static List<int> StandingTeams(CombatSimulation sim) => sim.TeamsStillFighting().Order().ToList();
 }

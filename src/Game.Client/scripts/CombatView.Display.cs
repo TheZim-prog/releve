@@ -11,12 +11,13 @@ public partial class CombatView
         var seconds = _sim.CurrentTick / (double)_data.Rules.TicksPerSecond;
         var speed = _session.IsNetwork ? "" : $"   Vitesse : {Speeds[_speed]} %";
         var status = $"Temps : {seconds:0.0} s{speed}{(_session.IsPaused ? "   — PAUSE —" : "")}";
-        _hud.SetStatus(status + (_showIntentions ? "\nIntentions ennemies révélées" : ""));
+        var objectives = "Objectifs :\n" + string.Join('\n', _sim.Objectives.Select(Texts.ObjectiveLine));
+        _hud.SetStatus(status + (_showIntentions ? "\nIntentions ennemies révélées" : "") + "\n\n" + objectives);
         if (_won is null)
             _hud.SetBanner(_session.IsPaused ? _session.PauseText : "", Colors.White);
 
         _hud.SetHeroes(_sim.Units
-            .Where(u => u.OriginalTeam == PlayerTeam && u.SummonedBy is null && !u.IsCivilian)
+            .Where(u => u.OriginalTeam == CombatSimulation.PlayerTeam && u.SummonedBy is null && !u.IsCivilian)
             .Select(HeroCardOf)
             .ToList());
 
@@ -134,7 +135,7 @@ public partial class CombatView
         if (unit.IsCivilian)
             return Civilian;
         if (unit.SummonedBy is not null)
-            return unit.OriginalTeam == PlayerTeam ? HeroGadget : EnemyDefault;
+            return unit.OriginalTeam == CombatSimulation.PlayerTeam ? HeroGadget : EnemyDefault;
         return UnitColors.TryGetValue(unit.Definition.Id, out var color) ? color : EnemyDefault;
     }
 }

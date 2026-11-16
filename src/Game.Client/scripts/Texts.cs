@@ -1,5 +1,6 @@
 using Game.Core.Combat;
 using Game.Core.Network;
+using Game.Core.Objectives;
 
 namespace Game.Client;
 
@@ -75,14 +76,37 @@ public static class Texts
         _ => reason.ToString(),
     };
 
+    /// <summary>Ce que demande un objectif : « Éliminer tous les ennemis ».</summary>
+    public static string Objective(ObjectiveDefinition objective) => objective.Kind switch
+    {
+        ObjectiveKind.Eliminate => "Éliminer tous les ennemis",
+        _ => objective.Kind.ToString(),
+    };
+
+    /// <summary>Un objectif et où il en est, pour le panneau d'état : « Éliminer tous les ennemis : réussi ».</summary>
+    public static string ObjectiveLine(Objective objective)
+    {
+        var secondary = objective.Definition.Secondary ? " (secondaire)" : "";
+        var state = objective.State switch
+        {
+            ObjectiveState.Completed => " : réussi",
+            ObjectiveState.Failed => " : raté",
+            _ => "",
+        };
+        return $"- {Objective(objective.Definition)}{secondary}{state}";
+    }
+
     /// <summary>Ligne de journal pour un événement, ou <c>null</c> pour ceux qui ne méritent pas d'y figurer.</summary>
     public static string? Describe(CombatEvent e, CombatSimulation sim)
     {
         string N(UnitId id) => sim.FindUnit(id)?.Definition.Name ?? $"#{id.Value}";
         string S(UnitId unit, string skill) => sim.FindUnit(unit)?.FindSkill(skill)?.DisplayName ?? skill;
+        string O(int index) => Objective(sim.Objectives[index].Definition);
 
         return e switch
         {
+            ObjectiveCompleted o => $"Objectif réussi : {O(o.Objective)}",
+            ObjectiveFailed o => $"Objectif raté : {O(o.Objective)}",
             SkillUsed u => u.Target is { } target && target != u.Unit
                 ? $"{N(u.Unit)} : {S(u.Unit, u.SkillId)} sur {N(target)}"
                 : $"{N(u.Unit)} : {S(u.Unit, u.SkillId)}",

@@ -1,12 +1,13 @@
 using Game.Core.Combat;
 using Game.Core.Grids;
+using Game.Core.Objectives;
 using Game.Core.Progression;
 
 namespace Game.Core.Scenarios;
 
 /// <summary>
 /// Combat décrit en données (data/scenarios) : la carte (une ligne de texte par rangée, voir <see cref="Grid.FromRows"/>),
-/// les unités placées et la graine. <see cref="ToSetup"/> en fait l'état initial d'un combat.
+/// les unités placées, la graine et les objectifs. <see cref="ToSetup"/> en fait l'état initial d'un combat.
 /// </summary>
 public sealed record ScenarioDefinition
 {
@@ -19,6 +20,9 @@ public sealed record ScenarioDefinition
     public required IReadOnlyList<string> Map { get; init; }
     public required IReadOnlyList<ScenarioUnit> Units { get; init; }
 
+    /// <summary>Objectifs de la mission ; sans eux, éliminer tous les ennemis (<see cref="ObjectiveDefinition.Default"/>).</summary>
+    public IReadOnlyList<ObjectiveDefinition>? Objectives { get; init; }
+
     public static ScenarioDefinition FromJson(string json)
     {
         var scenario = DataJson.Deserialize<ScenarioDefinition>(json);
@@ -26,13 +30,21 @@ public sealed record ScenarioDefinition
         return scenario;
     }
 
-    /// <summary>Vérifie le scénario seul : carte lisible, unités sur des cases libres et distinctes.</summary>
+    /// <summary>Vérifie le scénario seul : carte lisible, unités sur des cases libres et distinctes, objectifs valides.</summary>
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(Name))
             throw new ArgumentException("A scenario needs an id and a name.");
         if (Map is null || Units is null || Units.Any(u => u is null))
             throw new ArgumentException($"Scenario '{Id}' needs a map and a unit list without null entries.");
+        try
+        {
+            ObjectiveDefinition.ValidateMission(Objectives ?? ObjectiveDefinition.Default);
+        }
+        catch (ArgumentException e)
+        {
+            throw new ArgumentException($"Scenario '{Id}': {e.Message}", e);
+        }
         var grid = Grid.FromRows(Map.ToArray());
         var taken = new HashSet<Cell>();
         foreach (var unit in Units)
@@ -69,7 +81,10 @@ public sealed record ScenarioDefinition
                     throw new ArgumentException(
                         $"'{unit.Definition.Id}' has an initiative above the gauge capacity ({rules.GaugeCapacity}) with its stat points.");
             }
-            return new CombatSetup(rules, Grid.FromRows(Map.ToArray()), placed, Seed);
+            return new CombatSetup(rules, Grid.FromRows(Map.ToArray()), placed, Seed)
+            {
+                Objectives = Objectives ?? ObjectiveDefinition.Default,
+            };
         }
         catch (ArgumentException e)
         {

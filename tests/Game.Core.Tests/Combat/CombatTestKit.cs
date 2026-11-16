@@ -1,5 +1,6 @@
 using Game.Core.Combat;
 using Game.Core.Grids;
+using Game.Core.Objectives;
 
 namespace Game.Core.Tests.Combat;
 
@@ -115,7 +116,12 @@ internal static class CombatTestKit
     public static ActivateCommand Use(UnitId unit, string skill, UnitId? target = null, Cell? cell = null) =>
         new(unit, null, new SkillUse(skill, target, cell));
 
-    public static CombatSetup Setup(Grid grid, params UnitSetup[] units) => new(Rules, grid, units, Seed: 1);
+    /// <summary>
+    /// Combat de test sans objectif : il ne se termine jamais, pour éprouver une mécanique seule (un héros sans
+    /// adversaire, par exemple). Les tests des objectifs fixent les leurs.
+    /// </summary>
+    public static CombatSetup Setup(Grid grid, params UnitSetup[] units) =>
+        new(Rules, grid, units, Seed: 1) { Objectives = Array.Empty<ObjectiveDefinition>() };
 
     public static CombatSimulation Simulation(Grid grid, params UnitSetup[] units) => new(Setup(grid, units));
 

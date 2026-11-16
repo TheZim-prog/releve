@@ -115,7 +115,7 @@ public sealed class ServerSession
         }
         Broadcast(new TickPlayed(simulation.CurrentTick, commands.Select(c => c.Command).ToList(), simulation.Checksum()));
 
-        if (CombatLaunch.Outcome(simulation) is { } victory)
+        if (simulation.Outcome is { } victory)
             EndCombat(new CombatOver(victory));
     }
 

@@ -73,7 +73,7 @@ public sealed class SoloCombat : ICombatSession
     public bool IsNetwork => false;
     public bool IsPaused { get; private set; }
     public string PauseText => "PAUSE";
-    public bool? Outcome { get; private set; }
+    public bool? Outcome => Simulation.Outcome;
 
     public IReadOnlyList<CombatEvent> Advance(double delta)
     {
@@ -86,7 +86,6 @@ public sealed class SoloCombat : ICombatSession
         {
             _accumulator -= tickDuration;
             events.AddRange(Simulation.Tick());
-            Outcome = CombatLaunch.Outcome(Simulation);
         }
         return events;
     }

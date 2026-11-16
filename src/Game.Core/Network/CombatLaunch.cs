@@ -11,9 +11,6 @@ public sealed record HeroAssignment(UnitId Unit, int Player);
 /// </summary>
 public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignment> Heroes)
 {
-    /// <summary>Camp des joueurs dans les scénarios.</summary>
-    public const int PlayerTeam = 0;
-
     public CombatSetup BuildSetup(GameContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -44,14 +41,6 @@ public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignmen
         return unit.Id == hero || unit.DominatedBy == hero;
     }
 
-    /// <summary>Issue du combat libre : victoire quand il ne reste que le camp des joueurs, défaite quand il n'y est plus.</summary>
-    public static bool? Outcome(CombatSimulation simulation)
-    {
-        ArgumentNullException.ThrowIfNull(simulation);
-        var teams = simulation.TeamsStillFighting();
-        return !teams.Contains(PlayerTeam) ? false : teams.Count == 1 ? true : null;
-    }
-
     private static bool IsPlayableHero(UnitSetup unit) =>
-        unit.Team == PlayerTeam && unit.Definition.Behavior is null && !unit.Definition.IsCivilian;
+        unit.Team == CombatSimulation.PlayerTeam && unit.Definition.Behavior is null && !unit.Definition.IsCivilian;
 }

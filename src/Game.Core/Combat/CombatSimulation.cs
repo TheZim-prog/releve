@@ -10,7 +10,8 @@ namespace Game.Core.Combat;
 /// échéance se déclenchent ; les commandes des joueurs soumises depuis le tick précédent sont appliquées
 /// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les ordres à l'avance dont
 /// l'unité peut agir partent, dans l'ordre où ils ont été donnés ; les unités IA prêtes agissent ; les jauges
-/// se remplissent ; les unités IA qui passent le seuil fixent leur intention.
+/// se remplissent ; les unités IA qui passent le seuil fixent leur intention ; les objectifs avancent, et l'issue
+/// du combat peut tomber.
 /// </para>
 /// <para>
 /// L'IA fait partie de la simulation : ses décisions sont déterministes et se rejouent d'elles-mêmes,
@@ -63,6 +64,7 @@ public sealed partial class CombatSimulation
             Validate(unit);
             _units.Add(new Unit(unit, Rules));
         }
+        SetUpObjectives(setup.Objectives);
     }
 
     public CombatRules Rules { get; }
@@ -88,7 +90,7 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Équipes encore en lice : celles (d'origine : une unité dominée compte pour la sienne) qui ont au moins une unité
-    /// debout, sans compter les civils ni les gadgets. Le combat libre se termine quand il n'en reste qu'une.
+    /// debout, sans compter les civils ni les gadgets. Sans le camp des joueurs, le combat est perdu.
     /// </summary>
     public IReadOnlySet<int> TeamsStillFighting() =>
         _units.Where(u => u.IsStandingCombatant)
@@ -141,6 +143,7 @@ public sealed partial class CombatSimulation
         }
 
         UpdateIntentions();
+        UpdateObjectives();
 
         return _events.GetRange(firstEvent, _events.Count - firstEvent);
     }
@@ -169,7 +172,7 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Empreinte de l'état (tick, unités, générateur aléatoire, nombre d'événements et d'ordres, zones au sol, obstacles
+    /// Empreinte de l'état (tick, issue et objectifs, unités, générateur aléatoire, nombre d'événements et d'ordres, zones au sol, obstacles
     /// dressés, dômes, PV des obstacles abîmés) : deux simulations qui
     /// devraient être identiques (serveur et client) le sont si leurs empreintes concordent à chaque tick.
     /// </summary>
@@ -184,6 +187,9 @@ public sealed partial class CombatSimulation
 
         Add(CurrentTick);
         Add((long)_random.State);
+        Add(Outcome is { } victory ? (victory ? 1 : 2) : 0);
+        foreach (var objective in _objectives)
+            Add((int)objective.State);
         Add(_events.Count);
         Add(_orders.Count);
         Add(_lastGroundZoneId);

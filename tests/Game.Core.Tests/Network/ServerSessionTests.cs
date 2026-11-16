@@ -366,6 +366,6 @@ public class ServerSessionTests
         Assert.Equal(6, heroes.Count);
         var launch = new CombatLaunch("street", new[] { new HeroAssignment(heroes[0].Id, 1), new HeroAssignment(heroes[1].Id, 2) });
         var setup = launch.BuildSetup(content);
-        Assert.Equal(4, setup.Units.Count(u => u.Team == CombatLaunch.PlayerTeam && u.Definition.Behavior == Behaviors.Basic));
+        Assert.Equal(4, setup.Units.Count(u => u.Team == CombatSimulation.PlayerTeam && u.Definition.Behavior == Behaviors.Basic));
     }
 }

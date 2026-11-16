@@ -19,10 +19,10 @@ public class TrialContentTests
         var setup = new CombatLaunch("trial", Array.Empty<HeroAssignment>()).BuildSetup(Content);
         var sim = new CombatSimulation(setup);
         var maxTicks = Rules.TicksPerSecond * 60 * 10;
-        while (sim.CurrentTick < maxTicks && sim.TeamsStillFighting().Count > 1)
+        while (sim.CurrentTick < maxTicks && sim.Outcome is null)
             sim.Tick();
 
-        Assert.True(sim.TeamsStillFighting().Count <= 1, "The trial combat is still running.");
+        Assert.True(sim.Outcome is not null, "The trial combat is still running.");
         Assert.Equal(sim.EventLog, CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick).EventLog);
     }
 

@@ -14,8 +14,6 @@ namespace Game.Client;
 /// </summary>
 public partial class CombatView : Node3D
 {
-    private const int PlayerTeam = CombatLaunch.PlayerTeam;
-
     private static readonly Dictionary<string, Color> UnitColors = new()
     {
         ["colossus"] = new(0.35f, 0.45f, 0.9f),

@@ -15,7 +15,7 @@ Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`
 | `units/` | Les types d'unités : archétypes de héros (stats de base), ennemis, gadgets, civils. |
 | `trees/` | Un arbre de compétences par archétype : branches, paliers, variantes, passifs. |
 | `heroes/` | Des héros prêts à jouer : ceux du prologue (`prologue.json`) et des héros d'essai (`trial.json`). Niveau, points de stats, cases achetées, équipement. |
-| `scenarios/` | Les combats : la carte, et les unités et les héros placés dessus. Le scénario se choisit dans le menu du jeu. |
+| `scenarios/` | Les combats : la carte, les unités et les héros placés dessus, et les objectifs. Le scénario se choisit dans le menu du jeu. |
 
 ## Qui désigne qui
 
@@ -44,6 +44,11 @@ Les dégâts écrits sont ceux d'une recrue ; la puissance du héros les multipl
 puis lancer le scénario « Essai des nouvelles compétences ». Le jeu relit `data/` à chaque lancement d'un solo ou
 d'une partie hébergée, et F9 le relit sans quitter un combat solo. Ce fichier est fait pour être modifié : aucun test
 ne dépend de ce que ces héros équipent.
+
+**Donner des objectifs à un combat** : une liste `"objectives"` dans le scénario, par exemple
+`[ { "kind": "eliminate" } ]`. Ajouter `"secondary": true` à un objectif qui ne compte que pour le bilan ; il faut au
+moins un objectif principal. Sans liste, le combat est une élimination de tous les ennemis. Dans tous les cas, perdre
+tous les héros est une défaite. Types disponibles : `eliminate` (plus aucun ennemi debout, enfuis compris).
 
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et

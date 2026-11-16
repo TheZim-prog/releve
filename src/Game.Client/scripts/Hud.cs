@@ -258,7 +258,7 @@ public partial class Hud : CanvasLayer
     /// <summary>Aide des commandes affichée ou repliée (touche H).</summary>
     public bool ShowHelp { get; set; }
 
-    /// <summary>État du combat (pause, vitesse, temps, intentions révélées), sous l'aide des commandes si elle est affichée.</summary>
+    /// <summary>État du combat (pause, vitesse, temps, intentions révélées, objectifs), sous l'aide des commandes si elle est affichée.</summary>
     public void SetStatus(string text) =>
         _help.Text = (ShowHelp ? HelpText : "H : afficher l'aide") + (text.Length > 0 ? "\n\n" + text : "");
 
