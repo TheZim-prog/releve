@@ -28,6 +28,8 @@ public class CombatRulesTests
           "aloneAgainstAllDamageTakenPercent": 75,
           "kineticScreenDamageTakenPercent": 70,
           "ambusherDamagePercent": 125,
+          "excessDamagePercent": 125,
+          "excessCoverWearPercent": 200,
           "furnaceMinDamage": 3,
           "furnaceMaxDamage": 5,
           "chainReactionMinDamage": 8,

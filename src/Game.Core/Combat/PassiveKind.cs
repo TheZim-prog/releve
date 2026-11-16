@@ -115,6 +115,12 @@ public enum PassiveKind
     /// (<see cref="CombatRules.TacticalAnalysisRange"/>).
     /// </summary>
     TacticalAnalysis,
+
+    /// <summary>
+    /// Démesure (énergétique) : ses coups font plus de dégâts à ses adversaires (<see cref="CombatRules.ExcessDamagePercent"/>),
+    /// mais l'obstacle qui couvre sa cible s'use plus vite (<see cref="CombatRules.ExcessCoverWearPercent"/>).
+    /// </summary>
+    Excess,
 }
 
 /// <summary>Identifiants des passifs dans les données : le nom du <see cref="PassiveKind"/> en camelCase (« weakPoint »).</summary>

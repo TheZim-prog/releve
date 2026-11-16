@@ -31,9 +31,15 @@ public class TechSpeedsterContentTests
     [Fact]
     public void FlyingStart_TheScenarioStartsTheSpeedsterWithAFullGauge()
     {
-        // Le speedster d'essai, avec Départ canon au lieu de Réflexes.
+        // Le speedster d'essai, avec Départ canon au lieu de Réflexes (et le Sillage au lieu du Vortex, pour l'ouvrir).
         var sheet = Content.Heroes.Sheets["trial-speedster"];
-        var fast = sheet with { Learned = sheet.Learned.Select(s => s == "reflexes" ? "flyingStart" : s).ToList(), Passive = "flyingStart" };
+        string Swapped(string id) => id switch { "reflexes" => "flyingStart", "vortex" => "slipstream", _ => id };
+        var fast = sheet with
+        {
+            Learned = sheet.Learned.Select(Swapped).ToList(),
+            Equipped = sheet.Equipped.Select(s => s == "vortex" ? "carry" : s).ToList(),
+            Passive = "flyingStart",
+        };
         var heroes = new HeroCatalog(Content.Heroes.Rules, Content.Units, Content.Skills, Content.Heroes.Trees.Values, new[] { fast });
         var scenario = new ScenarioDefinition
         {

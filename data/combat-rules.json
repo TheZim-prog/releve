@@ -44,6 +44,9 @@
   "aloneAgainstAllDamageTakenPercent": 75,
   "kineticScreenDamageTakenPercent": 70,
   "ambusherDamagePercent": 125,
+  // Démesure : ses coups font ce % de dégâts, et l'obstacle qui couvre sa cible perd ce % de ce qu'il absorbe.
+  "excessDamagePercent": 125,
+  "excessCoverWearPercent": 200,
   "furnaceMinDamage": 3,
   "furnaceMaxDamage": 5,
   "chainReactionMinDamage": 8,

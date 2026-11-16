@@ -2,13 +2,14 @@ using Game.Core.Grids;
 
 namespace Game.Core.Combat;
 
-// Déplacements forcés d'une cible : projection, renversement, tourniquet, pose sur une case, permutation. Aucun ne
+// Déplacements forcés d'une cible : projection, renversement, tourniquet, vortex, pose sur une case, permutation. Aucun ne
 // déclenche d'attaque d'opportunité, et tous interrompent une charge en cours. Un adversaire inébranlable ne bouge pas.
 public sealed partial class CombatSimulation
 {
     /// <summary>
     /// Applique le déplacement forcé d'une compétence à sa cible. <paramref name="destination"/> : la case choisie,
-    /// pour une pose. Une projection part du lanceur ; celle d'une zone, de son centre (voir <see cref="PushFromZone"/>).
+    /// pour une pose ; vers laquelle un tourniquet lance ; vers laquelle un vortex attire (le centre de sa zone, sinon le
+    /// lanceur). Une projection part du lanceur ; celle d'une zone, de son centre (voir <see cref="PushFromZone"/>).
     /// </summary>
     private void ApplyForcedMove(Unit caster, SkillDefinition skill, Unit target, ForcedMoveDefinition move, int damageFactor,
         Cell? destination)
@@ -20,6 +21,9 @@ public sealed partial class CombatSimulation
                 break;
             case ForcedMoveType.Spin:
                 Push(caster, skill, target, move, damageFactor, from: caster.Position, toward: destination);
+                break;
+            case ForcedMoveType.Pull:
+                Pull(caster, target, move, center: destination ?? caster.Position);
                 break;
             case ForcedMoveType.Place:
                 if (ResistsForcedMove(caster, target))
@@ -81,11 +85,60 @@ public sealed partial class CombatSimulation
             return;
         var start = move.Type == ForcedMoveType.Push ? target.Position : from;
 
+        var (collided, obstacle) = Slide(target, start, move.Distance, _ => step);
+        if (!collided)
+            return;
+
+        _events.Add(new UnitCollided(CurrentTick, target.Id, obstacle?.Id));
+        if (move.CollisionMaxDamage == 0)
+            return;
+        // La cible (projetée sous un dôme de son équipe) ou l'unité percutée peuvent être protégées : la collision
+        // fait partie de la même source. Un civil percuté n'est pas blessé (seules les zones les touchent).
+        foreach (var hit in new[] { target, obstacle })
+        {
+            if (hit is { Status: UnitStatus.Active, IsCivilian: false })
+                SecondaryDamage(caster, skill, hit, move.CollisionMinDamage, move.CollisionMaxDamage, damageFactor);
+        }
+    }
+
+    /// <summary>
+    /// Vortex : chaque unité touchée encore debout est attirée vers <paramref name="center"/>, les plus proches d'abord
+    /// (celles qui suivent s'arrêtent derrière elles).
+    /// </summary>
+    private void PullToCenter(Unit caster, SkillDefinition skill, IEnumerable<Unit> hit, ForcedMoveDefinition move, int damageFactor,
+        Cell center)
+    {
+        foreach (var unit in hit.OrderBy(u => u.Position.DistanceTo(center)).ToList())
+        {
+            if (unit.Status == UnitStatus.Active)
+                ApplyForcedMove(caster, skill, unit, move, damageFactor, center);
+        }
+    }
+
+    /// <summary>
+    /// Attire <paramref name="target"/> vers <paramref name="center"/>, sans collision. Un adversaire inébranlable ne
+    /// bouge pas (il ne « résiste » que s'il avait à bouger).
+    /// </summary>
+    private void Pull(Unit caster, Unit target, ForcedMoveDefinition move, Cell center)
+    {
+        if (target.Position != center && !ResistsForcedMove(caster, target))
+            Slide(target, target.Position, move.Distance, position => position.NearestDirectionTo(center));
+    }
+
+    /// <summary>
+    /// Fait glisser <paramref name="target"/> (posée sur <paramref name="start"/> ou partie de là) sur
+    /// <paramref name="distance"/> cases au plus, chaque pas dans la direction que donne <paramref name="direction"/>
+    /// depuis la case atteinte (<c>null</c> : elle s'arrête là). Elle s'arrête avant une unité, ou avant un mur, le bord
+    /// ou une diagonale bloquée (même règle de coupe d'angle qu'un déplacement de la cible), et sur un piège ou un sol
+    /// qui fige. Renvoie si elle a heurté quelque chose, et l'unité heurtée.
+    /// </summary>
+    private (bool Collided, Unit? Obstacle) Slide(Unit target, Cell start, int distance, Func<Cell, (int X, int Y)?> direction)
+    {
         var position = start;
         var collided = false;
         Unit? obstacle = null;
         var crossed = new List<Cell>();
-        for (var i = 0; i < move.Distance; i++)
+        for (var i = 0; i < distance && direction(position) is { } step; i++)
         {
             var next = new Cell(position.X + step.X, position.Y + step.Y);
             // Le décor (ou un coin bouché) arrête d'abord : on ne percute pas une unité à travers un coin de mur.
@@ -103,25 +156,13 @@ public sealed partial class CombatSimulation
             crossed.Add(next);
             position = next;
             // Un piège ou un sol qui fige sur cette case : la course s'arrête là (sans collision).
-            if (GroundHalts(target, crossed.Count > 1 ? crossed[^2] : target.Position, next))
+            if (GroundHalts(target, crossed.Count > 1 ? crossed[^2] : start, next))
                 break;
         }
 
         if (position != start)
-            Displace(target, position, crossed);
-        if (!collided)
-            return;
-
-        _events.Add(new UnitCollided(CurrentTick, target.Id, obstacle?.Id));
-        if (move.CollisionMaxDamage == 0)
-            return;
-        // La cible (projetée sous un dôme de son équipe) ou l'unité percutée peuvent être protégées : la collision
-        // fait partie de la même source. Un civil percuté n'est pas blessé (seules les zones les touchent).
-        foreach (var hit in new[] { target, obstacle })
-        {
-            if (hit is { Status: UnitStatus.Active, IsCivilian: false })
-                SecondaryDamage(caster, skill, hit, move.CollisionMinDamage, move.CollisionMaxDamage, damageFactor);
-        }
+            Displace(target, position, crossed, departure: start);
+        return (collided, obstacle);
     }
 
     /// <summary>
@@ -184,15 +225,16 @@ public sealed partial class CombatSimulation
     /// Déplacement forcé (sans chemin ni attaque d'opportunité) ; il interrompt une charge en cours, et une unité debout
     /// qui arrive ainsi sur un piège ou un sol gelé y entre comme à pied. <paramref name="course"/> : les cases qu'elle
     /// parcourt au sol pour y arriver, arrivée comprise (poussée, Charge) ; sans elle, seule l'arrivée compte (elle est
-    /// posée, elle saute ou elle file).
+    /// posée, elle saute ou elle file). <paramref name="departure"/> : d'où part cette course, si ce n'est pas sa case
+    /// (lancée par-dessus le lanceur, elle part de la case de celui-ci).
     /// </summary>
-    private void Displace(Unit unit, Cell to, IReadOnlyList<Cell>? course = null)
+    private void Displace(Unit unit, Cell to, IReadOnlyList<Cell>? course = null, Cell? departure = null)
     {
         var from = unit.Position;
         unit.Position = to;
         _events.Add(new UnitDisplaced(CurrentTick, unit.Id, from, to));
         InterruptCharge(unit);
-        var previous = from;
+        var previous = departure ?? from;
         foreach (var cell in course ?? new[] { to })
         {
             EnterGround(unit, previous, cell, fallbackCell: null);

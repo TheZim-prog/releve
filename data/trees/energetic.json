@@ -16,7 +16,7 @@
       "id": "blaze", "name": "Brasier",
       "tiers": [
         { "actives": [ { "skill": "nova", "variant": "recoil-wave" }, { "skill": "propulsion", "variant": "comet" } ] },
-        { "actives": [ { "skill": "melting-point", "variant": "discharge" } ], "passives": [ { "id": "excess", "name": "Démesure", "planned": true } ] },
+        { "actives": [ { "skill": "melting-point", "variant": "discharge" } ], "passives": [ { "id": "excess", "name": "Démesure" } ] },
         { "actives": [ { "skill": "energy-form" } ], "passives": [ { "id": "furnace", "name": "Fournaise" } ] }
       ]
     },

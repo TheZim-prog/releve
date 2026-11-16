@@ -61,7 +61,7 @@ public sealed partial class CombatSimulation
                 var factor = WithDamagePassives(WithSkillBonuses(damageFactor, attacker, skill, target), attacker, skill, target);
                 dealt = Scaled(roll, factor, target);
                 if (origin is { } from && !attacker.HasPassive(PassiveKind.Piercing) && CoverFor(from, target.Position) is { } cover)
-                    dealt = AbsorbByCover(target, cover, dealt);
+                    dealt = AbsorbByCover(attacker, target, cover, dealt);
             }
             var wereOpponents = AreOpponents(target, attacker); // avant le coup : une unité dominée qui tombe retrouve son camp
             var lost = Damage(target, dealt, fallbackCell, ignoresProtections);
@@ -170,15 +170,18 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// L'obstacle <paramref name="cover"/> absorbe sa part des dégâts (arrondie en dessous), dans la limite de ses PV, et
-    /// l'encaisse ; à 0 PV, il devient du sol. Renvoie les dégâts qui passent.
+    /// l'encaisse (davantage contre un adversaire qui a Démesure, comme son bonus de dégâts) ; à 0 PV, il devient du sol. Renvoie les dégâts qui passent.
     /// </summary>
-    private int AbsorbByCover(Unit target, Cell cover, int damage)
+    private int AbsorbByCover(Unit attacker, Unit target, Cell cover, int damage)
     {
         var hp = _coverHp.GetValueOrDefault(cover, Rules.LowObstacleHp);
         var absorbed = Math.Min(hp, (int)((long)damage * Rules.CoverDamageReductionPercent / 100));
         if (absorbed == 0)
             return damage;
-        hp -= absorbed;
+        var wear = attacker.HasPassive(PassiveKind.Excess) && AreOpponents(attacker, target)
+            ? (int)((long)absorbed * Rules.ExcessCoverWearPercent / 100)
+            : absorbed;
+        hp -= Math.Min(hp, wear);
         _coverHp[cover] = hp;
         _events.Add(new HitCovered(CurrentTick, target.Id, cover, absorbed, hp));
         if (hp == 0)

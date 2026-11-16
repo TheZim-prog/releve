@@ -96,6 +96,15 @@ public sealed record CombatRules
     /// <summary>Embusqué : dégâts de ses coups de loin quand il est collé au décor, en % de la normale.</summary>
     public required int AmbusherDamagePercent { get; init; }
 
+    /// <summary>Démesure : dégâts de ses coups contre un adversaire, en % de la normale.</summary>
+    public required int ExcessDamagePercent { get; init; }
+
+    /// <summary>
+    /// Démesure : PV que perd un obstacle bas qui couvre une cible de ses coups, en % de ce qu'il absorbe (200 : il
+    /// s'use deux fois plus vite ; il n'absorbe pas davantage).
+    /// </summary>
+    public required int ExcessCoverWearPercent { get; init; }
+
     /// <summary>Fournaise : dégâts (avant la puissance) infligés aux ennemis à son contact après chaque action.</summary>
     public required int FurnaceMinDamage { get; init; }
 
@@ -225,7 +234,8 @@ public sealed record CombatRules
         foreach (var (value, name) in new[]
                  {
                      (OpportunistDamagePercent, nameof(OpportunistDamagePercent)), (FirstBloodDamagePercent, nameof(FirstBloodDamagePercent)),
-                     (AmbusherDamagePercent, nameof(AmbusherDamagePercent)),
+                     (AmbusherDamagePercent, nameof(AmbusherDamagePercent)), (ExcessDamagePercent, nameof(ExcessDamagePercent)),
+                     (ExcessCoverWearPercent, nameof(ExcessCoverWearPercent)),
                  })
             ValidatePercent(value, name, max: 1000, min: 100);
         ValidatePercent(AloneAgainstAllDamageTakenPercent, nameof(AloneAgainstAllDamageTakenPercent), max: 100, min: 1);

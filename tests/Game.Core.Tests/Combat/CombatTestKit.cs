@@ -34,6 +34,8 @@ internal static class CombatTestKit
         AloneAgainstAllDamageTakenPercent = 50,
         KineticScreenDamageTakenPercent = 50,
         AmbusherDamagePercent = 150,
+        ExcessDamagePercent = 150,
+        ExcessCoverWearPercent = 200,
         FurnaceMinDamage = 5,
         FurnaceMaxDamage = 5,
         ChainReactionMinDamage = 10,

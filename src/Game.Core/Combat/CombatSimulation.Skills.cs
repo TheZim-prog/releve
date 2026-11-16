@@ -111,6 +111,10 @@ public sealed partial class CombatSimulation
                 if (target is { Status: UnitStatus.Active } && hit.Contains(target))
                     ApplyForcedMove(caster, skill, target, spin, damageFactor, destination);
             }
+            else if (skill.ForcedMove is { Type: ForcedMoveType.Pull } pull)
+            {
+                PullToCenter(caster, skill, hit, pull, damageFactor, zoneOrigin ?? caster.Position);
+            }
             else if (skill.ForcedMove is { } push)
             {
                 PushFromZone(caster, skill, hit, push, damageFactor, zoneOrigin ?? caster.Position);

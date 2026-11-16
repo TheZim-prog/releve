@@ -39,5 +39,14 @@
     "id": "rigged-decoy", "name": "Leurre piégé",
     "weight": "light", "range": 1, "minDamage": 0, "maxDamage": 0, "cooldownMs": 12000,
     "summon": "rigged-decoy"
+  },
+  {
+    // Il court autour d'une grande zone (et revient à sa case) : les ennemis y sont attirés de deux cases au plus vers
+    // le centre, déséquilibrés, et prennent des dégâts.
+    "id": "vortex", "name": "Vortex",
+    "weight": "heavy", "range": 4, "minDamage": 10, "maxDamage": 14, "cooldownMs": 25000,
+    "zone": { "shape": "square", "size": 2, "throughWalls": false, "affects": "enemies" },
+    "effects": [ { "status": "offBalance", "durationMs": 3000 } ],
+    "forcedMove": { "type": "pull", "distance": 2 }
   }
 ]

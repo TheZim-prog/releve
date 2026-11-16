@@ -293,14 +293,16 @@ public sealed record SkillDefinition
         // Déplacements forcés : une projection vise un ennemi ; une télékinésie n'est pas chargée (la cible bougerait
         // avant le déclenchement) ; une compétence sur « n'importe qui » ne fait que déplacer.
         ForcedMove?.Validate(Id);
-        // Seuls une projection (chaque unité touchée est repoussée loin du lanceur) et un tourniquet (l'ennemi attrapé frappe
-        // tout autour, puis il est lancé) vont avec une zone, centrée sur le lanceur ; un tourniquet en a toujours une.
+        // Seuls une projection (chaque unité touchée est repoussée loin du lanceur), un tourniquet (l'ennemi attrapé frappe
+        // tout autour, puis il est lancé) et un vortex (attirés vers le centre) vont avec une zone : un carré offensif
+        // instantané, autour du lanceur pour les deux premiers. Un tourniquet et un vortex n'existent qu'avec elle.
         if (ForcedMove is not null && Zone is not null
-            && (ForcedMove.Type is not (ForcedMoveType.Push or ForcedMoveType.Spin) || !IsOffensive || Zone.Shape != ZoneShape.Square
-                || Range != 0 || IsCharged))
-            throw new ArgumentException($"Skill '{Id}': only a push or a spin goes with a zone, an instant offensive square around the caster (range 0).");
-        if (ForcedMove?.Type == ForcedMoveType.Spin && (Zone is null || SelfMove is not null))
-            throw new ArgumentException($"Skill '{Id}': a spin hits a square zone around its caster, without a self move.");
+            && (!ForcedMove.GoesWithZone || !IsOffensive || Zone.Shape != ZoneShape.Square || IsCharged
+                || (ForcedMove.ZoneAroundCaster && Range != 0)))
+            throw new ArgumentException(
+                $"Skill '{Id}': only a push or a spin (around the caster, range 0) or a pull (anywhere in range) goes with a zone, an instant offensive square.");
+        if (ForcedMove is { NeedsZone: true } && (Zone is null || SelfMove is not null))
+            throw new ArgumentException($"Skill '{Id}': a spin or a pull hits a square zone, without a self move.");
         if (ForcedMove is { IsLinear: true } && Target != SkillTargeting.Enemy)
             throw new ArgumentException($"Skill '{Id}': a push or a throw targets an enemy.");
         // Un renversement passe la cible par-dessus le lanceur : elle est à son contact.

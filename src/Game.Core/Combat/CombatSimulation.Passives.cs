@@ -15,7 +15,7 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Le multiplicateur de dégâts d'un coup, corrigé par le passif de l'attaquant contre un adversaire (Rage,
-    /// Opportuniste, Premier sang, Embusqué) et par l'Écran cinétique de la cible. (Seul contre tous joue sur tous les
+    /// Opportuniste, Premier sang, Embusqué, Démesure) et par l'Écran cinétique de la cible. (Seul contre tous joue sur tous les
     /// dégâts : voir <see cref="Scaled"/>.)
     /// </summary>
     private int WithDamagePassives(int damageFactor, Unit attacker, SkillDefinition skill, Unit target)
@@ -41,6 +41,9 @@ public sealed partial class CombatSimulation
                     break;
                 case PassiveKind.Ambusher when IsRangedHit(attacker, skill, target) && IsAgainstScenery(attacker.Position):
                     Times(Rules.AmbusherDamagePercent);
+                    break;
+                case PassiveKind.Excess:
+                    Times(Rules.ExcessDamagePercent);
                     break;
             }
         }

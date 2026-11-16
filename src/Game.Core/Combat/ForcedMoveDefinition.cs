@@ -29,6 +29,13 @@ public enum ForcedMoveType
     /// parmi les 8 depuis le lanceur) ; la distance se compte depuis la case du lanceur.
     /// </summary>
     Spin,
+
+    /// <summary>
+    /// Vortex : chaque unité touchée par la zone est attirée vers son centre, pas à pas (la direction la plus proche parmi
+    /// les 8, recalculée à chaque pas), sur <see cref="ForcedMoveDefinition.Distance"/> cases au plus ; elle s'arrête sur
+    /// le centre, ou avant une unité, un mur ou un coin bouché, sans collision.
+    /// </summary>
+    Pull,
 }
 
 /// <summary>Déplacement forcé appliqué à la cible d'une compétence (données). Pas d'attaque d'opportunité.</summary>
@@ -55,6 +62,18 @@ public sealed record ForcedMoveDefinition
     /// <summary>Projection, renversement ou tourniquet : la cible part en ligne droite et peut percuter quelque chose.</summary>
     public bool IsLinear => Type is ForcedMoveType.Push or ForcedMoveType.Throw or ForcedMoveType.Spin;
 
+    /// <summary>
+    /// Ce déplacement peut aller avec une zone : une projection ou un tourniquet, autour du lanceur
+    /// (<see cref="ZoneAroundCaster"/>) ; un vortex, où qu'elle soit.
+    /// </summary>
+    public bool GoesWithZone => Type is ForcedMoveType.Push or ForcedMoveType.Spin or ForcedMoveType.Pull;
+
+    /// <summary>Avec une zone, elle est centrée sur le lanceur (portée 0) : une projection, un tourniquet.</summary>
+    public bool ZoneAroundCaster => Type is ForcedMoveType.Push or ForcedMoveType.Spin;
+
+    /// <summary>Ce déplacement n'existe qu'avec une zone : un tourniquet (qui frappe autour), un vortex (vers son centre).</summary>
+    public bool NeedsZone => Type is ForcedMoveType.Spin or ForcedMoveType.Pull;
+
     public void Validate(string skillId)
     {
         if (!Enum.IsDefined(Type))
@@ -64,7 +83,7 @@ public sealed record ForcedMoveDefinition
         if (CollisionMinDamage < 0 || CollisionMaxDamage < CollisionMinDamage)
             throw new ArgumentException($"Skill '{skillId}' needs 0 <= collisionMinDamage <= collisionMaxDamage.");
         if (!IsLinear && CollisionMaxDamage > 0)
-            throw new ArgumentException($"Skill '{skillId}': only a push or a throw deals collision damage.");
+            throw new ArgumentException($"Skill '{skillId}': only a push, a throw or a spin deals collision damage.");
         if (ImpactMinDamage < 0 || ImpactMaxDamage < ImpactMinDamage)
             throw new ArgumentException($"Skill '{skillId}' needs 0 <= impactMinDamage <= impactMaxDamage.");
         if (Type != ForcedMoveType.Place && ImpactMaxDamage > 0)
