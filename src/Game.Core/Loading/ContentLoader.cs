@@ -6,8 +6,9 @@ namespace Game.Core.Loading;
 
 /// <summary>
 /// Charge et vérifie un dossier <c>data/</c> entier. L'ordre suit les dépendances : les règles, puis les compétences et
-/// les unités (qui se désignent entre elles), les arbres et les héros (qui désignent des compétences et des unités),
-/// enfin les scénarios (qui placent des unités et des héros). Une erreur nomme le fichier en cause.
+/// les unités (qui se désignent entre elles), les arbres et les héros (qui désignent des compétences et des unités), les
+/// cartes partagées, enfin les scénarios (qui placent des unités et des héros sur une carte). Une erreur nomme le fichier
+/// en cause.
 /// </summary>
 internal static class ContentLoader
 {
@@ -31,8 +32,9 @@ internal static class ContentLoader
 
         var heroes = Heroes(files, units, skills);
 
+        var maps = files.List("maps").Select(file => files.Load(file, MapDefinition.FromJson)).ToDictionary(m => m.Id);
         var scenarios = files.List("scenarios")
-            .Select(file => (File: file, Scenario: files.Load(file, ScenarioDefinition.FromJson)))
+            .Select(file => (File: file, Scenario: files.Load(file, json => ScenarioDefinition.FromJson(json, maps))))
             // Chaque scénario doit pouvoir se monter avec ce contenu (unités et héros connus, points de stats valides).
             .Select(s => DataFiles.InContext(s.File, () => { s.Scenario.ToSetup(rules, units, heroes); return s.Scenario; }))
             .ToDictionary(s => s.Id);

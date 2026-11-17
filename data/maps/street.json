@@ -1,0 +1,17 @@
+// La rue du combat libre du prototype, partagée par plusieurs scénarios ("mapId": "street").
+// Carte : '.' sol, '#' mur, 'o' obstacle bas (muret, voiture : couverture). x de gauche à droite, y de haut en bas.
+{
+  "id": "street",
+  "rows": [
+    "..................",
+    "..o.......##......",
+    "..o...........o...",
+    "......###.........",
+    "..............o...",
+    ".........o........",
+    "....##............",
+    "..........###.....",
+    "..o...............",
+    ".................."
+  ]
+}

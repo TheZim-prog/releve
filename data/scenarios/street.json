@@ -1,22 +1,11 @@
 // Combat libre du prototype : les héros (à gauche) contre une bande de rue (à droite), des civils
-// pris au milieu. Carte : '.' sol, '#' mur, 'o' obstacle bas (muret, voiture : couverture).
+// pris au milieu. La carte est celle de la rue (data/maps/street.json).
 // Les héros sont ceux du prologue (data/heroes/prologue.json).
 {
   "id": "street",
   "name": "Règlement de comptes dans la rue",
   "seed": 2026,
-  "map": [
-    "..................",
-    "..o.......##......",
-    "..o...........o...",
-    "......###.........",
-    "..............o...",
-    ".........o........",
-    "....##............",
-    "..........###.....",
-    "..o...............",
-    ".................."
-  ],
+  "mapId": "street",
   "units": [
     { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
     { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4 },

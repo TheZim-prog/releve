@@ -17,7 +17,13 @@ public sealed record ScenarioDefinition
     public required string Name { get; init; }
 
     public required ulong Seed { get; init; }
-    public required IReadOnlyList<string> Map { get; init; }
+
+    /// <summary>La carte, écrite dans le scénario ; ou bien <see cref="MapId"/> (exactement l'un des deux dans les données).</summary>
+    public IReadOnlyList<string>? Map { get; init; }
+
+    /// <summary>Une carte partagée de data/maps ; à la lecture, elle est recopiée dans <see cref="Map"/>.</summary>
+    public string? MapId { get; init; }
+
     public required IReadOnlyList<ScenarioUnit> Units { get; init; }
 
     /// <summary>Objectifs de la mission ; sans eux, éliminer tous les ennemis (<see cref="ObjectiveDefinition.Default"/>).</summary>
@@ -26,9 +32,21 @@ public sealed record ScenarioDefinition
     /// <summary>Renforts qui arrivent en cours de combat (aucun par défaut).</summary>
     public IReadOnlyList<ScenarioWave>? Waves { get; init; }
 
-    public static ScenarioDefinition FromJson(string json)
+    /// <summary>
+    /// Lit un scénario ; sa carte est soit écrite dedans, soit désignée parmi <paramref name="maps"/> (elle y est alors
+    /// recopiée).
+    /// </summary>
+    public static ScenarioDefinition FromJson(string json, IReadOnlyDictionary<string, MapDefinition>? maps = null)
     {
         var scenario = DataJson.Deserialize<ScenarioDefinition>(json);
+        if ((scenario.Map is null) == (scenario.MapId is null))
+            throw new ArgumentException($"Scenario '{scenario.Id}' needs either a map or a mapId.");
+        if (scenario.MapId is { } mapId)
+        {
+            if (maps is null || !maps.TryGetValue(mapId, out var map))
+                throw new ArgumentException($"Scenario '{scenario.Id}': unknown map '{mapId}'.");
+            scenario = scenario with { Map = map.Rows };
+        }
         scenario.Validate();
         return scenario;
     }
@@ -99,7 +117,7 @@ public sealed record ScenarioDefinition
             var waves = (Waves ?? Array.Empty<ScenarioWave>())
                 .Select(w => new WaveSetup(w.AtMs, w.Units.Select(u => Place(u, default, units, heroes, rules)).ToList()))
                 .ToList();
-            var setup = new CombatSetup(rules, Grid.FromRows(Map.ToArray()), placed, Seed)
+            var setup = new CombatSetup(rules, Grid.FromRows(Map!.ToArray()), placed, Seed)
             {
                 Objectives = Objectives ?? ObjectiveDefinition.Default,
                 Waves = waves,

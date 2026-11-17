@@ -148,6 +148,20 @@ public class MissionDataTests
     }
 
     [Fact]
+    public void AScenario_CanUseASharedMap()
+    {
+        var maps = new Dictionary<string, MapDefinition> { ["alley"] = MapDefinition.FromJson("""{ "id": "alley", "rows": [ "....", "..#." ] }""") };
+        var json = Scenario.Replace("OBJECTIVES", "").Replace("\"map\": [ \"....\" ],", "\"mapId\": \"alley\",");
+
+        var setup = ScenarioDefinition.FromJson(json, maps).ToSetup(Rules, Catalog);
+
+        Assert.Equal(Terrain.Wall, setup.Grid.TerrainAt(new Cell(2, 1)));
+        Assert.Throws<ArgumentException>(() => ScenarioDefinition.FromJson(json)); // carte inconnue
+        Assert.Throws<ArgumentException>(() => ScenarioDefinition.FromJson(
+            Scenario.Replace("OBJECTIVES", "").Replace("\"map\": [ \"....\" ],", "\"map\": [ \"....\" ], \"mapId\": \"alley\","), maps));
+    }
+
+    [Fact]
     public void ARescue_ReadsItsMinimum_AndNeedsThatManyCivilians()
     {
         var rescue = """[ { "kind": "rescue", "minimum": 1 } ]""";

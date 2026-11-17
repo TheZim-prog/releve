@@ -1,22 +1,10 @@
 // Scénario d'essai : la même rue et la même bande que le combat libre (street.json), avec les héros d'essai
 // (data/heroes/trial.json), qui équipent les compétences ajoutées au fur et à mesure.
-// Carte : '.' sol, '#' mur, 'o' obstacle bas (muret, voiture : couverture).
 {
   "id": "trial",
   "name": "Essai des nouvelles compétences",
   "seed": 2026,
-  "map": [
-    "..................",
-    "..o.......##......",
-    "..o...........o...",
-    "......###.........",
-    "..............o...",
-    ".........o........",
-    "....##............",
-    "..........###.....",
-    "..o...............",
-    ".................."
-  ],
+  "mapId": "street",
   "units": [
     { "hero": "trial-colossus", "team": 0, "x": 1, "y": 3 },
     { "hero": "trial-fighter", "team": 0, "x": 1, "y": 4 },
