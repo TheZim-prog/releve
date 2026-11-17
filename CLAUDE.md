@@ -54,15 +54,20 @@ tests/
 - Stats séparées : **initiative** (vitesse de jauge) et **mobilité** (distance de déplacement).
 - **Pause manuelle** déclenchable par n'importe quel joueur.
 
-## Objectif actuel : prototype du combat libre
+## Objectif actuel : des missions jouables
 
-Valider que le combat ATB temps réel sur grille est amusant, **avant** tout le reste (pas de réseau, pas de carte du monde, pas de tutoriel scripté pour l'instant).
+Le combat est en place ; on construit maintenant ce qui en fait des **missions** (objectifs, scripts), toujours sans carte du monde ni campagne.
 
-Étapes :
-1. **Game.Core + tests** : grille, déplacements (pathfinding sans coupe d'angle), jauges et ticks, commandes atomiques, poids des actions, recharges, états, attaques d'opportunité, attaques chargées, intentions de l'IA.
-2. **Contenu** : les 6 héros (colosse, speedster, énergétique, télépathe, tech, combattant) et les ennemis du prologue (cogneur, tireur, brute, caïd), en données. Kits détaillés dans `docs/design.md` section 3.
-3. **Affichage Godot en solo** : 3D, caméra fixe plongeante, **capsules colorées** sur la grille. Prévisualisation avec fantôme, zones au sol, jauges visibles.
-4. Ensuite seulement : réseau, puis le reste.
+Déjà fait :
+1. **Combat libre** : Game.Core + tests (grille, déplacements, jauges et ticks, commandes atomiques, états, attaques d'opportunité, attaques chargées, intentions de l'IA), affichage Godot en solo (3D, capsules colorées, prévisualisation, jauges).
+2. **Contenu** : les 6 héros et les ennemis du prologue, et les **6 arbres de compétences complets** (toutes les compétences, variantes et passifs codés), en données.
+3. **Réseau** : serveur dédié, salon, combat en réseau par journal de commandes, export Windows.
+4. **Objectifs de mission** (`docs/design.md` 3.3 et 3.5), décrits par le scénario : élimination, sauvetage, poursuite, course contre la montre, protection (personnes ou structure), objectifs principaux et secondaires, chefs dont les sbires fuient ou se rendent, vagues de renforts. Mode d'emploi dans `data/README.md`.
+
+Prochaines étapes possibles (à choisir avec moi) :
+- **Une mission d'essai** qui combine ces objectifs, pour les éprouver en jouant (aucun scénario ne s'en sert encore).
+- **Scripts de mission** (principe 7) : actions imposées, événements déclenchés, alliés aux actions prédéfinies, pour le tutoriel du prologue.
+- Ensuite seulement : la carte du monde et la campagne (`docs/design.md` sections 4 et 5).
 
 ## Façon de travailler
 
