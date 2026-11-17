@@ -65,7 +65,8 @@ public sealed partial class CombatSimulation
             for (var dx = -1; dx <= 1; dx++)
             {
                 var next = new Cell(cell.X + dx, cell.Y + dy);
-                if (next != cell && _grid.Contains(next) && _grid.TerrainAt(next) != Terrain.Floor)
+                // Un objet de mission n'est pas du décor : on ne s'y embusque pas (il ne couvre pas non plus).
+                if (next != cell && _grid.Contains(next) && _grid.TerrainAt(next) is Terrain.Wall or Terrain.LowObstacle)
                     return true;
             }
         }

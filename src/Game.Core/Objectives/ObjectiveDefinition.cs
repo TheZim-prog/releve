@@ -20,22 +20,45 @@ public sealed record ObjectiveDefinition
     /// <summary>Poursuite : les cases par où le vilain poursuivi quitte le combat (au moins une). Les autres types n'en ont pas.</summary>
     public IReadOnlyList<Cell>? Exits { get; init; }
 
+    /// <summary>Course contre la montre : les objets à neutraliser (au moins un). Les autres types n'en ont pas.</summary>
+    public IReadOnlyList<DeviceDefinition>? Devices { get; init; }
+
+    /// <summary>Course contre la montre : durée du compte à rebours, en ms. Les autres types n'en ont pas.</summary>
+    public int? DurationMs { get; init; }
+
     /// <summary>Objectifs d'un scénario qui n'en décrit pas : éliminer tous les ennemis.</summary>
     public static IReadOnlyList<ObjectiveDefinition> Default { get; } =
         Array.AsReadOnly(new[] { new ObjectiveDefinition { Kind = ObjectiveKind.Eliminate } });
 
+    /// <summary>Chaque champ propre à un type est présent pour ce type, absent pour les autres, et sa valeur a un sens.</summary>
     public void Validate()
     {
         if (!Enum.IsDefined(Kind))
             throw new ArgumentException($"Unknown objective kind {Kind}.");
-        if (Kind == ObjectiveKind.Rescue && Minimum is not > 0)
+        ExpectField(Minimum is not null, ObjectiveKind.Rescue, "minimum");
+        ExpectField(Exits is not null, ObjectiveKind.Pursuit, "exits");
+        ExpectField(Devices is not null, ObjectiveKind.Countdown, "devices");
+        ExpectField(DurationMs is not null, ObjectiveKind.Countdown, "durationMs");
+
+        if (Minimum < 1)
             throw new ArgumentException("A rescue objective needs a minimum of evacuated civilians (at least 1).");
-        if (Kind != ObjectiveKind.Rescue && Minimum is not null)
-            throw new ArgumentException($"Only a rescue objective takes a minimum (not {Kind}).");
-        if (Kind == ObjectiveKind.Pursuit && Exits is not { Count: > 0 })
+        if (Exits is { Count: 0 })
             throw new ArgumentException("A pursuit objective needs at least one exit cell.");
-        if (Kind != ObjectiveKind.Pursuit && Exits is not null)
-            throw new ArgumentException($"Only a pursuit objective takes exits (not {Kind}).");
+        if (Devices is { Count: 0 } || Devices?.Any(d => d is null) == true)
+            throw new ArgumentException("A countdown objective needs at least one device, without null entries.");
+        foreach (var device in Devices ?? Array.Empty<DeviceDefinition>())
+            device.Validate();
+        if (DurationMs < 1)
+            throw new ArgumentException("A countdown needs a duration of at least 1 ms.");
+    }
+
+    /// <summary>Le champ <paramref name="field"/> va avec le type <paramref name="owner"/> : obligatoire pour lui, interdit aux autres.</summary>
+    private void ExpectField(bool present, ObjectiveKind owner, string field)
+    {
+        if (present != (Kind == owner))
+            throw new ArgumentException(present
+                ? $"Only a {owner} objective takes '{field}' (not {Kind})."
+                : $"A {owner} objective needs '{field}'.");
     }
 
     /// <summary>

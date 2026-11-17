@@ -82,6 +82,9 @@ public static class Texts
         ObjectiveKind.Eliminate => "Éliminer tous les ennemis",
         ObjectiveKind.Rescue => objective.Minimum == 1 ? "Évacuer un civil" : $"Évacuer au moins {objective.Minimum} civils",
         ObjectiveKind.Pursuit => $"Arrêter {sim.PursuedUnit?.Definition.Name ?? "le fuyard"} avant qu'il s'échappe",
+        ObjectiveKind.Countdown => objective.Devices!.Count == 1
+            ? "Neutraliser l'objet à temps"
+            : $"Neutraliser les {objective.Devices.Count} objets à temps",
         _ => objective.Kind.ToString(),
     };
 
@@ -96,18 +99,30 @@ public static class Texts
         {
             ObjectiveState.Completed => " : réussi",
             ObjectiveState.Failed => " : raté",
-            _ => Progress(objective.Definition, sim),
+            _ => Progress(objective, sim),
         };
         return $"- {Objective(objective.Definition, sim)}{secondary}{state}";
     }
 
-    /// <summary>Où en est un objectif en cours, s'il se compte : « (1 évacué, 1 perdu) ».</summary>
-    private static string Progress(ObjectiveDefinition objective, CombatSimulation sim)
+    /// <summary>
+    /// Où en est un objectif en cours, s'il se compte : « (1 évacué, 1 perdu) », « (4/6, reste 42 s) ».
+    /// </summary>
+    private static string Progress(Objective objective, CombatSimulation sim)
     {
-        if (objective.Kind != ObjectiveKind.Rescue)
-            return "";
-        var tally = RescueTally.Of(sim);
-        return $" ({tally.Evacuated} évacué{(tally.Evacuated > 1 ? "s" : "")}, {tally.Lost} perdu{(tally.Lost > 1 ? "s" : "")})";
+        switch (objective.Definition.Kind)
+        {
+            case ObjectiveKind.Rescue:
+                var tally = RescueTally.Of(sim);
+                return $" ({tally.Evacuated} évacué{(tally.Evacuated > 1 ? "s" : "")}, {tally.Lost} perdu{(tally.Lost > 1 ? "s" : "")})";
+            case ObjectiveKind.Countdown:
+                var done = objective.Devices.Sum(d => d.Done);
+                var needed = objective.Devices.Sum(d => d.Definition.Interactions);
+                var ticksPerSecond = sim.Rules.TicksPerSecond;
+                var seconds = (Math.Max(0, objective.EndTick!.Value - sim.CurrentTick) + ticksPerSecond - 1) / ticksPerSecond; // arrondi au-dessus
+                return $" ({done}/{needed}, reste {seconds} s)";
+            default:
+                return "";
+        }
     }
 
     /// <summary>Ligne de journal pour un événement, ou <c>null</c> pour ceux qui ne méritent pas d'y figurer.</summary>
@@ -121,6 +136,9 @@ public static class Texts
         {
             ObjectiveCompleted o => $"Objectif réussi : {O(o.Objective)}",
             ObjectiveFailed o => $"Objectif raté : {O(o.Objective)}",
+            DeviceOperated d => d.Done >= d.Needed
+                ? $"{N(d.Unit)} neutralise l'objet !"
+                : $"{N(d.Unit)} travaille sur l'objet ({d.Done}/{d.Needed})",
             SkillUsed u => u.Target is { } target && target != u.Unit
                 ? $"{N(u.Unit)} : {S(u.Unit, u.SkillId)} sur {N(target)}"
                 : $"{N(u.Unit)} : {S(u.Unit, u.SkillId)}",

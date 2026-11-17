@@ -150,6 +150,9 @@ public sealed record CombatRules
     /// <summary>Poids de l'action « relever » (reprise de jauge du releveur, comme une compétence).</summary>
     public required SkillWeight ReviveWeight { get; init; }
 
+    /// <summary>Poids d'une interaction avec un objet de mission (désamorcer, fermer un portail).</summary>
+    public required SkillWeight OperateWeight { get; init; }
+
     /// <summary>Part des dégâts qu'absorbe un obstacle bas pour l'unité à couvert derrière lui, en %.</summary>
     public required int CoverDamageReductionPercent { get; init; }
 
@@ -206,6 +209,8 @@ public sealed record CombatRules
         ValidatePercent(ReviveHpPercent, nameof(ReviveHpPercent), max: 100, min: 1);
         if (!Enum.IsDefined(ReviveWeight))
             throw new ArgumentException($"{nameof(ReviveWeight)} is unknown.");
+        if (!Enum.IsDefined(OperateWeight))
+            throw new ArgumentException($"{nameof(OperateWeight)} is unknown.");
         ValidatePercent(CoverDamageReductionPercent, nameof(CoverDamageReductionPercent), max: 100); // 0 : pas de couverture
         if (LowObstacleHp <= 0)
             throw new ArgumentException($"{nameof(LowObstacleHp)} must be positive.");

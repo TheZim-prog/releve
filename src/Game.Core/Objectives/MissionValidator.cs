@@ -1,11 +1,13 @@
 using Game.Core.Combat;
+using Game.Core.Grids;
 
 namespace Game.Core.Objectives;
 
 /// <summary>
 /// Les objectifs d'un combat sont-ils réalisables avec sa carte et ses unités ? Un sauvetage ne demande pas plus de
 /// civils qu'il n'y en a ; une poursuite (une seule) a ses sorties sur des cases praticables, et un seul vilain
-/// poursuivi, ennemi et pas civil, qui ne part pas d'une sortie ; un vilain poursuivi n'existe qu'avec une poursuite.
+/// poursuivi, ennemi et pas civil, qui ne part pas d'une sortie ; un vilain poursuivi n'existe qu'avec une poursuite ;
+/// les objets d'une course contre la montre sont sur des cases libres.
 /// </summary>
 internal static class MissionValidator
 {
@@ -33,6 +35,20 @@ internal static class MissionValidator
                 throw new ArgumentException($"The pursuit exit {exit} is not a free cell of the map.");
             if (pursued.Any(u => u.Position == exit))
                 throw new ArgumentException($"The pursued unit starts on the exit {exit}: it would escape at once.");
+        }
+
+        // Les objets se posent sur des cases libres : ni décor, ni unité, ni sortie, ni un autre objet.
+        var exits = pursuits.SelectMany(o => o.Exits!).ToHashSet();
+        var taken = new HashSet<Cell>();
+        foreach (var device in setup.Objectives.SelectMany(o => o.Devices ?? Array.Empty<DeviceDefinition>()))
+        {
+            var cell = device.Cell;
+            if (!setup.Grid.Contains(cell) || setup.Grid.IsBlocked(cell) || setup.Units.Any(u => u.Position == cell)
+                || exits.Contains(cell) || !taken.Add(cell))
+                throw new ArgumentException($"The device on {cell} is not on a free cell (scenery, unit, exit or another device).");
+            // Une case voisine d'où l'atteindre au contact (la carte du scénario n'a pas encore les objets : la case est du sol).
+            if (!setup.Grid.Neighbors(cell).Any())
+                throw new ArgumentException($"The device on {cell} cannot be reached: no free cell next to it.");
         }
     }
 }

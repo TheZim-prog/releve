@@ -26,13 +26,29 @@ public sealed partial class CombatSimulation
     /// <summary>Le vilain poursuivi (objectif Poursuite), ou <c>null</c> sans poursuite.</summary>
     public Unit? PursuedUnit { get; private set; }
 
+    /// <summary>Les objets à neutraliser de toutes les courses contre la montre, posés sur la carte (cases d'objet de mission).</summary>
+    public IReadOnlyList<Device> Devices { get; private set; } = Array.Empty<Device>();
+
+    /// <summary>L'objet à neutraliser posé sur cette case, ou <c>null</c>.</summary>
+    public Device? DeviceAt(Cell cell) => Devices.FirstOrDefault(d => d.Cell == cell);
+
     private void SetUpObjectives(CombatSetup setup)
     {
         setup.ValidateObjectives();
-        _objectives.AddRange(setup.Objectives.Select(o => new Objective(o)));
+        _objectives.AddRange(setup.Objectives.Select(o => new Objective(o, Rules)));
         Objectives = _objectives.AsReadOnly();
         PursuitExits = setup.Objectives.SelectMany(o => o.Exits ?? Array.Empty<Cell>()).ToHashSet();
         PursuedUnit = _units.SingleOrDefault(u => u.IsPursued);
+        Devices = _objectives.SelectMany(o => o.Devices).ToList().AsReadOnly();
+        foreach (var device in Devices)
+            _grid.SetTerrain(device.Cell, Terrain.Fixture);
+    }
+
+    /// <summary>Un héros travaille sur l'objet : une interaction de plus (au plus le nombre demandé).</summary>
+    private void Operate(Unit unit, Device device)
+    {
+        device.Done++;
+        _events.Add(new DeviceOperated(CurrentTick, unit.Id, device.Cell, device.Done, device.Definition.Interactions));
     }
 
     /// <summary>
@@ -69,14 +85,14 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>Chaque objectif en cours prend l'état que donne <paramref name="rule"/> ; un changement s'annonce.</summary>
-    private void UpdateEach(Func<ObjectiveDefinition, CombatSimulation, ObjectiveState> rule)
+    private void UpdateEach(Func<Objective, CombatSimulation, ObjectiveState> rule)
     {
         for (var i = 0; i < _objectives.Count; i++)
         {
             var objective = _objectives[i];
             if (objective.State != ObjectiveState.InProgress)
                 continue;
-            objective.State = rule(objective.Definition, this);
+            objective.State = rule(objective, this);
             if (objective.State == ObjectiveState.Completed)
                 _events.Add(new ObjectiveCompleted(CurrentTick, i));
             else if (objective.State == ObjectiveState.Failed)

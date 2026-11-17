@@ -62,6 +62,7 @@ internal static class CombatTestKit
         IntentionThresholdPercent = 50,
         ReviveHpPercent = 25,
         ReviveWeight = SkillWeight.Light,
+        OperateWeight = SkillWeight.Light,
         CoverDamageReductionPercent = 50,
         LowObstacleHp = 40,
         // Un point de stat : +10 % de la stat de base (ou +10 points de puissance), pour des comptes ronds.

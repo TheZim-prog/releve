@@ -4,7 +4,7 @@ using Godot;
 namespace Game.Client;
 
 /// <summary>
-/// Le plateau : une dalle par case, des blocs pour les murs et les obstacles bas, et des calques de surlignage au sol
+/// Le plateau : une dalle par case, des blocs pour les murs, les obstacles bas et les objets de mission, et des calques de surlignage au sol
 /// (cases atteignables, chemin, zones). Une case (x, y) est centrée en (x, 0, y), une unité de monde par case.
 /// </summary>
 public partial class BoardView : Node3D
@@ -14,6 +14,7 @@ public partial class BoardView : Node3D
     private static readonly Color WallColor = new(0.55f, 0.52f, 0.48f);
     private static readonly Color ObstacleColor = new(0.45f, 0.36f, 0.25f);
     private static readonly Color IceColor = new(0.7f, 0.9f, 1f);
+    private static readonly Color FixtureColor = new(0.25f, 0.25f, 0.3f);
 
     private static readonly PlaneMesh LayerTile = new() { Size = new Vector2(0.9f, 0.9f) };
 
@@ -42,6 +43,10 @@ public partial class BoardView : Node3D
                         var obstacle = Box(new Vector3(0.85f, 0.35f, 0.85f), ToWorld(cell, 0.175f), ObstacleColor);
                         AddChild(obstacle);
                         _obstacles[cell] = obstacle;
+                        break;
+                    case Terrain.Fixture:
+                        // Objet de mission : un bloc étroit, pour qu'on voie la case surlignée autour.
+                        AddChild(Box(new Vector3(0.5f, 0.5f, 0.5f), ToWorld(cell, 0.25f), FixtureColor));
                         break;
                 }
             }

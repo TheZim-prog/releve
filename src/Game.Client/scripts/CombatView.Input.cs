@@ -90,7 +90,7 @@ public partial class CombatView
         }
     }
 
-    /// <summary>Bouton d'action n° i : compétence i, puis relever, puis déplacement seul (le dernier).</summary>
+    /// <summary>Bouton d'action n° i : compétence i, puis interagir, puis déplacement seul (le dernier).</summary>
     private void OnActionPressed(int index)
     {
         if (Selected is { } unit && index == unit.Skills.Count + 1)
@@ -111,7 +111,7 @@ public partial class CombatView
 
     /// <summary>
     /// Arme l'action n° <paramref name="index"/> du héros choisi : une compétence (même en recharge : l'ordre attendra
-    /// qu'elle soit prête), ou relever (juste après la dernière compétence, comme le dernier bouton).
+    /// qu'elle soit prête), ou interagir (juste après la dernière compétence, comme le dernier bouton).
     /// </summary>
     private void ArmAction(int index)
     {
@@ -119,7 +119,7 @@ public partial class CombatView
             return;
         if (index == unit.Skills.Count)
         {
-            _aiming = new Aiming(null, InteractionKind.Revive);
+            _aiming = Aiming.Interact;
             return;
         }
         if (index >= unit.Skills.Count)
@@ -148,7 +148,7 @@ public partial class CombatView
                     _aiming = aiming with { FirstTarget = clicked.Id };
                 return;
             }
-            if (aiming.CommandFor(unit.Id, _ghost, cell, clicked?.Id) is { } command)
+            if (aiming.CommandFor(unit.Id, _ghost, cell, clicked?.Id, _sim.DeviceAt(cell) is not null) is { } command)
                 TrySubmit(command);
             return;
         }

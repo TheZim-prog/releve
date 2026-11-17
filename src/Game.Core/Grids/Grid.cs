@@ -10,6 +10,12 @@ public enum Terrain : byte
 
     /// <summary>Obstacle bas (ex. une voiture) : bloque le déplacement, mais pas la vue ; on peut le sauter.</summary>
     LowObstacle,
+
+    /// <summary>
+    /// Objet de mission (bombe, portail…) : bloque le déplacement, pas la vue ; ne donne pas de couverture, ne se
+    /// détruit pas, ne s'arrache pas. Posé par les objectifs, pas par la carte.
+    /// </summary>
+    Fixture,
 }
 
 /// <summary>
@@ -96,7 +102,7 @@ public sealed class Grid
     /// <summary>Terrain de la case ; hors de la grille, un mur.</summary>
     public Terrain TerrainAt(Cell cell) => Contains(cell) ? _terrain[Index(cell)] : Terrain.Wall;
 
-    /// <summary>Vrai si on ne peut pas se tenir ni passer sur la case : hors de la grille, mur ou obstacle bas.</summary>
+    /// <summary>Vrai si on ne peut pas se tenir ni passer sur la case : hors de la grille, mur, obstacle bas ou objet de mission.</summary>
     public bool IsBlocked(Cell cell) => TerrainAt(cell) != Terrain.Floor;
 
     public bool IsWalkable(Cell cell) => !IsBlocked(cell);

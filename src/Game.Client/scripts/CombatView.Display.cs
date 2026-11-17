@@ -54,7 +54,7 @@ public partial class CombatView
             actions.Add(new ActionButton($"{key}{skill.DisplayName}\n{details}",
                 Enabled: true, Armed: _aiming?.Skill == skill, Cooldown: CooldownLeft(unit, skill)));
         }
-        actions.Add(new ActionButton("R  Relever\nun allié au contact", Enabled: true, Armed: _aiming?.Interaction is not null));
+        actions.Add(new ActionButton("R  Interagir\n(relever, objet)", Enabled: true, Armed: _aiming is { Skill: null }));
         actions.Add(new ActionButton($"Entrée  Déplacement seul\n{(_ghost is null ? "choisis d'abord une case" : "vers le fantôme")}",
             Enabled: _ghost is not null, Armed: false));
         _hud.SetSelection(header, actions);

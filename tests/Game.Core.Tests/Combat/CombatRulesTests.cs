@@ -55,6 +55,7 @@ public class CombatRulesTests
           "intentionThresholdPercent": 50,
           "reviveHpPercent": 25,
           "reviveWeight": "light",
+          "operateWeight": "light",
           "coverDamageReductionPercent": 50,
           "lowObstacleHp": 40,
           "hpPercentPerStatPoint": 3,

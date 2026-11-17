@@ -54,7 +54,10 @@ ennemi n'est en lice, et à la victoire, les civils encore sur la carte comptent
 `pursuit` avec `"exits": [ { "x": 17, "y": 0 } ]` (le vilain marqué `"pursued": true` dans les unités court dès le
 début vers ces sorties, qui ne doivent pas être sa case de départ ; réussi s'il est vaincu, à terre ou rendu, raté s'il
 en atteint une ou s'il court encore à la victoire ; une seule poursuite et un seul vilain poursuivi par combat). Les
-sorties sont surlignées en violet au sol.
+sorties sont surlignées en violet au sol ;
+`countdown` avec `"durationMs": 60000` et `"devices": [ { "x": 8, "y": 4, "interactions": 3 } ]` (neutraliser chaque
+objet, posé sur une case libre, en autant d'interactions au contact, avant la fin du compte à rebours ; les héros y
+travaillent avec R, « interagir » ; le poids de l'interaction est `operateWeight` dans `combat-rules.json`).
 
 **Désigner le chef d'une bande** : ajouter `"leader": "flee"` ou `"leader": "surrender"` à une unité du scénario (pas un
 héros ; un seul chef par camp). Quand il tombe (vaincu, à terre ou enfui), les autres unités de son camp prennent la

@@ -93,6 +93,10 @@
   "reviveHpPercent": 25,
   "reviveWeight": "light",
 
+  // Travailler sur un objet de mission (désamorcer une bombe, fermer un portail : action « interagir ») : le héros
+  // repart selon ce poids. Le nombre d'interactions par objet est dans la mission.
+  "operateWeight": "light",
+
   // Couverture : un coup venu de loin dont la ligne passe par un obstacle bas collé à la cible perd ce %
   // de ses dégâts ; l'obstacle encaisse la part absorbée et devient du sol à 0 PV.
   "coverDamageReductionPercent": 50,

@@ -11,7 +11,7 @@ public sealed record HeroCard(UnitId Id, string Name, float Hp, string HpText, f
     IReadOnlyList<float> SkillReadiness);
 
 /// <summary>
-/// Un bouton d'action du héros choisi (compétence, relever ou déplacement seul). <paramref name="Cooldown"/> : part de
+/// Un bouton d'action du héros choisi (compétence, interagir ou déplacement seul). <paramref name="Cooldown"/> : part de
 /// la recharge qu'il reste à attendre (0 = prête).
 /// </summary>
 public sealed record ActionButton(string Text, bool Enabled, bool Armed, float Cooldown = 0);
@@ -28,7 +28,7 @@ public partial class Hud : CanvasLayer
     private static readonly string HelpText = string.Join('\n',
         "Clic : héros, case (fantôme), cible",
         "Entrée ou bouton : déplacement seul (vers le fantôme)",
-        "1-9 ou boutons : compétence   R : relever",
+        "1-9 ou boutons : compétence   R : interagir (relever, objet)",
         "F1-F6 ou cartes à gauche : choisir un héros   Tab : prêt suivant",
         "Clic droit / Échap : annuler",
         "Espace : pause (pour tout le monde en réseau)",
@@ -52,7 +52,7 @@ public partial class Hud : CanvasLayer
     private readonly StyleBoxFlat _cardReady = CardStyle(new Color(0.15f, 0.12f, 0, 0.7f), new Color(1f, 0.85f, 0.2f));
     private readonly StyleBoxFlat _cardSelected = CardStyle(new Color(0.1f, 0.12f, 0.2f, 0.8f), new Color(0.5f, 0.75f, 1f));
 
-    /// <summary>Clic sur le bouton d'action n° i (compétence i, puis relever, puis déplacement seul).</summary>
+    /// <summary>Clic sur le bouton d'action n° i (compétence i, puis interagir, puis déplacement seul).</summary>
     public event Action<int>? ActionPressed;
 
     /// <summary>Clic sur la carte d'un héros.</summary>

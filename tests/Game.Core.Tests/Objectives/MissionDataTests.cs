@@ -116,6 +116,17 @@ public class MissionDataTests
     }
 
     [Fact]
+    public void ACountdown_ReadsItsDurationAndDevices()
+    {
+        var setup = WithObjectives("""[ { "kind": "countdown", "durationMs": 30000, "devices": [ { "x": 1, "y": 0, "interactions": 3 } ] } ]""")
+            .ToSetup(Rules, Catalog);
+
+        var objective = Assert.Single(setup.Objectives);
+        Assert.Equal(30000, objective.DurationMs);
+        Assert.Equal(new DeviceDefinition { X = 1, Y = 0, Interactions = 3 }, Assert.Single(objective.Devices!));
+    }
+
+    [Fact]
     public void ARescue_ReadsItsMinimum_AndNeedsThatManyCivilians()
     {
         var rescue = """[ { "kind": "rescue", "minimum": 1 } ]""";

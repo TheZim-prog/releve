@@ -229,15 +229,21 @@ public sealed partial class CombatSimulation
                 SetGauge(unit, Rules.GaugeAt(Rules.MoveOnlyRestartPercent));
                 return;
             }
+            SkillWeight weight;
             switch (interaction.Kind)
             {
                 case InteractionKind.Revive:
-                    Revive(unit, interaction.Target);
+                    Revive(unit, interaction.Target!);
+                    weight = Rules.ReviveWeight;
+                    break;
+                case InteractionKind.Operate:
+                    Operate(unit, interaction.Device!);
+                    weight = Rules.OperateWeight;
                     break;
                 default:
                     throw new InvalidOperationException($"Unknown interaction {interaction.Kind}.");
             }
-            SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(Rules.ReviveWeight)));
+            SetGauge(unit, Rules.GaugeAt(RestartPercentAfter(weight)));
             AfterAction(unit);
             return;
         }

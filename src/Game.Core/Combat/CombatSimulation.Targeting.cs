@@ -1,4 +1,5 @@
 using Game.Core.Grids;
+using Game.Core.Objectives;
 
 namespace Game.Core.Combat;
 
@@ -300,23 +301,33 @@ public sealed partial class CombatSimulation
             .FirstOrDefault();
     }
 
-    /// <summary>Interaction validée : son type et l'unité au contact visée.</summary>
-    internal sealed record PlannedInteraction(InteractionKind Kind, Unit Target);
+    /// <summary>Interaction validée : son type, et l'unité (relever) ou l'objet (objet de mission) au contact visé.</summary>
+    internal sealed record PlannedInteraction(InteractionKind Kind, Unit? Target = null, Device? Device = null);
 
     /// <summary>
-    /// Validation d'une interaction depuis <paramref name="position"/> (case d'arrivée). Relever : un allié à terre,
-    /// au contact (sans coupe d'angle par un mur, comme le corps à corps).
+    /// Validation d'une interaction depuis <paramref name="position"/> (case d'arrivée), toujours au contact (sans coupe
+    /// d'angle par un mur, comme le corps à corps). Relever : un allié à terre. Objet de mission : un objet pas encore
+    /// neutralisé, dont la course contre la montre est en cours et pas encore à son dernier tick.
     /// </summary>
     private (PlannedInteraction? Interaction, RejectionReason? Reason) PlanInteraction(Unit unit, Cell position, InteractionUse use)
     {
         switch (use.Kind)
         {
             case InteractionKind.Revive:
-                if (FindUnit(use.Target) is not { Status: UnitStatus.Downed } target || target.Team != unit.Team)
+                if (use.Target is not { } id || FindUnit(id) is not { Status: UnitStatus.Downed } target || target.Team != unit.Team)
                     return (null, RejectionReason.InvalidTarget);
                 if (!IsInMeleeReach(position, target.Position))
                     return (null, RejectionReason.OutOfRange);
-                return (new PlannedInteraction(use.Kind, target), null);
+                return (new PlannedInteraction(use.Kind, Target: target), null);
+            case InteractionKind.Operate:
+                // Au tick où le compte à rebours arrive au bout, il est trop tard (l'objectif tombe en fin de tick).
+                if (use.Cell is not { } cell || DeviceAt(cell) is not { IsNeutralized: false } device
+                    || device.Objective.State != ObjectiveState.InProgress || CurrentTick >= device.Objective.EndTick)
+                    return (null, RejectionReason.InvalidTarget);
+                // La case de l'objet est bloquée : le contact se juge comme un pas de vue (adjacente, sans coupe d'angle).
+                if (!_grid.CanSeeStep(position, cell))
+                    return (null, RejectionReason.OutOfRange);
+                return (new PlannedInteraction(use.Kind, Device: device), null);
             default: // valeur inconnue envoyée par un client : refusée, pas une erreur du serveur
                 return (null, RejectionReason.InvalidTarget);
         }

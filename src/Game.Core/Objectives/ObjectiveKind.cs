@@ -17,4 +17,10 @@ public enum ObjectiveKind
     /// Réussi s'il est vaincu, mis à terre ou rendu ; raté s'il atteint une sortie.
     /// </summary>
     Pursuit,
+
+    /// <summary>
+    /// Course contre la montre : neutraliser tous les objets (<see cref="ObjectiveDefinition.Devices"/>) avant la fin du
+    /// compte à rebours (<see cref="ObjectiveDefinition.DurationMs"/>) ; raté s'il arrive au bout.
+    /// </summary>
+    Countdown,
 }

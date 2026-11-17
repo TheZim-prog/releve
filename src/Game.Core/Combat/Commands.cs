@@ -32,10 +32,16 @@ public enum InteractionKind
 {
     /// <summary>Relever un allié à terre : il se remet debout avec une part de ses PV, jauge vide.</summary>
     Revive,
+
+    /// <summary>Travailler sur un objet de mission (désamorcer une bombe, fermer un portail) : une interaction de plus.</summary>
+    Operate,
 }
 
-/// <summary>Interaction avec une unité au contact (<paramref name="Target"/>).</summary>
-public sealed record InteractionUse(InteractionKind Kind, UnitId Target);
+/// <summary>
+/// Interaction au contact : avec une unité (<paramref name="Target"/>, pour relever) ou avec l'objet d'une case
+/// (<paramref name="Cell"/>, pour un objet de mission).
+/// </summary>
+public sealed record InteractionUse(InteractionKind Kind, UnitId? Target = null, Cell? Cell = null);
 
 /// <summary>
 /// Activation d'une unité à jauge pleine : un déplacement et/ou une action, en une seule commande atomique.

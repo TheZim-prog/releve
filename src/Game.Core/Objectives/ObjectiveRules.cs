@@ -5,22 +5,24 @@ namespace Game.Core.Objectives;
 /// <summary>Où en est chaque type d'objectif, d'après l'état de la simulation : la règle de chacun, à un seul endroit.</summary>
 internal static class ObjectiveRules
 {
-    public static ObjectiveState Evaluate(ObjectiveDefinition objective, CombatSimulation simulation) => objective.Kind switch
+    public static ObjectiveState Evaluate(Objective objective, CombatSimulation simulation) => objective.Definition.Kind switch
     {
         ObjectiveKind.Eliminate => NoEnemyLeft(simulation) ? ObjectiveState.Completed : ObjectiveState.InProgress,
-        ObjectiveKind.Rescue => Rescue(objective.Minimum!.Value, RescueTally.Of(simulation), safe: NoEnemyLeft(simulation)),
+        ObjectiveKind.Rescue => Rescue(objective.Definition.Minimum!.Value, RescueTally.Of(simulation), safe: NoEnemyLeft(simulation)),
         ObjectiveKind.Pursuit => Pursuit(simulation.PursuedUnit!),
-        _ => throw new ArgumentOutOfRangeException(nameof(objective), objective.Kind, "Unknown objective kind."),
+        ObjectiveKind.Countdown => Countdown(objective, simulation.CurrentTick),
+        _ => throw new ArgumentOutOfRangeException(nameof(objective), objective.Definition.Kind, "Unknown objective kind."),
     };
 
     /// <summary>
     /// À la victoire, ce qui est encore en cours se règle : un sauvetage compte les civils encore sur la carte, hors de
-    /// danger ; une poursuite est ratée (le vilain court encore : il s'échappe). L'élimination reste où elle en est.
+    /// danger ; une poursuite est ratée (le vilain court encore : il s'échappe), une course contre la montre aussi (les
+    /// objets n'ont pas été neutralisés). L'élimination reste où elle en est.
     /// </summary>
-    public static ObjectiveState SettleAtVictory(ObjectiveDefinition objective, CombatSimulation simulation) => objective.Kind switch
+    public static ObjectiveState SettleAtVictory(Objective objective, CombatSimulation simulation) => objective.Definition.Kind switch
     {
-        ObjectiveKind.Rescue => Rescue(objective.Minimum!.Value, RescueTally.Of(simulation), safe: true),
-        ObjectiveKind.Pursuit => ObjectiveState.Failed,
+        ObjectiveKind.Rescue => Rescue(objective.Definition.Minimum!.Value, RescueTally.Of(simulation), safe: true),
+        ObjectiveKind.Pursuit or ObjectiveKind.Countdown => ObjectiveState.Failed,
         _ => ObjectiveState.InProgress,
     };
 
@@ -34,6 +36,12 @@ internal static class ObjectiveRules
     private static ObjectiveState Pursuit(Unit pursued) =>
         pursued.Escaped ? ObjectiveState.Failed
         : pursued.Status != UnitStatus.Active ? ObjectiveState.Completed
+        : ObjectiveState.InProgress;
+
+    /// <summary>Réussi quand tous les objets sont neutralisés ; raté quand le compte à rebours arrive au bout avant.</summary>
+    private static ObjectiveState Countdown(Objective objective, int tick) =>
+        objective.Devices.All(d => d.IsNeutralized) ? ObjectiveState.Completed
+        : tick >= objective.EndTick ? ObjectiveState.Failed
         : ObjectiveState.InProgress;
 
     /// <summary>

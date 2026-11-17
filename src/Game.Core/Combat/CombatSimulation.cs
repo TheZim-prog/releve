@@ -191,6 +191,8 @@ public sealed partial class CombatSimulation
         Add(Outcome is { } victory ? (victory ? 1 : 2) : 0);
         foreach (var objective in _objectives)
             Add((int)objective.State);
+        foreach (var device in Devices)
+            Add(device.Done);
         Add(_events.Count);
         Add(_orders.Count);
         Add(_lastGroundZoneId);

@@ -17,6 +17,12 @@ public partial class CombatView
         // Les sorties du vilain poursuivi, tant que la poursuite et le combat durent.
         var chasing = _sim.Outcome is null && _sim.Objectives.Any(o => o is { Definition.Kind: ObjectiveKind.Pursuit, State: ObjectiveState.InProgress });
         _board.SetLayer("exits", chasing ? _sim.PursuitExits : Array.Empty<Cell>(), new Color(0.75f, 0.3f, 1f, 0.5f), 0.011f);
+        // Objets de mission : ceux qui restent à neutraliser (tant que leur course et le combat durent), et ceux qui le sont.
+        _board.SetLayer("devices-pending", _sim.Devices
+                .Where(d => !d.IsNeutralized && d.Objective.State == ObjectiveState.InProgress && _sim.Outcome is null)
+                .Select(d => d.Cell),
+            new Color(1f, 0.8f, 0.1f, 0.6f), 0.011f);
+        _board.SetLayer("devices-done", _sim.Devices.Where(d => d.IsNeutralized).Select(d => d.Cell), new Color(0.3f, 1f, 0.4f, 0.6f), 0.011f);
         ShowGroundZones();
         // Surveillances : la zone, ou la case de l'allié protégé (il bouge avec lui).
         _board.SetLayer("watches", _sim.Watches.SelectMany(w => w.Cells
@@ -130,9 +136,12 @@ public partial class CombatView
                     aim.Add(destination);
                 target.AddRange(StruckCells(preview));
             }
-            else if (command.Interaction is { } interaction && _sim.FindUnit(interaction.Target) is { } other)
+            else if (command.Interaction is { } interaction)
             {
-                target.Add(other.Position);
+                if (interaction.Target is { } other && _sim.FindUnit(other) is { } ally)
+                    target.Add(ally.Position);
+                else if (interaction.Cell is { } cell)
+                    target.Add(cell);
             }
         }
 
@@ -165,7 +174,7 @@ public partial class CombatView
 
         var first = aiming.FirstTarget is { } firstId ? _sim.FindUnit(firstId) : null;
         var firstCells = first is null ? none : new[] { first.Position };
-        if (aiming.CommandFor(unit.Id, _ghost, cell, _sim.UnitAt(cell)?.Id) is not { } command)
+        if (aiming.CommandFor(unit.Id, _ghost, cell, _sim.UnitAt(cell)?.Id, _sim.DeviceAt(cell) is not null) is not { } command)
             return (none, firstCells, prefix, Colors.White);
 
         // Une seule validation complète si le héros peut agir ; sinon, une seconde sans le temps pour trouver le vrai obstacle.
@@ -184,6 +193,10 @@ public partial class CombatView
         else if (_sim.UnitAt(cell) is { } other)
         {
             target = new[] { other.Position };
+        }
+        else if (command.Interaction?.Cell is { } deviceCell)
+        {
+            target = new[] { deviceCell };
         }
 
         if (reason is { } r)
