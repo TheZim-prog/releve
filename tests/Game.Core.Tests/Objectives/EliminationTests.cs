@@ -70,8 +70,8 @@ public class EliminationTests
         var events = sim.Tick();
 
         Assert.False(sim.Outcome);
-        Assert.Equal(ObjectiveState.InProgress, sim.Objectives[0].State);
-        Assert.Equal(new CombatEnded(1, false), events[^1]);
+        Assert.Equal(ObjectiveState.Failed, sim.Objectives[0].State); // à la défaite, ce qui restait est raté
+        Assert.Equal(new CombatEvent[] { new ObjectiveFailed(1, 0), new CombatEnded(1, false) }, events.TakeLast(2));
     }
 
     [Fact]
@@ -84,8 +84,28 @@ public class EliminationTests
         var events = sim.Tick();
 
         Assert.False(sim.Outcome);
-        Assert.Equal(ObjectiveState.InProgress, sim.Objectives[0].State); // rien ne se réussit sur une défaite
+        Assert.Equal(ObjectiveState.Failed, sim.Objectives[0].State); // rien ne se réussit sur une défaite
         Assert.DoesNotContain(events, e => e is ObjectiveCompleted);
+    }
+
+    [Fact]
+    public void AtVictory_ASecondaryEliminationNotDone_IsFailed()
+    {
+        // Mission réussie (un témoin protégé 50 ms, soit un tick) alors que le voyou est encore debout.
+        var witness = Unit(5, team: 0, 1, 0, behavior: Behaviors.Cautious) with { IsProtected = true };
+        var sim = new CombatSimulation(Setup(new Grid(8, 1), Unit(1, team: 0, 0, 0), witness, Unit(2, team: 1, 7, 0)) with
+        {
+            Objectives = new[]
+            {
+                new ObjectiveDefinition { Kind = ObjectiveKind.Protect, Until = ProtectUntil.Time, DurationMs = 50 },
+                new ObjectiveDefinition { Kind = ObjectiveKind.Eliminate, Secondary = true },
+            },
+        });
+
+        sim.Tick();
+
+        Assert.True(sim.Outcome);
+        Assert.Equal(ObjectiveState.Failed, sim.Objectives[1].State);
     }
 
     [Fact]

@@ -60,8 +60,9 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Fin de tick : défaite si tous les héros sont hors de combat (rien ne se réussit alors, même au même tick) ; sinon
     /// chaque objectif en cours peut être réussi ou raté, puis l'issue tombe : défaite si un objectif principal est raté,
-    /// victoire quand tous les principaux sont réussis (les secondaires encore en cours se règlent alors, cf.
-    /// <see cref="ObjectiveRules.SettleAtVictory"/>). Un combat sans objectif (tests, outils) ne se termine jamais.
+    /// victoire quand tous les principaux sont réussis. À la fin, plus rien n'est en cours : à la victoire, les
+    /// secondaires se règlent (cf. <see cref="ObjectiveRules.SettleAtVictory"/>) ; à la défaite, tout ce qui restait est
+    /// raté. Un combat sans objectif (tests, outils) ne se termine jamais.
     /// </summary>
     private void UpdateObjectives()
     {
@@ -78,10 +79,7 @@ public sealed partial class CombatSimulation
         if (main.Any(o => o.State == ObjectiveState.Failed))
             EndCombat(victory: false);
         else if (main.All(o => o.State == ObjectiveState.Completed))
-        {
-            UpdateEach(ObjectiveRules.SettleAtVictory);
             EndCombat(victory: true);
-        }
     }
 
     /// <summary>Chaque objectif en cours prend l'état que donne <paramref name="rule"/> ; un changement s'annonce.</summary>
@@ -100,8 +98,10 @@ public sealed partial class CombatSimulation
         }
     }
 
+    /// <summary>Le combat est joué : les objectifs encore en cours se règlent, puis l'issue s'annonce.</summary>
     private void EndCombat(bool victory)
     {
+        UpdateEach(victory ? ObjectiveRules.SettleAtVictory : (_, _) => ObjectiveState.Failed);
         Outcome = victory;
         _events.Add(new CombatEnded(CurrentTick, victory));
     }

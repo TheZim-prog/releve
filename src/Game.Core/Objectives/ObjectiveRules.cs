@@ -19,14 +19,13 @@ internal static class ObjectiveRules
     /// À la victoire, ce qui est encore en cours se règle : un sauvetage compte les civils encore sur la carte, hors de
     /// danger ; une poursuite est ratée (le vilain court encore : il s'échappe), une course contre la montre aussi (les
     /// objets n'ont pas été neutralisés) ; une protection est réussie (les personnes protégées sont encore debout : sinon
-    /// elle serait déjà ratée). L'élimination reste où elle en est.
+    /// elle serait déjà ratée) ; une élimination est ratée (des ennemis sont encore debout).
     /// </summary>
     public static ObjectiveState SettleAtVictory(Objective objective, CombatSimulation simulation) => objective.Definition.Kind switch
     {
         ObjectiveKind.Rescue => Rescue(objective.Definition.Minimum!.Value, RescueTally.Of(simulation), safe: true),
-        ObjectiveKind.Pursuit or ObjectiveKind.Countdown => ObjectiveState.Failed,
         ObjectiveKind.Protect => ObjectiveState.Completed,
-        _ => ObjectiveState.InProgress,
+        _ => ObjectiveState.Failed,
     };
 
     /// <summary>
