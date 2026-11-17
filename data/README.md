@@ -15,6 +15,7 @@ Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`
 | `units/` | Les types d'unités : archétypes de héros (stats de base), ennemis, gadgets, civils. |
 | `trees/` | Un arbre de compétences par archétype : branches, paliers, variantes, passifs. |
 | `heroes/` | Des héros prêts à jouer : ceux du prologue (`prologue.json`) et des héros d'essai (`trial.json`). Niveau, points de stats, cases achetées, équipement. |
+| `maps/` | Des cartes partagées entre scénarios (`"mapId": "street"` dans un scénario, au lieu d'écrire `"map"`). |
 | `scenarios/` | Les combats : la carte, les unités et les héros placés dessus, et les objectifs. Le scénario se choisit dans le menu du jeu. |
 
 ## Qui désigne qui
@@ -76,6 +77,11 @@ amener des ennemis, une élimination n'est pas finie.
 héros ; un seul chef par camp). Quand il tombe (vaincu, à terre ou enfui), les autres unités de son camp prennent la
 fuite (`flee`) ou se rendent et quittent le combat (`surrender`). Dans les deux cas, elles ne comptent plus : abattre
 le chef suffit à gagner une élimination.
+
+**Essayer les objectifs en jeu** : les scénarios de `scenarios/objectives/` (« Objectifs : … » dans le menu) en
+montrent un par type (élimination avec chef et renforts, sauvetage, poursuite, bombes, protection d'un témoin et d'un
+relais), plus une mission combinée. Les personnes à protéger sont dans `units/allies.json`, les structures dans
+`units/structures.json`. Leurs valeurs sont des valeurs d'essai, à ajuster en jouant.
 
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et

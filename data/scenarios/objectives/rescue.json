@@ -1,0 +1,30 @@
+// Essai des objectifs : sauvetage. Cinq civils pris entre les héros et la bande ; il faut en évacuer au moins trois
+// (ils fuient seuls vers le bord) et vaincre la bande. La Frappe sismique de la brute touche tout le monde : le dôme et
+// le Sauvetage éclair servent ici.
+{
+  "id": "objectives-rescue",
+  "name": "Objectifs : sauvetage",
+  "seed": 102,
+  "mapId": "street",
+  "objectives": [
+    { "kind": "rescue", "minimum": 3 },
+    { "kind": "eliminate" }
+  ],
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-energetic", "team": 0, "x": 0, "y": 6 },
+    { "hero": "prologue-telepath", "team": 0, "x": 0, "y": 4 },
+
+    { "unit": "civilian", "team": 2, "x": 8, "y": 2 },
+    { "unit": "civilian", "team": 2, "x": 9, "y": 4 },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 5 },
+    { "unit": "civilian", "team": 2, "x": 8, "y": 8 },
+    { "unit": "civilian", "team": 2, "x": 11, "y": 6 },
+
+    { "unit": "brute", "team": 1, "x": 12, "y": 4 },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 2 },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 5 }
+  ]
+}

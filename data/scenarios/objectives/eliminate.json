@@ -1,0 +1,30 @@
+// Essai des objectifs : élimination. La bande de la brute, chef (ses hommes fuient quand elle tombe), et des renforts à
+// 20 s. Abattre la brute suffit, mais les renforts doivent encore arriver… et fuiront aussitôt.
+{
+  "id": "objectives-eliminate",
+  "name": "Objectifs : élimination (chef et renforts)",
+  "seed": 101,
+  "mapId": "street",
+  "objectives": [ { "kind": "eliminate" } ],
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4 },
+    { "hero": "prologue-energetic", "team": 0, "x": 0, "y": 6 },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+
+    { "unit": "brute", "team": 1, "x": 15, "y": 4, "leader": "flee" },
+    { "unit": "brawler", "team": 1, "x": 15, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 15, "y": 5 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 1 }
+  ],
+  "waves": [
+    {
+      "atMs": 20000,
+      "units": [
+        { "unit": "brawler", "team": 1, "x": 17, "y": 4 },
+        { "unit": "brawler", "team": 1, "x": 17, "y": 6 },
+        { "unit": "gunner", "team": 1, "x": 17, "y": 8 }
+      ]
+    }
+  ]
+}

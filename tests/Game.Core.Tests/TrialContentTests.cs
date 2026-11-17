@@ -16,14 +16,7 @@ public class TrialContentTests
     public void TheTrialScenario_PlaysToTheEnd()
     {
         // Personne ne joue : tous les héros d'essai sont confiés à l'IA de base.
-        var setup = new CombatLaunch("trial", Array.Empty<HeroAssignment>()).BuildSetup(Content);
-        var sim = new CombatSimulation(setup);
-        var maxTicks = Rules.TicksPerSecond * 60 * 10;
-        while (sim.CurrentTick < maxTicks && sim.Outcome is null)
-            sim.Tick();
-
-        Assert.True(sim.Outcome is not null, "The trial combat is still running.");
-        Assert.Equal(sim.EventLog, CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick).EventLog);
+        PlayToTheEnd(new CombatLaunch("trial", Array.Empty<HeroAssignment>()).BuildSetup(Content), "trial");
     }
 
     [Theory]

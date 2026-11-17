@@ -1,0 +1,43 @@
+// Essai des objectifs : mission combinée, avec les six héros du prologue. Principal : vaincre la bande (la brute est
+// son chef : ses hommes se rendent quand elle tombe). Secondaires, pour le bilan : évacuer au moins trois civils sur
+// quatre, et neutraliser la bombe avant 60 s… et avant la fin du combat (gagner avant, bombe intacte, la rate). Des
+// renforts arrivent à 25 s.
+{
+  "id": "objectives-combined",
+  "name": "Objectifs : mission combinée",
+  "seed": 106,
+  "mapId": "street",
+  "objectives": [
+    { "kind": "eliminate" },
+    { "kind": "rescue", "minimum": 3, "secondary": true },
+    { "kind": "countdown", "durationMs": 60000, "devices": [ { "x": 12, "y": 2, "interactions": 4 } ], "secondary": true }
+  ],
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4 },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-energetic", "team": 0, "x": 0, "y": 6 },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+    { "hero": "prologue-telepath", "team": 0, "x": 0, "y": 4 },
+
+    { "unit": "civilian", "team": 2, "x": 8, "y": 2 },
+    { "unit": "civilian", "team": 2, "x": 9, "y": 4 },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 6 },
+    { "unit": "civilian", "team": 2, "x": 11, "y": 5 },
+
+    { "unit": "brute", "team": 1, "x": 15, "y": 4, "leader": "surrender" },
+    { "unit": "brawler", "team": 1, "x": 15, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 14, "y": 7 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 1 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 8 }
+  ],
+  "waves": [
+    {
+      "atMs": 25000,
+      "units": [
+        { "unit": "brawler", "team": 1, "x": 17, "y": 4 },
+        { "unit": "brawler", "team": 1, "x": 17, "y": 6 }
+      ]
+    }
+  ]
+}

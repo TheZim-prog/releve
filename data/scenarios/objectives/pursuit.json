@@ -1,0 +1,23 @@
+// Essai des objectifs : poursuite. Le caïd file dès le début vers les sorties de droite (surlignées en violet) ; ses
+// hommes couvrent sa fuite. L'arrêter compte (principal) ; vaincre ses hommes, non (secondaire).
+{
+  "id": "objectives-pursuit",
+  "name": "Objectifs : poursuite du caïd",
+  "seed": 103,
+  "mapId": "street",
+  "objectives": [
+    { "kind": "pursuit", "exits": [ { "x": 17, "y": 4 }, { "x": 17, "y": 5 } ] },
+    { "kind": "eliminate", "secondary": true }
+  ],
+  "units": [
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4 },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+    { "hero": "prologue-telepath", "team": 0, "x": 0, "y": 4 },
+
+    { "unit": "kingpin", "team": 1, "x": 3, "y": 4, "pursued": true },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 4 },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 5 },
+    { "unit": "gunner", "team": 1, "x": 15, "y": 2 }
+  ]
+}

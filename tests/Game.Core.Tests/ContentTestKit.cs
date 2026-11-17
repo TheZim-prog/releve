@@ -1,5 +1,6 @@
 using Game.Core.Combat;
 using Game.Core.Grids;
+using Game.Core.Objectives;
 
 namespace Game.Core.Tests;
 
@@ -52,6 +53,24 @@ internal static class ContentTestKit
         events.OfType<UnitDamaged>().Select(e => e.Unit.Value).Order().ToArray();
 
     public static int Ticks(int milliseconds) => Rules.MillisecondsToTicks(milliseconds);
+
+    /// <summary>
+    /// Joue le combat jusqu'à son issue (au plus 10 minutes de jeu) et vérifie qu'il se termine, que plus aucun objectif
+    /// n'est en cours, et qu'il se rejoue à l'identique. Renvoie le combat joué et son issue en clair.
+    /// </summary>
+    public static (CombatSimulation Sim, string Outcome) PlayToTheEnd(CombatSetup setup, string name)
+    {
+        var sim = new CombatSimulation(setup);
+        var maxTicks = Rules.TicksPerSecond * 60 * 10;
+        while (sim.CurrentTick < maxTicks && sim.Outcome is null)
+            sim.Tick();
+
+        Assert.True(sim.Outcome is not null, $"Combat '{name}' still running after {maxTicks} ticks.");
+        Assert.DoesNotContain(sim.Objectives, o => o.State == ObjectiveState.InProgress);
+        Assert.Equal(sim.EventLog, CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick).EventLog);
+        var outcome = sim.Outcome == true ? "victoire" : "défaite";
+        return (sim, $"[{name}] {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, {outcome}");
+    }
 
     public static Cell PositionOf(CombatSimulation sim, int id) => sim.FindUnit(new UnitId(id))!.Position;
 }

@@ -1,0 +1,45 @@
+// Essai des objectifs : protection. Un témoin (il recule quand on l'attaque) et un relais (une structure : il ne bouge
+// pas et ne se répare pas) à garder debout jusqu'à la fin des trois vagues. Les ennemis les visent en priorité.
+{
+  "id": "objectives-protect",
+  "name": "Objectifs : protection du témoin et du relais",
+  "seed": 105,
+  "mapId": "street",
+  "objectives": [ { "kind": "protect", "until": "waves" } ],
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 4, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 4, "y": 5 },
+    { "hero": "prologue-energetic", "team": 0, "x": 3, "y": 6 },
+    { "hero": "prologue-tech", "team": 0, "x": 2, "y": 3 },
+
+    { "unit": "relay", "team": 0, "x": 3, "y": 4, "protected": true },
+    { "unit": "witness", "team": 0, "x": 2, "y": 5, "protected": true },
+
+    { "unit": "brawler", "team": 1, "x": 15, "y": 3 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 6 }
+  ],
+  "waves": [
+    {
+      "atMs": 10000,
+      "units": [
+        { "unit": "brawler", "team": 1, "x": 17, "y": 4 },
+        { "unit": "brawler", "team": 1, "x": 17, "y": 5 }
+      ]
+    },
+    {
+      "atMs": 25000,
+      "units": [
+        { "unit": "brute", "team": 1, "x": 17, "y": 4 },
+        { "unit": "gunner", "team": 1, "x": 17, "y": 2 }
+      ]
+    },
+    {
+      "atMs": 40000,
+      "units": [
+        { "unit": "brawler", "team": 1, "x": 17, "y": 3 },
+        { "unit": "brawler", "team": 1, "x": 17, "y": 6 },
+        { "unit": "gunner", "team": 1, "x": 17, "y": 8 }
+      ]
+    }
+  ]
+}

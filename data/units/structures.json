@@ -1,0 +1,15 @@
+// Structures : des objets de terrain destructibles, le « lieu » d'une protection (docs/design.md section 3). Elles
+// n'agissent pas, ne bougent pas, ne subissent pas d'états et ne se réparent pas ; personne ne traverse leur case, mais
+// on voit par-dessus. Valeurs d'essai, à ajuster en jouant.
+[
+  {
+    "id": "relay", "name": "Relais",
+    "isStructure": true,
+    "maxHp": 120, "initiative": 0, "mobility": 0,
+    "onDefeat": "removed",
+    "basicAttack": null,
+    "opportunityAttacksPerCycle": 0,
+    "behavior": "inert",
+    "skills": []
+  }
+]

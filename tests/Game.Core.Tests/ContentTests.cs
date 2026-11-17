@@ -194,19 +194,10 @@ public class ContentTests
         foreach (var (x, y) in new[] { (7, 3), (8, 4), (9, 1) })
             units.Add(Units["civilian"].ToSetup(new UnitId(id++), team: 2, new Cell(x, y)));
 
-        var setup = new CombatSetup(Rules, Arena, units, Seed: 2026);
-        var sim = new CombatSimulation(setup);
-        var maxTicks = Rules.TicksPerSecond * 60 * 10;
-        while (sim.CurrentTick < maxTicks && sim.Outcome is null)
-            sim.Tick();
+        var (sim, outcome) = ContentTestKit.PlayToTheEnd(new CombatSetup(Rules, Arena, units, Seed: 2026), name);
 
-        var outcome = sim.Outcome switch { true => "victoire", false => "défaite", null => "en cours" };
-        _output.WriteLine($"[{name}] durée : {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, {outcome}");
+        _output.WriteLine(outcome);
         foreach (var unit in sim.Units)
             _output.WriteLine($"  {unit.Definition.Name,-12} équipe {unit.Team}  {unit.Status,-8} {unit.Hp,4}/{unit.MaxHp} PV{(unit.IsFleeing ? " en fuite" : "")}{(unit.Escaped ? ", enfui" : "")}");
-
-        Assert.True(sim.Outcome is not null, $"Combat '{name}' still running after {maxTicks} ticks.");
-        var replayed = CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick);
-        Assert.Equal(sim.EventLog, replayed.EventLog);
     }
 }

@@ -1,0 +1,34 @@
+// Essai des objectifs : course contre la montre. Deux bombes (surlignées en jaune) à neutraliser en 45 s, trois
+// interactions chacune (R, « interagir », au contact) ; la bande les garde et des renforts arrivent à 15 s.
+{
+  "id": "objectives-countdown",
+  "name": "Objectifs : bombes à neutraliser",
+  "seed": 104,
+  "mapId": "street",
+  "objectives": [
+    {
+      "kind": "countdown", "durationMs": 45000,
+      "devices": [ { "x": 9, "y": 2, "interactions": 3 }, { "x": 12, "y": 8, "interactions": 3 } ]
+    }
+  ],
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4 },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+
+    { "unit": "brawler", "team": 1, "x": 10, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 8 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 2 },
+    { "unit": "brute", "team": 1, "x": 15, "y": 6 }
+  ],
+  "waves": [
+    {
+      "atMs": 15000,
+      "units": [
+        { "unit": "brawler", "team": 1, "x": 17, "y": 3 },
+        { "unit": "brawler", "team": 1, "x": 17, "y": 7 }
+      ]
+    }
+  ]
+}

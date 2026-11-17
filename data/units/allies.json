@@ -1,0 +1,14 @@
+// Alliés commandés par le jeu : les personnes à protéger (objectif Protection, docs/design.md section 3). Placées dans
+// un scénario avec "protected": true ; à terre, la protection est ratée. Valeurs d'essai, à ajuster en jouant.
+[
+  {
+    // Ne se bat pas : attaqué, il recule loin de l'ennemi le plus proche (comportement prudent).
+    "id": "witness", "name": "Témoin",
+    "maxHp": 50, "initiative": 60, "mobility": 3,
+    "onDefeat": "downed",
+    "basicAttack": null,
+    "opportunityAttacksPerCycle": 0,
+    "behavior": "cautious",
+    "skills": []
+  }
+]
