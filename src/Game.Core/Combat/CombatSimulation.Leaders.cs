@@ -16,7 +16,7 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Le chef est tombé : ses sbires, les unités de son camp d'origine encore sur la carte (ni civils, ni gadgets),
+    /// Le chef est tombé : ses sbires, les unités de son camp d'origine encore sur la carte (ni civils, ni gadgets, ni structures),
     /// prennent la fuite ou se rendent. Un sbire à terre se rend aussi, ou fuira s'il est relevé.
     /// </summary>
     private void ReleaseMinions(Unit leader)
@@ -43,5 +43,5 @@ public sealed partial class CombatSimulation
 
     private IEnumerable<Unit> MinionsOf(Unit leader) =>
         _units.Where(u => u != leader && u.OriginalTeam == leader.OriginalTeam && u.Status != UnitStatus.Removed
-                          && !u.IsCivilian && u.SummonedBy is null);
+                          && !u.IsCivilian && u.SummonedBy is null && !u.IsStructure);
 }

@@ -69,6 +69,14 @@ public sealed record UnitDefinition
     /// </summary>
     public bool IsCivilian { get; init; }
 
+    /// <summary>
+    /// Structure : un objet de terrain destructible (le lieu d'une protection). Elle n'agit pas (comportement
+    /// <see cref="Behaviors.Inert"/>, ni initiative, ni mobilité, ni compétence), ne bouge pas et ne se fait pas déplacer,
+    /// ne subit pas d'états, ne reçoit ni soin ni soutien. Personne ne traverse sa case, mais on voit par-dessus ; seuls
+    /// les coups (et les zones qui touchent tout le monde) l'abîment. Faux par défaut.
+    /// </summary>
+    public bool IsStructure { get; init; }
+
     /// <summary>Nombre d'activations après lequel l'unité disparaît (ex. balise : 3), ou <c>null</c> (illimité).</summary>
     public int? MaxActivations { get; init; }
 
@@ -118,6 +126,11 @@ public sealed record UnitDefinition
                            || Initiative == 0 || Mobility == 0))
             throw new ArgumentException(
                 $"Unit '{Id}': a civilian flees ('{Behaviors.Flee}', so it can act and move), has no skill or opportunity attack, and is lost (removed) at 0 HP.");
+        if (IsStructure && (Behavior != Behaviors.Inert || Initiative != 0 || Mobility != 0 || Skills is not { Count: 0 }
+                            || BasicAttack is not null || OpportunityAttacksPerCycle != 0 || OnDefeat != DefeatOutcome.Removed
+                            || Passive is not null || FleeAtHpPercent is not null || Lure is not null || DefeatBlast is not null))
+            throw new ArgumentException(
+                $"Unit '{Id}': a structure never acts ('{Behaviors.Inert}', no initiative, mobility, skill, passive or opportunity attack) and is destroyed (removed) at 0 HP.");
         Lure?.Validate(Id);
         // Un leurre est un gadget : posé par une compétence, il agit seul et disparaît à 0 PV.
         if (Lure is not null && (Behavior is null || OnDefeat != DefeatOutcome.Removed || BasicAttack is not null))

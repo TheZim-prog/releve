@@ -85,7 +85,7 @@ public static class Texts
         ObjectiveKind.Countdown => objective.Devices!.Count == 1
             ? "Neutraliser l'objet à temps"
             : $"Neutraliser les {objective.Devices.Count} objets à temps",
-        ObjectiveKind.Protect => $"Protéger {string.Join(", ", sim.Units.Where(u => u.IsProtected).Select(u => u.Definition.Name).Distinct())}"
+        ObjectiveKind.Protect => $"Protéger : {string.Join(", ", sim.Units.Where(u => u.IsProtected).Select(u => u.Definition.Name).Distinct())}"
                                  + (objective.Until == ProtectUntil.Time ? $" pendant {(objective.DurationMs + 999) / 1000} s" : " jusqu'à la fin des vagues"),
         _ => objective.Kind.ToString(),
     };

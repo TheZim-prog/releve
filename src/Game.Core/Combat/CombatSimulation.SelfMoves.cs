@@ -27,14 +27,14 @@ public sealed partial class CombatSimulation
     {
         if (use.Cell is not { } aim || use.Target is not null || position.DirectionTo(aim) is not { } step)
             return (null, RejectionReason.InvalidTarget);
-        // Course à travers les unités (les civils traversés ne sont pas touchés), arrêtée par les murs et les
-        // obstacles bas (sans coupe d'angle par le décor).
+        // Course à travers les unités (les civils traversés ne sont pas touchés), arrêtée par les murs, les
+        // obstacles bas et les structures (sans coupe d'angle par le décor).
         var course = new List<Cell>();
         var previous = position;
         for (var i = 0; i < skill.Range; i++)
         {
             var next = new Cell(previous.X + step.X, previous.Y + step.Y);
-            if (!_grid.CanStep(previous, next))
+            if (!_grid.CanStep(previous, next) || UnitAt(next) is { IsStructure: true })
                 break;
             course.Add(next);
             previous = next;

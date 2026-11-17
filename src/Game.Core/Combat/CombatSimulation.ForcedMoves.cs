@@ -66,10 +66,13 @@ public sealed partial class CombatSimulation
         }
     }
 
-    /// <summary>Inébranlable : la cible a ce passif et le déplacement vient d'un adversaire. Elle reste où elle est.</summary>
+    /// <summary>
+    /// Inébranlable : la cible a ce passif et le déplacement vient d'un adversaire. Une structure (objet de terrain) ne
+    /// bouge jamais. Elle reste où elle est.
+    /// </summary>
     private bool ResistsForcedMove(Unit caster, Unit target)
     {
-        if (!target.HasPassive(PassiveKind.Unshakable) || !AreOpponents(caster, target))
+        if (!target.IsStructure && (!target.HasPassive(PassiveKind.Unshakable) || !AreOpponents(caster, target)))
             return false;
         _events.Add(new UnitResisted(CurrentTick, target.Id));
         return true;

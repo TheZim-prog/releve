@@ -4,7 +4,7 @@ using Godot;
 namespace Game.Client;
 
 /// <summary>
-/// Une unité à l'écran : capsule colorée, nom et PV, barres de PV et de jauge, états en cours, et son intention si
+/// Une unité à l'écran : capsule colorée (bloc pour une structure), nom et PV, barres de PV et de jauge, états en cours, et son intention si
 /// elle est révélée. Elle ne décide rien : elle recopie l'état de l'unité à chaque image.
 /// </summary>
 public partial class UnitView : Node3D
@@ -29,11 +29,14 @@ public partial class UnitView : Node3D
         _color = color;
         _bodyMaterial.AlbedoColor = color;
         var scale = small ? 0.65f : 1f;
+        // Une structure (objet de terrain) est un bloc ; les autres unités, des capsules.
         _body = new MeshInstance3D
         {
-            Mesh = new CapsuleMesh { Radius = 0.3f * scale, Height = 1.3f * scale },
+            Mesh = unit.IsStructure
+                ? new BoxMesh { Size = new Vector3(0.8f, 0.8f, 0.8f) }
+                : new CapsuleMesh { Radius = 0.3f * scale, Height = 1.3f * scale },
             MaterialOverride = _bodyMaterial,
-            Position = new Vector3(0, 0.65f * scale, 0),
+            Position = new Vector3(0, unit.IsStructure ? 0.4f : 0.65f * scale, 0),
         };
         AddChild(_body);
 

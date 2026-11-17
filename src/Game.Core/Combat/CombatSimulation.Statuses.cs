@@ -73,9 +73,11 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Inébranlable : jamais déséquilibré, d'où que ça vienne (un gaz allié compris). Serein : aucun état néfaste ne prend.
+    /// Une structure (objet de terrain) ne subit aucun état.
     /// </summary>
     private static bool ResistsStatus(Unit target, StatusKind status) =>
-        (status == StatusKind.OffBalance && target.HasPassive(PassiveKind.Unshakable))
+        target.IsStructure
+        || (status == StatusKind.OffBalance && target.HasPassive(PassiveKind.Unshakable))
         || (status.IsHarmful() && target.HasStatus(StatusKind.Serene));
 
     /// <summary>

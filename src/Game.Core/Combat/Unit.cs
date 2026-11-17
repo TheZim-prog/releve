@@ -190,11 +190,17 @@ public sealed class Unit
     /// <summary>Mise à l'abri à terre par un coéquipier (Sauvetage éclair) : compte pour la règle de campagne des chutes.</summary>
     public bool WasRescued { get; internal set; }
 
-    /// <summary>Combattant debout : ni à terre, ni civil, ni gadget posé par un autre. C'est ce qui compte pour l'issue du combat.</summary>
-    public bool IsStandingCombatant => Status == UnitStatus.Active && !IsCivilian && SummonedBy is null;
+    /// <summary>
+    /// Combattant debout : ni à terre, ni civil, ni gadget posé par un autre, ni structure. C'est ce qui compte pour l'issue
+    /// du combat.
+    /// </summary>
+    public bool IsStandingCombatant => Status == UnitStatus.Active && !IsCivilian && SummonedBy is null && !IsStructure;
 
     /// <summary>Civil (neutre) : voir <see cref="UnitDefinition.IsCivilian"/>.</summary>
     public bool IsCivilian => Definition.IsCivilian;
+
+    /// <summary>Structure (objet de terrain destructible) : voir <see cref="UnitDefinition.IsStructure"/>.</summary>
+    public bool IsStructure => Definition.IsStructure;
 
     /// <summary>Chef de son camp : ce que font ses sbires quand il tombe (<c>null</c> : pas un chef).</summary>
     public MinionReaction? MinionsOnFall { get; }
@@ -218,7 +224,7 @@ public sealed class Unit
     /// Héros : du camp des joueurs d'origine, ni civil, ni gadget, ni personne à protéger. Quand plus aucun n'est debout, le
     /// combat est perdu.
     /// </summary>
-    public bool IsHero => OriginalTeam == CombatSimulation.PlayerTeam && !IsCivilian && SummonedBy is null && !IsProtected;
+    public bool IsHero => OriginalTeam == CombatSimulation.PlayerTeam && !IsCivilian && SummonedBy is null && !IsProtected && !IsStructure;
 
     /// <summary>Enfuie : a quitté le combat par le bord de carte (retirée, mais pas vaincue).</summary>
     public bool Escaped { get; internal set; }

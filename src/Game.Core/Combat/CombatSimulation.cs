@@ -313,7 +313,7 @@ public sealed partial class CombatSimulation
     private void GainGauge(Unit unit, int amount)
     {
         var gained = Math.Min(amount, Rules.GaugeCapacity - unit.Gauge);
-        if (gained <= 0 || unit.Charge is not null)
+        if (gained <= 0 || unit.Charge is not null || unit.IsStructure) // une structure n'agit jamais
             return;
         _events.Add(new GaugeGained(CurrentTick, unit.Id, gained, unit.Gauge + gained));
         SetGauge(unit, unit.Gauge + gained);

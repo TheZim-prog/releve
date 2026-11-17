@@ -194,14 +194,15 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Une attaque vise un ennemi ; une compétence de soutien, un allié autre que le lanceur ; une télékinésie,
-    /// n'importe quelle unité sauf le lanceur. Personne ne vise un civil directement (le sauvetage a sa propre règle).
+    /// n'importe quelle unité sauf le lanceur. Personne ne vise un civil directement (le sauvetage a sa propre règle) ;
+    /// une structure ne se vise que pour l'attaquer.
     /// </summary>
     private static bool IsRightSide(Unit caster, Unit target, SkillDefinition skill) => !target.IsCivilian && skill.Target switch
     {
         // Une unité confuse frappe n'importe qui (sauf elle-même).
         SkillTargeting.Enemy => target.Team != caster.Team || (caster.HasStatus(StatusKind.Confused) && target != caster),
-        SkillTargeting.Ally => target != caster && target.Team == caster.Team,
-        SkillTargeting.Any => target != caster,
+        SkillTargeting.Ally => target != caster && target.Team == caster.Team && !target.IsStructure,
+        SkillTargeting.Any => target != caster && !target.IsStructure,
         _ => throw new InvalidOperationException($"Unknown target kind {skill.Target}."),
     };
 

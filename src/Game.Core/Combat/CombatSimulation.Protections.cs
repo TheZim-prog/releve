@@ -13,6 +13,8 @@ public sealed partial class CombatSimulation
     /// </summary>
     private void GrantTempHp(Unit caster, Unit target, TempHpDefinition tempHp)
     {
+        if (target.IsStructure) // ni soin ni soutien sur un objet de terrain
+            return;
         var amount = tempHp.PercentOfCasterHp > 0
             ? (int)((long)caster.Hp * tempHp.PercentOfCasterHp / 100)
             : caster.HealWith(_random.NextInt(tempHp.Min, tempHp.Max));

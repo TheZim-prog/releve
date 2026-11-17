@@ -333,9 +333,11 @@ public sealed partial class CombatSimulation
         _events.Add(announcement);
     }
 
-    /// <summary>Soigne une unité debout, sans dépasser son maximum. Renvoie les PV rendus.</summary>
+    /// <summary>Soigne une unité debout (pas une structure), sans dépasser son maximum. Renvoie les PV rendus.</summary>
     private int Heal(Unit unit, int amount)
     {
+        if (unit.IsStructure) // un objet de terrain ne se répare pas
+            return 0;
         var healed = Math.Min(amount, unit.MaxHp - unit.Hp);
         if (healed <= 0)
             return 0;

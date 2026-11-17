@@ -165,7 +165,8 @@ public sealed partial class CombatSimulation
         if (!from.IsDiagonalTo(to))
             return true;
         bool Blocks(Cell corner) =>
-            UnitAt(corner) is { } other && AreOpponents(other, unit) && (downedBlockCorners || other.Status == UnitStatus.Active);
+            UnitAt(corner) is { } other && other != unit
+            && (other.IsStructure || (AreOpponents(other, unit) && (downedBlockCorners || other.Status == UnitStatus.Active)));
         return !Blocks(new Cell(from.X, to.Y)) && !Blocks(new Cell(to.X, from.Y));
     }
 
@@ -206,14 +207,15 @@ public sealed partial class CombatSimulation
         var other = UnitAt(cell);
         if (other is null || other == mover)
             return Occupant.None;
-        // On traverse un civil comme un allié, et un civil traverse tout le monde.
-        return AreOpponents(other, mover) ? Occupant.Enemy : Occupant.Ally;
+        // Une structure bloque tout le monde, comme un mur ; on traverse un civil comme un allié, et un civil traverse
+        // tout le monde.
+        return other.IsStructure || AreOpponents(other, mover) ? Occupant.Enemy : Occupant.Ally;
     }
 
     /// <summary>Adversaires : de camps différents, et aucun des deux n'est un civil (neutre).</summary>
     internal static bool AreOpponents(Unit a, Unit b) => a.Team != b.Team && !a.IsCivilian && !b.IsCivilian;
 
-    /// <summary>Pour la ligne de vue : seuls les ennemis debout bloquent.</summary>
+    /// <summary>Pour la ligne de vue : seuls les ennemis debout bloquent (pas une structure : on voit par-dessus).</summary>
     private bool BlocksSightOf(Unit viewer, Cell cell) =>
-        UnitAt(cell) is { Status: UnitStatus.Active } other && AreOpponents(other, viewer);
+        UnitAt(cell) is { Status: UnitStatus.Active, IsStructure: false } other && AreOpponents(other, viewer);
 }

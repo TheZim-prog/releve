@@ -63,7 +63,9 @@ travaillent avec R, « interagir » ; le poids de l'interaction est `operateWeig
 commandés par le jeu, pas des héros) doivent rester debout ; une seule à terre et c'est raté. Leur type d'unité dit
 comment elles réagissent : `"behavior": "basic"` pour qu'elles se défendent, `"behavior": "cautious"` pour qu'elles
 reculent loin des ennemis quand on les attaque (sans jamais frapper). Les ennemis les visent en priorité quand ils
-peuvent les frapper.
+peuvent les frapper. Pour protéger un **lieu**, on protège une structure : un type d'unité avec `"isStructure": true`
+(comportement `inert`, initiative et mobilité à 0, ni compétence ni attaque d'opportunité, retirée à 0 PV). Elle ne
+bouge pas, ne subit pas d'états, ne se répare pas ; personne ne traverse sa case, mais on voit par-dessus.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

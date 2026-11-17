@@ -137,6 +137,9 @@ public partial class CombatView
             return Civilian;
         if (unit.SummonedBy is not null)
             return unit.OriginalTeam == CombatSimulation.PlayerTeam ? HeroGadget : EnemyDefault;
-        return UnitColors.TryGetValue(unit.Definition.Id, out var color) ? color : EnemyDefault;
+        if (UnitColors.TryGetValue(unit.Definition.Id, out var color))
+            return color;
+        // Ce qu'on protège (personne ou structure) : la couleur des alliés, pas celle des ennemis.
+        return unit.IsProtected ? Protected : EnemyDefault;
     }
 }

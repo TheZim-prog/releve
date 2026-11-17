@@ -30,8 +30,10 @@ internal sealed class BeaconBehavior : IUnitBehavior
         unit.Skills.FirstOrDefault(s => s.Zone is not null && s.Range == 0
                                         && (s.Zone.Affects == ZoneTargets.Allies ? s.Heals || s.TempHp is not null : s.HasHitEffect));
 
+    /// <summary>Sa zone sert à cette unité : un adversaire à frapper, ou un allié à soigner ou à protéger (pas une structure).</summary>
     private static bool Helps(SkillDefinition skill, Unit unit, Unit other) =>
         skill.IsOffensive
             ? CombatSimulation.AreOpponents(unit, other)
-            : (skill.Heals && other.Hp < other.MaxHp) || (skill.TempHp is not null && other.TempHp == 0 && other.SummonedBy is null);
+            : !other.IsStructure
+              && ((skill.Heals && other.Hp < other.MaxHp) || (skill.TempHp is not null && other.TempHp == 0 && other.SummonedBy is null));
 }
