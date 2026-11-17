@@ -232,7 +232,8 @@ public sealed partial class CombatSimulation
             Add(unit.TauntedBy?.Value ?? 0);
             Add(unit.PendingGauge);
             Add((int)unit.Status);
-            Add((unit.IsFleeing ? 1 : 0) | (unit.Escaped ? 2 : 0) | (unit.Surrendered ? 4 : 0) | (unit.FellAsLeader ? 8 : 0));
+            Add((unit.IsFleeing ? 1 : 0) | (unit.Escaped ? 2 : 0) | (unit.Surrendered ? 4 : 0) | (unit.FellAsLeader ? 8 : 0)
+                | (unit.AttackedSinceActivation ? 16 : 0));
             Add(unit.Team);
             Add((int)unit.SpentReactions);
             Add(unit.Guard is null ? 0 : 1 + (int)unit.Guard.Against);

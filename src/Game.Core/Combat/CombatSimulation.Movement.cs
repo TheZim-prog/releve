@@ -107,7 +107,10 @@ public sealed partial class CombatSimulation
     /// de sa portée, et c'est un ennemi debout, non étourdi, pas en train de charger, avec une attaque de base et
     /// une attaque d'opportunité restante, qu'aucune Diversion ne retient.
     /// </summary>
-    private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell next) =>
+    private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell next) => CanMakeOpportunityAttack(enemy, mover, mover.Position, next);
+
+    /// <summary>La même règle, pour un pas de <paramref name="from"/> à <paramref name="next"/> (un trajet qu'on envisage).</summary>
+    private bool CanMakeOpportunityAttack(Unit enemy, Unit mover, Cell from, Cell next) =>
         enemy != mover
         && AreOpponents(enemy, mover)
         && enemy.Status == UnitStatus.Active
@@ -116,9 +119,27 @@ public sealed partial class CombatSimulation
         && enemy.BasicAttack is not null
         && enemy.OpportunityAttacksLeft > 0
         && ControllerOf(enemy) != Behaviors.FleeInstance // en fuite, elle ne fait que courir
-        && IsInMeleeReach(enemy, mover.Position)
+        && IsInMeleeReach(enemy, from)
         && !IsInMeleeReach(enemy, next)
         && !IsDistracted(enemy, mover);
+
+    /// <summary>
+    /// Un déplacement de l'unité le long de <paramref name="path"/> provoquerait-il une attaque d'opportunité ? (Pour l'IA
+    /// qui veut s'éloigner sans se faire punir ; rien ne change.)
+    /// </summary>
+    internal bool PathProvokesOpportunityAttack(Unit unit, IReadOnlyList<Cell> path)
+    {
+        if (unit.HasPassive(PassiveKind.IgnoresOpportunityAttacks))
+            return false;
+        var from = unit.Position;
+        foreach (var next in path)
+        {
+            if (_units.Any(enemy => CanMakeOpportunityAttack(enemy, unit, from, next)))
+                return true;
+            from = next;
+        }
+        return false;
+    }
 
     /// <summary>
     /// Case que l'unité peut frapper au contact : adjacente, libre, sans coupe d'angle par un mur (règle de la vue :

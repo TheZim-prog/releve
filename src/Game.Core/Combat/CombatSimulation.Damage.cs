@@ -29,6 +29,9 @@ public sealed partial class CombatSimulation
         // Tombée plus tôt dans la même compétence (une Réaction en chaîne au milieu d'une zone) : elle n'est pas refrappée.
         if (target.Status != UnitStatus.Active)
             return false;
+        // Un coup ennemi, qu'il porte ou non (esquivé, bloqué, absorbé, sans dégâts) : elle a été attaquée.
+        if (AreOpponents(attacker, target))
+            target.AttackedSinceActivation = true;
         // Prise par un garde du corps, esquivée ou parée : la cible ne la reçoit pas.
         if (AvertedBeforeHit(attacker, skill, target, damageFactor, origin))
             return false;

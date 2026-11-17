@@ -226,6 +226,12 @@ public sealed class Unit
     /// <summary>Rendue (son chef tombé) : a quitté le combat (retirée, mais pas vaincue).</summary>
     public bool Surrendered { get; internal set; }
 
+    /// <summary>
+    /// Un adversaire l'a attaquée depuis sa dernière action, que le coup ait porté ou non (un prudent recule alors à sa
+    /// prochaine activation). Les dégâts sans attaquant (brûlure) et le tir ami ne comptent pas.
+    /// </summary>
+    public bool AttackedSinceActivation { get; internal set; }
+
     /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
     public int Activations { get; internal set; }
 

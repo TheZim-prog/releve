@@ -41,9 +41,10 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
             return new Intention((reaching ?? skills.FirstOrDefault())?.Id, nearest.Id);
         }
 
-        // L'ennemi le plus fragile qu'au moins une compétence atteint (OrderBy est stable : à égalité, l'ordre
-        // des unités), puis la plus forte compétence qui l'atteint.
-        foreach (var target in enemies.OrderBy(e => e.Hp))
+        // D'abord ce qu'on protège (personnes de l'objectif Protection), puis l'ennemi le plus fragile : le premier
+        // qu'au moins une compétence atteint (OrderBy est stable : à égalité, l'ordre des unités), avec la plus forte
+        // compétence qui l'atteint.
+        foreach (var target in enemies.OrderByDescending(e => e.IsProtected).ThenBy(e => e.Hp))
         {
             var skill = skills.FirstOrDefault(s => CanAttack(sim, unit, s, target, reachable));
             if (skill is not null)
@@ -182,7 +183,8 @@ internal sealed class BasicBehavior(BasicBehavior.Mode mode) : IUnitBehavior
         return use;
     }
 
-    private static IReadOnlyList<Cell> ReachableCells(CombatSimulation sim, Unit unit) =>
+    /// <summary>Cases où l'unité peut aller ce tour (la sienne d'abord, puis par distance croissante), selon sa portée de déplacement.</summary>
+    internal static IReadOnlyList<Cell> ReachableCells(CombatSimulation sim, Unit unit) =>
         Pathfinder.ReachableCells(sim.Grid, unit.Position, unit.Reach, cell => sim.OccupantFor(unit, cell)).Keys.ToList();
 
     /// <summary>Distance à pied de chaque case jusqu'à <paramref name="target"/>, selon les règles de déplacement de l'unité.</summary>

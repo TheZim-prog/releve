@@ -94,8 +94,9 @@ public partial class CombatView
         // Révélées pour toutes (touche de débogage), ou par l'Analyse tactique.
         if (unit.Intention is not { } intention || unit.Status != UnitStatus.Active || !(_showIntentions || revealed.Contains(unit.Id)))
             return null;
+        // Sans compétence, sur elle-même : elle fuit, ou (prudente, à protéger) elle reste sur ses gardes.
         if (intention.SkillId is null && intention.Target == unit.Id)
-            return "→ fuit";
+            return unit.IsFleeing || unit.IsCivilian ? "→ fuit" : "→ sur ses gardes";
         var target = _sim.FindUnit(intention.Target)?.Definition.Name ?? "?";
         var skill = intention.SkillId is { } id ? unit.FindSkill(id)?.DisplayName : null;
         return skill is null ? $"→ {target}" : $"→ {skill} sur {target}";

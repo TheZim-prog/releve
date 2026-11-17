@@ -4,7 +4,8 @@ namespace Game.Core.Combat;
 public static class Behaviors
 {
     /// <summary>
-    /// Comportement de base (docs/design.md) : vise l'ennemi le plus fragile qu'il peut frapper à son prochain tour,
+    /// Comportement de base (docs/design.md) : vise d'abord une personne à protéger qu'il peut frapper à son prochain tour,
+    /// sinon l'ennemi le plus fragile qu'il peut frapper,
     /// avec la compétence la plus forte qui l'atteint ; sinon se rapproche de l'ennemi le plus proche à pied.
     /// Évite de prendre ses alliés dans ses zones. N'utilise pas encore les zones en ligne ni le soutien.
     /// </summary>
@@ -25,10 +26,17 @@ public static class Behaviors
     /// <summary>Inerte (un leurre) : n'agit jamais et ne bouge pas.</summary>
     public const string Inert = "inert";
 
+    /// <summary>
+    /// Prudent (une personne à protéger qui ne se bat pas) : n'attaque jamais ; attaqué depuis sa dernière action, il
+    /// recule loin de l'adversaire le plus proche ; sinon il attend sur place.
+    /// </summary>
+    public const string Cautious = "cautious";
+
     internal static readonly IUnitBehavior BasicInstance = new BasicBehavior(BasicBehavior.Mode.Basic);
     private static readonly IUnitBehavior BeaconInstance = new BeaconBehavior();
     private static readonly IUnitBehavior GunnerInstance = new BasicBehavior(BasicBehavior.Mode.Gunner);
     private static readonly IUnitBehavior InertInstance = new InertBehavior();
+    private static readonly IUnitBehavior CautiousInstance = new CautiousBehavior();
 
     /// <summary>Unité confuse (état, pas une donnée) : attaque l'unité debout la plus proche, quel que soit son camp.</summary>
     internal static readonly IUnitBehavior ConfusedInstance = new BasicBehavior(BasicBehavior.Mode.Confused);
@@ -49,6 +57,7 @@ public static class Behaviors
         Beacon => BeaconInstance,
         Gunner => GunnerInstance,
         Inert => InertInstance,
+        Cautious => CautiousInstance,
         Flee => FleeInstance,
         _ => null,
     };

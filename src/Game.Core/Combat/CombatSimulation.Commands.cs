@@ -196,6 +196,7 @@ public sealed partial class CombatSimulation
         SpendTaunt(unit); // et, provoquée, elle vient d'obéir une fois
         RemoveDome(unit); // et son dôme éventuel tombe (un nouveau peut être posé par cette action)
         unit.Gauge = 0; // l'unité a agi : sa jauge n'est plus pleine, même si elle repart à 100 %
+        unit.AttackedSinceActivation = false;
         unit.OpportunityAttacksLeft = unit.OpportunityAttacksPerCycle; // rechargées quand l'unité rejoue
         ResetReactions(unit); // ses réactions aussi ; sa garde et sa surveillance tombent
 

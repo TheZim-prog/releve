@@ -60,7 +60,10 @@ objet, posé sur une case libre, en autant d'interactions au contact, avant la f
 travaillent avec R, « interagir » ; le poids de l'interaction est `operateWeight` dans `combat-rules.json`) ;
 `protect` avec `"until": "waves"` (réussi quand toutes les vagues sont arrivées et vaincues) ou `"until": "time"` et
 `"durationMs": 60000` (réussi quand le temps est tenu) : les unités marquées `"protected": true` (des alliés du camp 0
-commandés par le jeu, pas des héros) doivent rester debout ; une seule à terre et c'est raté.
+commandés par le jeu, pas des héros) doivent rester debout ; une seule à terre et c'est raté. Leur type d'unité dit
+comment elles réagissent : `"behavior": "basic"` pour qu'elles se défendent, `"behavior": "cautious"` pour qu'elles
+reculent loin des ennemis quand on les attaque (sans jamais frapper). Les ennemis les visent en priorité quand ils
+peuvent les frapper.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au
