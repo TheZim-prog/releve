@@ -82,7 +82,9 @@ public partial class UnitView : Node3D
             : new Color(0.3f, 0.7f, 1f);
 
         // Les PV chiffrés seulement pour l'unité survolée ou choisie : sinon les noms de voisins se chevauchent.
-        var name = unit.MinionsOnFall is null ? unit.Definition.Name : $"{unit.Definition.Name} (chef)";
+        var name = unit.MinionsOnFall is not null ? $"{unit.Definition.Name} (chef)"
+            : unit.IsProtected ? $"{unit.Definition.Name} (à protéger)"
+            : unit.Definition.Name;
         _title.Text = selected || hovered ? $"{name}  {Texts.Hp(unit)}" : name;
         var details = new List<string>();
         if (downed)

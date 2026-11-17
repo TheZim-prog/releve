@@ -5,7 +5,7 @@ namespace Game.Core.Combat;
 /// <summary>
 /// Simulation d'un combat, à ticks fixes et entièrement déterministe.
 /// <para>
-/// Déroulement d'un tick : les états, les PV temporaires, les zones au sol et les obstacles dressés arrivés à
+/// Déroulement d'un tick : les vagues de renforts dont l'heure est venue arrivent ; les états, les PV temporaires, les zones au sol et les obstacles dressés arrivés à
 /// échéance prennent fin (une zone qui renouvelle ses états les repose) ; les attaques chargées arrivées à
 /// échéance se déclenchent ; les commandes des joueurs soumises depuis le tick précédent sont appliquées
 /// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les ordres à l'avance dont
@@ -64,6 +64,7 @@ public sealed partial class CombatSimulation
             Validate(unit);
             _units.Add(new Unit(unit, Rules));
         }
+        SetUpWaves(setup.Waves);
         SetUpObjectives(setup);
     }
 
@@ -75,7 +76,10 @@ public sealed partial class CombatSimulation
     /// <summary>Numéro du dernier tick joué (0 avant le premier).</summary>
     public int CurrentTick { get; private set; }
 
-    /// <summary>Unités (retirées comprises), dans l'ordre de mise en place (ordre de traitement des jauges).</summary>
+    /// <summary>
+    /// Unités (retirées comprises), dans l'ordre de mise en place (ordre de traitement des jauges) : celles du début, puis
+    /// les gadgets et les renforts dans l'ordre de leur arrivée.
+    /// </summary>
     public IReadOnlyList<Unit> Units { get; }
 
     public IReadOnlyList<CombatEvent> EventLog { get; }
@@ -91,7 +95,7 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Équipes encore en lice : celles (d'origine : une unité dominée compte pour la sienne) qui ont au moins une unité
     /// debout, sans compter les civils, les gadgets ni les fuyards (une unité en fuite ne compte plus, même avant
-    /// d'atteindre le bord). Sans le camp des joueurs, le combat est perdu.
+    /// d'atteindre le bord).
     /// </summary>
     public IReadOnlySet<int> TeamsStillFighting() =>
         _units.Where(u => u.IsStandingCombatant && !u.IsFleeing)
@@ -113,6 +117,7 @@ public sealed partial class CombatSimulation
         CurrentTick++;
         var firstEvent = _events.Count;
 
+        BringReinforcements();
         ExpireStatuses();
         ExpireTempHp();
         ExpireGround();
@@ -189,6 +194,7 @@ public sealed partial class CombatSimulation
         Add(CurrentTick);
         Add((long)_random.State);
         Add(Outcome is { } victory ? (victory ? 1 : 2) : 0);
+        Add(_wavesArrived);
         foreach (var objective in _objectives)
             Add((int)objective.State);
         foreach (var device in Devices)

@@ -11,26 +11,40 @@ internal static class ObjectiveRules
         ObjectiveKind.Rescue => Rescue(objective.Definition.Minimum!.Value, RescueTally.Of(simulation), safe: NoEnemyLeft(simulation)),
         ObjectiveKind.Pursuit => Pursuit(simulation.PursuedUnit!),
         ObjectiveKind.Countdown => Countdown(objective, simulation.CurrentTick),
+        ObjectiveKind.Protect => Protect(objective, simulation),
         _ => throw new ArgumentOutOfRangeException(nameof(objective), objective.Definition.Kind, "Unknown objective kind."),
     };
 
     /// <summary>
     /// À la victoire, ce qui est encore en cours se règle : un sauvetage compte les civils encore sur la carte, hors de
     /// danger ; une poursuite est ratée (le vilain court encore : il s'échappe), une course contre la montre aussi (les
-    /// objets n'ont pas été neutralisés). L'élimination reste où elle en est.
+    /// objets n'ont pas été neutralisés) ; une protection est réussie (les personnes protégées sont encore debout : sinon
+    /// elle serait déjà ratée). L'élimination reste où elle en est.
     /// </summary>
     public static ObjectiveState SettleAtVictory(Objective objective, CombatSimulation simulation) => objective.Definition.Kind switch
     {
         ObjectiveKind.Rescue => Rescue(objective.Definition.Minimum!.Value, RescueTally.Of(simulation), safe: true),
         ObjectiveKind.Pursuit or ObjectiveKind.Countdown => ObjectiveState.Failed,
+        ObjectiveKind.Protect => ObjectiveState.Completed,
         _ => ObjectiveState.InProgress,
     };
 
     /// <summary>
-    /// Il ne reste debout que le camp des joueurs : les ennemis sont vaincus, enfuis ou en fuite (civils et gadgets à part).
+    /// Il ne reste debout que le camp des joueurs, et aucun ennemi ne doit encore arriver : les ennemis sont vaincus,
+    /// enfuis ou en fuite (civils et gadgets à part).
     /// </summary>
     private static bool NoEnemyLeft(CombatSimulation simulation) =>
-        simulation.TeamsStillFighting().All(team => team == CombatSimulation.PlayerTeam);
+        !simulation.EnemiesStillToCome && simulation.TeamsStillFighting().All(team => team == CombatSimulation.PlayerTeam);
+
+    /// <summary>
+    /// Raté dès qu'une personne protégée tombe (à terre, ou hors de combat sans s'être enfuie) ; sinon réussi à la fin des
+    /// vagues (plus d'ennemi en lice ni à venir) ou quand le temps est tenu.
+    /// </summary>
+    private static ObjectiveState Protect(Objective objective, CombatSimulation simulation) =>
+        simulation.Units.Any(u => u is { IsProtected: true, Status: not UnitStatus.Active, Escaped: false }) ? ObjectiveState.Failed
+        : (objective.Definition.Until == ProtectUntil.Time ? simulation.CurrentTick >= objective.EndTick : NoEnemyLeft(simulation))
+            ? ObjectiveState.Completed
+            : ObjectiveState.InProgress;
 
     /// <summary>Raté si le vilain poursuivi est sorti ; réussi s'il est hors de combat autrement (vaincu, à terre, rendu).</summary>
     private static ObjectiveState Pursuit(Unit pursued) =>

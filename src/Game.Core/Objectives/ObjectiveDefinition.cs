@@ -23,8 +23,14 @@ public sealed record ObjectiveDefinition
     /// <summary>Course contre la montre : les objets à neutraliser (au moins un). Les autres types n'en ont pas.</summary>
     public IReadOnlyList<DeviceDefinition>? Devices { get; init; }
 
-    /// <summary>Course contre la montre : durée du compte à rebours, en ms. Les autres types n'en ont pas.</summary>
+    /// <summary>
+    /// Durée, en ms : du compte à rebours (course contre la montre), ou à tenir (protection jusqu'à un temps). Les autres
+    /// n'en ont pas.
+    /// </summary>
     public int? DurationMs { get; init; }
+
+    /// <summary>Protection : quand elle est réussie (fin des vagues, ou temps tenu). Les autres types n'en ont pas.</summary>
+    public ProtectUntil? Until { get; init; }
 
     /// <summary>Objectifs d'un scénario qui n'en décrit pas : éliminer tous les ennemis.</summary>
     public static IReadOnlyList<ObjectiveDefinition> Default { get; } =
@@ -35,10 +41,14 @@ public sealed record ObjectiveDefinition
     {
         if (!Enum.IsDefined(Kind))
             throw new ArgumentException($"Unknown objective kind {Kind}.");
-        ExpectField(Minimum is not null, ObjectiveKind.Rescue, "minimum");
-        ExpectField(Exits is not null, ObjectiveKind.Pursuit, "exits");
-        ExpectField(Devices is not null, ObjectiveKind.Countdown, "devices");
-        ExpectField(DurationMs is not null, ObjectiveKind.Countdown, "durationMs");
+        ExpectField(Minimum is not null, Kind == ObjectiveKind.Rescue, "minimum");
+        ExpectField(Exits is not null, Kind == ObjectiveKind.Pursuit, "exits");
+        ExpectField(Devices is not null, Kind == ObjectiveKind.Countdown, "devices");
+        ExpectField(Until is not null, Kind == ObjectiveKind.Protect, "until");
+        if (Until is { } until && !Enum.IsDefined(until))
+            throw new ArgumentException($"Unknown protection end {until}.");
+        ExpectField(DurationMs is not null,
+            Kind == ObjectiveKind.Countdown || (Kind == ObjectiveKind.Protect && Until == ProtectUntil.Time), "durationMs");
 
         if (Minimum < 1)
             throw new ArgumentException("A rescue objective needs a minimum of evacuated civilians (at least 1).");
@@ -49,16 +59,19 @@ public sealed record ObjectiveDefinition
         foreach (var device in Devices ?? Array.Empty<DeviceDefinition>())
             device.Validate();
         if (DurationMs < 1)
-            throw new ArgumentException("A countdown needs a duration of at least 1 ms.");
+            throw new ArgumentException("A duration lasts at least 1 ms.");
     }
 
-    /// <summary>Le champ <paramref name="field"/> va avec le type <paramref name="owner"/> : obligatoire pour lui, interdit aux autres.</summary>
-    private void ExpectField(bool present, ObjectiveKind owner, string field)
+    /// <summary>
+    /// Le champ <paramref name="field"/> est obligatoire là où il est <paramref name="expected"/> (selon le type, voire
+    /// d'autres champs), interdit ailleurs.
+    /// </summary>
+    private void ExpectField(bool present, bool expected, string field)
     {
-        if (present != (Kind == owner))
+        if (present != expected)
             throw new ArgumentException(present
-                ? $"Only a {owner} objective takes '{field}' (not {Kind})."
-                : $"A {owner} objective needs '{field}'.");
+                ? $"A {Kind} objective does not take '{field}' here."
+                : $"A {Kind} objective needs '{field}'.");
     }
 
     /// <summary>

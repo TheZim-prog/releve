@@ -127,6 +127,27 @@ public class MissionDataTests
     }
 
     [Fact]
+    public void AProtection_ReadsItsWavesAndProtectedPeople()
+    {
+        var json = Scenario
+            .Replace("OBJECTIVES", """
+                , "objectives": [ { "kind": "protect", "until": "waves" } ],
+                "waves": [ { "atMs": 5000, "units": [ { "unit": "thug", "team": 1, "x": 3, "y": 0 } ] } ]
+                """)
+            .Replace("""{ "unit": "hero", "team": 0, "x": 0, "y": 0 }""",
+                """{ "unit": "hero", "team": 0, "x": 0, "y": 0 }, { "unit": "thug", "team": 0, "x": 1, "y": 0, "protected": true }""");
+        var catalog = new Dictionary<string, UnitDefinition>(Catalog) { ["thug"] = Catalog["thug"] with { Behavior = Behaviors.Basic } };
+
+        var setup = ScenarioDefinition.FromJson(json).ToSetup(Rules, catalog);
+
+        Assert.Equal(new[] { false, true, false }, setup.Units.Select(u => u.IsProtected));
+        var wave = Assert.Single(setup.Waves);
+        Assert.Equal(5000, wave.AtMs);
+        Assert.Equal(new Cell(3, 0), Assert.Single(wave.Units).Position);
+        Assert.Throws<ArgumentException>(() => ScenarioDefinition.FromJson(json.Replace("\"atMs\": 5000", "\"atMs\": 0")).ToSetup(Rules, catalog));
+    }
+
+    [Fact]
     public void ARescue_ReadsItsMinimum_AndNeedsThatManyCivilians()
     {
         var rescue = """[ { "kind": "rescue", "minimum": 1 } ]""";

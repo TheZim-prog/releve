@@ -38,6 +38,9 @@ public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinitio
 
     /// <summary>Vilain poursuivi (objectif Poursuite) : il fuit dès le début, vers les sorties de la mission.</summary>
     public bool IsPursued { get; init; }
+
+    /// <summary>Personne à protéger (objectif Protection) : un allié commandé par le jeu ; s'il tombe, la protection est ratée.</summary>
+    public bool IsProtected { get; init; }
 }
 
 /// <summary>
@@ -91,6 +94,7 @@ public sealed class Unit
         MinionsOnFall = setup.MinionsOnFall;
         IsPursued = setup.IsPursued;
         IsFleeing = setup.IsPursued;
+        IsProtected = setup.IsProtected;
         _rules = rules;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
@@ -206,6 +210,15 @@ public sealed class Unit
 
     /// <summary>Vilain poursuivi (objectif Poursuite) : il fuit dès le début, vers les sorties de la mission.</summary>
     public bool IsPursued { get; }
+
+    /// <summary>Personne à protéger (objectif Protection) : un allié commandé par le jeu, qui n'est pas un héros.</summary>
+    public bool IsProtected { get; }
+
+    /// <summary>
+    /// Héros : du camp des joueurs d'origine, ni civil, ni gadget, ni personne à protéger. Quand plus aucun n'est debout, le
+    /// combat est perdu.
+    /// </summary>
+    public bool IsHero => OriginalTeam == CombatSimulation.PlayerTeam && !IsCivilian && SummonedBy is null && !IsProtected;
 
     /// <summary>Enfuie : a quitté le combat par le bord de carte (retirée, mais pas vaincue).</summary>
     public bool Escaped { get; internal set; }

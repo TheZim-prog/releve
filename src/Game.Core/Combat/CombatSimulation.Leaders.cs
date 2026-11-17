@@ -24,17 +24,21 @@ public sealed partial class CombatSimulation
         var reaction = leader.MinionsOnFall!.Value;
         _events.Add(new LeaderFell(CurrentTick, leader.Id, reaction));
         foreach (var minion in MinionsOf(leader).ToList())
+            ReactToFallenLeader(minion, reaction);
+    }
+
+    /// <summary>Un sbire dont le chef est tombé se rend (il quitte le combat), ou prend la fuite (à terre : une fois relevé).</summary>
+    private void ReactToFallenLeader(Unit minion, MinionReaction reaction)
+    {
+        if (reaction == MinionReaction.Surrender)
         {
-            if (reaction == MinionReaction.Surrender)
-            {
-                minion.Surrendered = true;
-                Withdraw(minion, new UnitSurrendered(CurrentTick, minion.Id));
-            }
-            else if (minion.Status == UnitStatus.Downed)
-                minion.IsFleeing = true;
-            else if (!minion.IsFleeing)
-                StartFleeing(minion);
+            minion.Surrendered = true;
+            Withdraw(minion, new UnitSurrendered(CurrentTick, minion.Id));
         }
+        else if (minion.Status == UnitStatus.Downed)
+            minion.IsFleeing = true;
+        else if (!minion.IsFleeing)
+            StartFleeing(minion);
     }
 
     private IEnumerable<Unit> MinionsOf(Unit leader) =>

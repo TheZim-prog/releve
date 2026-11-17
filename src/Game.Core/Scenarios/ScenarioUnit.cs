@@ -24,6 +24,12 @@ public sealed record ScenarioUnit
     /// <summary>Vilain poursuivi (une unité ennemie) : il fuit dès le début vers les sorties de l'objectif Poursuite.</summary>
     public bool Pursued { get; init; }
 
+    /// <summary>
+    /// Personne à protéger (objectif Protection) : un allié du camp des joueurs commandé par le jeu (une unité, pas un
+    /// héros) ; s'il tombe, la protection est ratée.
+    /// </summary>
+    public bool Protected { get; init; }
+
     public required int Team { get; init; }
     public required int X { get; init; }
     public required int Y { get; init; }

@@ -17,7 +17,7 @@ public partial class CombatView
             _hud.SetBanner(_session.IsPaused ? _session.PauseText : "", Colors.White);
 
         _hud.SetHeroes(_sim.Units
-            .Where(u => u.OriginalTeam == CombatSimulation.PlayerTeam && u.SummonedBy is null && !u.IsCivilian)
+            .Where(u => u.IsHero)
             .Select(HeroCardOf)
             .ToList());
 

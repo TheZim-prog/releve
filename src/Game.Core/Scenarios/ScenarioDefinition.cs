@@ -23,6 +23,9 @@ public sealed record ScenarioDefinition
     /// <summary>Objectifs de la mission ; sans eux, éliminer tous les ennemis (<see cref="ObjectiveDefinition.Default"/>).</summary>
     public IReadOnlyList<ObjectiveDefinition>? Objectives { get; init; }
 
+    /// <summary>Renforts qui arrivent en cours de combat (aucun par défaut).</summary>
+    public IReadOnlyList<ScenarioWave>? Waves { get; init; }
+
     public static ScenarioDefinition FromJson(string json)
     {
         var scenario = DataJson.Deserialize<ScenarioDefinition>(json);
@@ -60,9 +63,14 @@ public sealed record ScenarioDefinition
             if (!taken.Add(cell))
                 throw new ArgumentException($"Scenario '{Id}': two units on {cell}.");
             if (unit.Leader is not null && (unit.Hero is not null || unit.Team == CombatSimulation.PlayerTeam))
-                throw new ArgumentException($"Scenario '{Id}': {unit.Label} cannot lead minions (only an enemy unit can, not a hero).");        }
+                throw new ArgumentException($"Scenario '{Id}': {unit.Label} cannot lead minions (only an enemy unit can, not a hero).");
+        }
         if (Units.Where(u => u.Leader is not null).GroupBy(u => u.Team).FirstOrDefault(g => g.Count() > 1) is { } team)
             throw new ArgumentException($"Scenario '{Id}': team {team.Key} has more than one leader.");
+        if (Waves?.Any(w => w is null) == true)
+            throw new ArgumentException($"Scenario '{Id}': the wave list contains a null entry.");
+        foreach (var wave in Waves ?? Array.Empty<ScenarioWave>())
+            wave.Validate(Id);
     }
 
     /// <summary>
@@ -87,9 +95,14 @@ public sealed record ScenarioDefinition
                     throw new ArgumentException(
                         $"'{unit.Definition.Id}' has an initiative above the gauge capacity ({rules.GaugeCapacity}) with its stat points.");
             }
+            // Les renforts reçoivent leur identifiant à leur arrivée (celui-ci n'est qu'une place réservée).
+            var waves = (Waves ?? Array.Empty<ScenarioWave>())
+                .Select(w => new WaveSetup(w.AtMs, w.Units.Select(u => Place(u, default, units, heroes, rules)).ToList()))
+                .ToList();
             var setup = new CombatSetup(rules, Grid.FromRows(Map.ToArray()), placed, Seed)
             {
                 Objectives = Objectives ?? ObjectiveDefinition.Default,
+                Waves = waves,
             };
             setup.ValidateObjectives(); // dès le chargement des données, pas au lancement du combat
             return setup;
@@ -112,13 +125,19 @@ public sealed record ScenarioDefinition
         {
             var hero = (heroes ?? throw new ArgumentException($"{unit.Label}: this content has no heroes.")).Unit(heroId);
             var gauge = hero.Definition.Passive == PassiveKind.FlyingStart ? rules.GaugeCapacity : 0;
-            // Un héros n'est jamais poursuivi : la marque passe pour que la vérification des objectifs le refuse.
-            return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points) with { IsPursued = unit.Pursued };
+            // Un héros n'est ni poursuivi ni protégé : les marques passent pour que la vérification des objectifs le refuse.
+            return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points) with
+            {
+                IsPursued = unit.Pursued, IsProtected = unit.Protected,
+            };
         }
         if (!units.TryGetValue(unit.Unit!, out var definition))
             throw new ArgumentException($"unknown {unit.Label}.");
         if (unit.Leader is not null && definition.IsCivilian)
             throw new ArgumentException($"{unit.Label} is a civilian, it cannot lead minions.");
-        return definition.ToSetup(id, unit.Team, cell) with { MinionsOnFall = unit.Leader, IsPursued = unit.Pursued };
+        return definition.ToSetup(id, unit.Team, cell) with
+        {
+            MinionsOnFall = unit.Leader, IsPursued = unit.Pursued, IsProtected = unit.Protected,
+        };
     }
 }

@@ -57,7 +57,15 @@ en atteint une ou s'il court encore à la victoire ; une seule poursuite et un s
 sorties sont surlignées en violet au sol ;
 `countdown` avec `"durationMs": 60000` et `"devices": [ { "x": 8, "y": 4, "interactions": 3 } ]` (neutraliser chaque
 objet, posé sur une case libre, en autant d'interactions au contact, avant la fin du compte à rebours ; les héros y
-travaillent avec R, « interagir » ; le poids de l'interaction est `operateWeight` dans `combat-rules.json`).
+travaillent avec R, « interagir » ; le poids de l'interaction est `operateWeight` dans `combat-rules.json`) ;
+`protect` avec `"until": "waves"` (réussi quand toutes les vagues sont arrivées et vaincues) ou `"until": "time"` et
+`"durationMs": 60000` (réussi quand le temps est tenu) : les unités marquées `"protected": true` (des alliés du camp 0
+commandés par le jeu, pas des héros) doivent rester debout ; une seule à terre et c'est raté.
+
+**Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
+`[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au
+moment dit ; une unité dont la case est prise arrive sur la case libre la plus proche. Tant qu'une vague doit encore
+amener des ennemis, une élimination n'est pas finie.
 
 **Désigner le chef d'une bande** : ajouter `"leader": "flee"` ou `"leader": "surrender"` à une unité du scénario (pas un
 héros ; un seul chef par camp). Quand il tombe (vaincu, à terre ou enfui), les autres unités de son camp prennent la

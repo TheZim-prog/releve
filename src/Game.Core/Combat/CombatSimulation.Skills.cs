@@ -180,7 +180,7 @@ public sealed partial class CombatSimulation
         if (ReplacedGadget(owner, definition) is { } previous)
             Dismiss(previous);
 
-        var id = new UnitId(_units.Max(u => u.Id.Value) + 1);
+        var id = NextUnitId();
         var unit = new Unit(definition.ToSetup(id, owner.Team, cell), Rules, owner.PowerPercent) { SummonedBy = owner.Id };
         _units.Add(unit);
         _events.Add(new UnitSummoned(CurrentTick, id, definition.Id, owner.Id, owner.Team, cell));

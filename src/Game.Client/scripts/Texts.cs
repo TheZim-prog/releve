@@ -85,6 +85,8 @@ public static class Texts
         ObjectiveKind.Countdown => objective.Devices!.Count == 1
             ? "Neutraliser l'objet à temps"
             : $"Neutraliser les {objective.Devices.Count} objets à temps",
+        ObjectiveKind.Protect => $"Protéger {string.Join(", ", sim.Units.Where(u => u.IsProtected).Select(u => u.Definition.Name).Distinct())}"
+                                 + (objective.Until == ProtectUntil.Time ? $" pendant {(objective.DurationMs + 999) / 1000} s" : " jusqu'à la fin des vagues"),
         _ => objective.Kind.ToString(),
     };
 
@@ -117,12 +119,21 @@ public static class Texts
             case ObjectiveKind.Countdown:
                 var done = objective.Devices.Sum(d => d.Done);
                 var needed = objective.Devices.Sum(d => d.Definition.Interactions);
-                var ticksPerSecond = sim.Rules.TicksPerSecond;
-                var seconds = (Math.Max(0, objective.EndTick!.Value - sim.CurrentTick) + ticksPerSecond - 1) / ticksPerSecond; // arrondi au-dessus
-                return $" ({done}/{needed}, reste {seconds} s)";
+                return $" ({done}/{needed}, reste {SecondsLeft(objective, sim)} s)";
+            case ObjectiveKind.Protect:
+                return objective.Definition.Until == ProtectUntil.Time
+                    ? $" (reste {SecondsLeft(objective, sim)} s)"
+                    : $" (vague {sim.WavesArrived}/{sim.WaveCount})";
             default:
                 return "";
         }
+    }
+
+    /// <summary>Secondes avant la fin de la durée de l'objectif, arrondies au-dessus (« reste 1 s » jusqu'au bout).</summary>
+    private static int SecondsLeft(Objective objective, CombatSimulation sim)
+    {
+        var ticksPerSecond = sim.Rules.TicksPerSecond;
+        return (Math.Max(0, objective.EndTick!.Value - sim.CurrentTick) + ticksPerSecond - 1) / ticksPerSecond;
     }
 
     /// <summary>Ligne de journal pour un événement, ou <c>null</c> pour ceux qui ne méritent pas d'y figurer.</summary>
@@ -136,6 +147,7 @@ public static class Texts
         {
             ObjectiveCompleted o => $"Objectif réussi : {O(o.Objective)}",
             ObjectiveFailed o => $"Objectif raté : {O(o.Objective)}",
+            WaveArrived w => $"Des renforts arrivent ! ({w.Units.Count} unité{(w.Units.Count > 1 ? "s" : "")})",
             DeviceOperated d => d.Done >= d.Needed
                 ? $"{N(d.Unit)} neutralise l'objet !"
                 : $"{N(d.Unit)} travaille sur l'objet ({d.Done}/{d.Needed})",

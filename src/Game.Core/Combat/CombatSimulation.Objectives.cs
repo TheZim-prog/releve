@@ -67,7 +67,7 @@ public sealed partial class CombatSimulation
     {
         if (Outcome is not null || _objectives.Count == 0)
             return;
-        if (!TeamsStillFighting().Contains(PlayerTeam))
+        if (!_units.Any(u => u.IsHero && u.IsStandingCombatant))
         {
             EndCombat(victory: false);
             return;

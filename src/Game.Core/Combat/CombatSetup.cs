@@ -29,6 +29,15 @@ public sealed record CombatSetup(CombatRules Rules, Grid Grid, IReadOnlyList<Uni
         init => _objectives = ReadOnlyCopy(value);
     }
 
+    private readonly IReadOnlyList<WaveSetup> _waves = Array.Empty<WaveSetup>();
+
+    /// <summary>Renforts qui arrivent en cours de combat (aucun par défaut).</summary>
+    public IReadOnlyList<WaveSetup> Waves
+    {
+        get => _waves;
+        init => _waves = ReadOnlyCopy(value);
+    }
+
     /// <summary>Objectifs valides et réalisables avec cette carte et ces unités (cf. <see cref="MissionValidator"/>).</summary>
     public void ValidateObjectives() => MissionValidator.Validate(this);
 
