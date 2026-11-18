@@ -151,7 +151,7 @@ public sealed record ScenarioDefinition
             var hero = (heroes ?? throw new ArgumentException($"{unit.Label}: this content has no heroes.")).Unit(heroId);
             var gauge = hero.Definition.Passive == PassiveKind.FlyingStart ? rules.GaugeCapacity : 0;
             // Un héros n'est ni poursuivi ni protégé : les marques passent pour que la vérification des objectifs le refuse.
-            return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points) with
+            return WithBehavior(hero.Definition, unit.Behavior).ToSetup(id, unit.Team, cell, gauge, hero.Points) with
             {
                 IsPursued = unit.Pursued, IsProtected = unit.Protected, Tag = unit.Tag,
             };
@@ -160,9 +160,22 @@ public sealed record ScenarioDefinition
             throw new ArgumentException($"unknown {unit.Label}.");
         if (unit.Leader is not null && definition.IsCivilian)
             throw new ArgumentException($"{unit.Label} is a civilian, it cannot lead minions.");
-        return definition.ToSetup(id, unit.Team, cell) with
+        return WithBehavior(definition, unit.Behavior).ToSetup(id, unit.Team, cell) with
         {
             MinionsOnFall = unit.Leader, IsPursued = unit.Pursued, IsProtected = unit.Protected, Tag = unit.Tag,
         };
+    }
+
+    /// <summary>
+    /// Le type d'unité avec le comportement que lui donne le scénario (<c>null</c> : le sien), revérifié : comportement
+    /// connu, et compatible avec le type (un civil fuit, une structure est inerte…). Vaut aussi pour les renforts.
+    /// </summary>
+    private static UnitDefinition WithBehavior(UnitDefinition definition, string? behavior)
+    {
+        if (behavior is null)
+            return definition;
+        var changed = definition with { Behavior = behavior };
+        changed.Validate();
+        return changed;
     }
 }

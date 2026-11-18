@@ -1,0 +1,48 @@
+// Essai des scripts de mission : un allié du jeu et des coups scénarisés, comme à la première mission du prologue. Le
+// télépathe n'agit que sur ordre du script ("behavior": "scripted" : il n'est pas jouable) : il paralyse un cogneur.
+// Puis le caïd l'abat d'un tir traître (une compétence réservée au script), et le speedster doit aller le chercher.
+{
+  "id": "scripts-allies",
+  "name": "Script : allié et coups scénarisés",
+  "seed": 203,
+  "mapId": "street",
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-speedster", "team": 0, "x": 0, "y": 6, "tag": "speedster" },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+    { "hero": "prologue-telepath", "team": 0, "x": 1, "y": 4, "tag": "telepath", "behavior": "scripted" },
+
+    { "unit": "brawler", "team": 1, "x": 6, "y": 4, "tag": "thug" },
+    { "unit": "brawler", "team": 1, "x": 7, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 2 },
+    { "unit": "kingpin", "team": 1, "x": 10, "y": 4, "leader": "flee", "tag": "kingpin" }
+  ],
+  "script": [
+    {
+      "id": "briefing",
+      "do": [ { "speaker": "Télépathe", "say": "Je m'occupe du premier. Couvrez-moi.", "freeze": true } ]
+    },
+    {
+      "id": "paralysis",
+      "when": { "after": "briefing", "atMs": 500 },
+      "do": [ { "speaker": "Télépathe", "say": "Ne bouge plus !", "act": [ { "unit": "telepath", "skill": "paralysis", "target": "thug" } ] } ]
+    },
+    {
+      "id": "betrayal",
+      "when": { "after": "paralysis", "atMs": 1500 },
+      "do": [ { "speaker": "Le caïd", "say": "Tu vieillis, le vieux !", "act": [ { "unit": "kingpin", "skill": "treacherous-shot", "target": "telepath" } ] } ]
+    },
+    {
+      "id": "rescue",
+      "when": { "unitDown": "telepath" },
+      "do": [
+        { "speaker": "Combattant", "say": "Il est à terre ! Speedster, sors-le de là !", "freeze": true },
+        {
+          "say": "Speedster : Sauvetage éclair sur le télépathe, dépose-le en (0, 5).",
+          "impose": [ { "unit": "speedster", "skill": "flash-rescue", "target": "telepath", "cell": { "x": 0, "y": 5 } } ]
+        }
+      ]
+    }
+  ]
+}

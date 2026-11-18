@@ -58,7 +58,8 @@ public sealed partial class CombatSimulation
     internal bool IsExitFor(Unit unit, Cell cell) => unit.IsPursued ? PursuitExits.Contains(cell) : _grid.IsEdge(cell);
 
     /// <summary>
-    /// Fin de tick : défaite si tous les héros sont hors de combat (rien ne se réussit alors, même au même tick) ; sinon
+    /// Fin de tick (et après le script, qui peut faire agir des unités) : défaite si tous les héros (hors alliés
+    /// scénarisés) sont hors de combat (rien ne se réussit alors, même au même tick) ; sinon
     /// chaque objectif en cours peut être réussi ou raté, puis l'issue tombe : défaite si un objectif principal est raté,
     /// victoire quand tous les principaux sont réussis. À la fin, plus rien n'est en cours : à la victoire, les
     /// secondaires se règlent (cf. <see cref="ObjectiveRules.SettleAtVictory"/>) ; à la défaite, tout ce qui restait est
@@ -68,7 +69,8 @@ public sealed partial class CombatSimulation
     {
         if (Outcome is not null || _objectives.Count == 0)
             return;
-        if (!_units.Any(u => u.IsHero && u.IsStandingCombatant))
+        // Un allié du jeu qui n'agit que sur ordre du script (le télépathe du prologue) ne tient pas le combat à lui seul.
+        if (!_units.Any(u => u.IsHero && u.IsStandingCombatant && u.Behavior != Behaviors.Scripted))
         {
             EndCombat(victory: false);
             return;

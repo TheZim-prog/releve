@@ -311,6 +311,9 @@ public enum RejectionReason
 
     /// <summary>Ce héros a une action imposée : elle se fait tout de suite, pas en ordre à l'avance.</summary>
     ImposedActionIsNow,
+
+    /// <summary>Compétence réservée au script de mission : seul un ordre du script la déclenche.</summary>
+    ScriptOnly,
 }
 
 public static class RejectionReasons

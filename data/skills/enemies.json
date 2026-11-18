@@ -26,6 +26,13 @@
     "effects": [ { "status": "offBalance", "durationMs": 3000 } ]
   },
   {
+    // Réservé au script : le coup qui fait tomber le télépathe au prologue. L'IA du caïd ne s'en sert jamais d'elle-même.
+    // Dégâts d'essai : de quoi mettre à terre le télépathe du prologue d'un coup.
+    "id": "treacherous-shot", "name": "Tir traître",
+    "weight": "light", "range": 8, "minDamage": 150, "maxDamage": 150, "cooldownMs": 0,
+    "scriptOnly": true
+  },
+  {
     // Dégâts autour du caïd.
     "id": "impact-wave", "name": "Onde d'impact",
     "weight": "light", "range": 0, "minDamage": 14, "maxDamage": 18, "cooldownMs": 8000,

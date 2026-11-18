@@ -76,6 +76,7 @@ public static class Texts
         RejectionReason.TimeFrozen => "combat figé, « Continuer » d'abord",
         RejectionReason.NotTheImposedAction => "ce n'est pas l'action demandée",
         RejectionReason.ImposedActionIsNow => "l'action demandée se fait tout de suite, pas en ordre",
+        RejectionReason.ScriptOnly => "compétence réservée au scénario",
         _ => reason.ToString(),
     };
 
@@ -144,7 +145,7 @@ public static class Texts
         message.Speaker is { } speaker ? $"{speaker} : « {message.Text} »" : message.Text;
 
     /// <summary>Ce que le script impose à un héros : « Frappe sur Cogneur », « déplacement en (3, 4) ».</summary>
-    public static string Imposed(Imposition imposed, CombatSimulation sim)
+    public static string Imposed(ResolvedAction imposed, CombatSimulation sim)
     {
         var unit = sim.FindUnit(imposed.Unit);
         var action = imposed.Skill is { } skill ? unit?.FindSkill(skill)?.DisplayName ?? skill : "déplacement";
@@ -168,6 +169,7 @@ public static class Texts
         {
             ScriptMessageShown m => ScriptLine(m.Message),
             ImposedActionEnded { Done: false } x => $"{N(x.Unit)} : action demandée devenue impossible, abandonnée",
+            ScriptedActionFailed f => $"{(f.Unit is { } failed ? N(failed) : f.Tag)} n'a pas pu faire l'action prévue par le script",
             ObjectiveCompleted o => $"Objectif réussi : {O(o.Objective)}",
             ObjectiveFailed o => $"Objectif raté : {O(o.Objective)}",
             WaveArrived w => $"Des renforts arrivent ! ({w.Units.Count} unité{(w.Units.Count > 1 ? "s" : "")})",

@@ -149,9 +149,12 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Validation complète d'une activation, sans rien changer : la commande est atomique, rien n'est appliqué
-    /// si une partie échoue. Sert aux commandes des joueurs comme à l'IA.
+    /// si une partie échoue. Sert aux commandes des joueurs comme à l'IA, et aux ordres du script
+    /// (<paramref name="scriptOrder"/> : ni la jauge ni la recharge ne comptent, tout le reste si ; seul un ordre du
+    /// script peut utiliser une compétence qui lui est réservée).
     /// </summary>
-    internal (ActivationPlan? Plan, RejectionReason? Reason) ValidateActivation(ActivateCommand command, bool ignoreTiming = false)
+    internal (ActivationPlan? Plan, RejectionReason? Reason) ValidateActivation(ActivateCommand command, bool ignoreTiming = false,
+        bool scriptOrder = false)
     {
         var unit = FindUnit(command.Unit);
         if (unit is null)
@@ -162,8 +165,11 @@ public sealed partial class CombatSimulation
             return (null, RejectionReason.Stunned);
         if (!ignoreTiming && unit.Charge is not null)
             return (null, RejectionReason.Charging);
-        if (!ignoreTiming && !unit.IsReady)
+        if (!ignoreTiming && !scriptOrder && !unit.IsReady)
             return (null, RejectionReason.NotReady);
+        // Une unité en fuite ne fait plus que courir, même sur ordre.
+        if (scriptOrder && ControllerOf(unit) == Behaviors.FleeInstance)
+            return (null, RejectionReason.NotControllable);
         if (command.MoveTo is null && command.Skill is null && command.Interaction is null)
             return (null, RejectionReason.Empty);
         if (command.Skill is not null && command.Interaction is not null)
@@ -189,7 +195,9 @@ public sealed partial class CombatSimulation
             var skill = unit.FindSkill(use.SkillId);
             if (skill is null)
                 return (null, RejectionReason.UnknownSkill);
-            if (!ignoreTiming && unit.UnavailableAt(skill, CurrentTick) is { } wait)
+            if (skill.ScriptOnly && !scriptOrder)
+                return (null, RejectionReason.ScriptOnly);
+            if (!ignoreTiming && (scriptOrder ? unit.StatusBlocking(skill) : unit.UnavailableAt(skill, CurrentTick)) is { } wait)
                 return (null, wait);
             var (planned, rejection) = PlanAction(unit, position, skill, use);
             if (rejection is not null)

@@ -94,8 +94,10 @@ public sealed partial class CombatSimulation
         while (!IsTimeFrozen && _scriptQueue.TryDequeue(out var next))
         {
             var effect = _script[next.Trigger].Do[next.Effect];
-            if (effect.Impose is { } actions)
-                Impose(actions, effect.Speaker, effect.Say);
+            if (effect.Impose is { } imposed)
+                Impose(imposed, effect.Speaker, effect.Say);
+            else if (effect.Act is { } ordered)
+                Act(ordered, effect.Speaker, effect.Say);
             else
             {
                 var message = Show(effect.Speaker, effect.Say!, effect.Freeze);

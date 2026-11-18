@@ -141,6 +141,7 @@ public sealed partial class CombatSimulation
             ApplyPendingCommands();
             _inFrozenStep = false;
             RunScript();
+            UpdateObjectives(); // une action imposée ou ordonnée a pu décider du combat
             return _events.GetRange(firstEvent, _events.Count - firstEvent);
         }
 
@@ -173,6 +174,7 @@ public sealed partial class CombatSimulation
         UpdateIntentions();
         UpdateObjectives();
         RunScript();
+        UpdateObjectives(); // une action ordonnée par le script a pu décider du combat : pas un tick de plus
 
         return _events.GetRange(firstEvent, _events.Count - firstEvent);
     }

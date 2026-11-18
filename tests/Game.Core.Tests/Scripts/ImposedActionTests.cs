@@ -12,9 +12,9 @@ public class ImposedActionTests
     private static ScriptTrigger Trigger(string id, ScriptCondition? when, params ScriptEffect[] effects) =>
         new() { Id = id, When = when, Do = effects };
 
-    private static ScriptEffect Impose(string? say, params ImposedAction[] actions) => new() { Say = say, Impose = actions };
+    private static ScriptEffect Impose(string? say, params ScriptAction[] actions) => new() { Say = say, Impose = actions };
 
-    private static ImposedAction Strike(string unit, string target) => new() { Unit = unit, Skill = "strike", Target = target };
+    private static ScriptAction Strike(string unit, string target) => new() { Unit = unit, Skill = "strike", Target = target };
 
     /// <summary>
     /// Deux héros à jauge vide, « fighter » (1) en (0, 1) et « runner » (2) en (0, 3), et deux voyous de 10 PV, « a » (3)
@@ -28,7 +28,7 @@ public class ImposedActionTests
                 Unit(4, team: 1, 3, 3, hp: 10) with { Tag = "b" })
             with { Script = script };
 
-    private static CombatSimulation Imposing(params ImposedAction[] actions) =>
+    private static CombatSimulation Imposing(params ScriptAction[] actions) =>
         new(Fight(Trigger("lesson", null, Impose("Frappez !", actions)), Trigger("after", new ScriptCondition { After = "lesson" },
             new ScriptEffect { Say = "Bravo" })));
 
@@ -44,7 +44,7 @@ public class ImposedActionTests
         Assert.True(sim.Get(1).IsReady);
         Assert.Contains(new ActionImposed(0, Fighter), events);
         Assert.Equal("Frappez !", sim.Instruction?.Text);
-        Assert.Equal(new Imposition(Fighter, "strike", ThugA, null, null), Assert.Single(sim.ImposedActions));
+        Assert.Equal(new ResolvedAction(Fighter, "strike", ThugA, null, null), Assert.Single(sim.ImposedActions));
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class ImposedActionTests
     [Fact]
     public void AnImposedCell_MustBeTheOneReached()
     {
-        var sim = Imposing(new ImposedAction { Unit = "runner", MoveTo = new Cell(1, 4) });
+        var sim = Imposing(new ScriptAction { Unit = "runner", MoveTo = new Cell(1, 4) });
         sim.Tick();
 
         sim.Submit(new ActivateCommand(Runner, new Cell(1, 3)));

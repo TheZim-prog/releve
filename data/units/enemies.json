@@ -37,6 +37,6 @@
     "basicAttack": "power-punch",
     "opportunityAttacksPerCycle": 1,
     "behavior": "basic",
-    "skills": ["power-punch", "charge", "impact-wave"]
+    "skills": ["power-punch", "charge", "impact-wave", "treacherous-shot"]
   }
 ]

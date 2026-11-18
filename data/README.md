@@ -120,6 +120,22 @@ c'est un déplacement seul. Une action devenue impossible (cible tombée, héros
 et le héros retrouve sa jauge d'avant ; un héros joué par l'IA fait la sienne lui-même. Exemple jouable : « Script :
 actions imposées ».
 
+**Faire agir une unité du jeu** (allié scénarisé, coup scénarisé d'un ennemi) : un effet `"act"`, avec la même forme
+d'actions que `"impose"`, mais pour n'importe quelle unité repérée ; `say` y est une réplique dite juste avant :
+
+```json
+{ "speaker": "Le caïd", "say": "Tu vieillis !", "act": [ { "unit": "kingpin", "skill": "treacherous-shot", "target": "telepath" } ] }
+```
+
+L'unité agit **aussitôt**, sans attendre sa jauge ni la recharge de la compétence, puis sa jauge repart comme après
+toute action ; elle se déplace d'abord s'il le faut (sauf `moveTo` imposé). Le reste des règles compte : à terre,
+étourdie, en charge, en fuite, désarmée, immobilisée, ou sans ligne de vue, elle échoue (le script continue, et le
+journal le dit). Un sauvetage ou une télékinésie vise une unité et la case où elle va (`target` et `cell`). Pour un
+allié qui n'agit **que** sur ordre, donner `"behavior": "scripted"` à son entrée dans le scénario : un héros ainsi
+marqué n'est pas jouable, et il ne suffit pas à éviter la défaite si tous les autres tombent (`behavior` remplace le
+comportement de n'importe quelle unité, renforts compris, s'il convient à son type). Une compétence marquée `"scriptOnly": true` (comme le Tir traître du caïd)
+n'est jamais choisie par l'IA d'elle-même. Exemple jouable : « Script : allié et coups scénarisés ».
+
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et
 seulement des compétences déjà codées dans l'équipement.

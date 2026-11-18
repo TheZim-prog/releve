@@ -76,61 +76,74 @@ public static class ScriptValidator
                 throw new ArgumentException("a text to say cannot be blank.");
             if (effect.Speaker is { } speaker && (string.IsNullOrWhiteSpace(speaker) || effect.Say is null))
                 throw new ArgumentException("a speaker needs a text to say, and cannot be blank.");
-            if (effect.Impose is null)
+            if (effect.Impose is not null && effect.Act is not null)
+                throw new ArgumentException("an effect either imposes actions or orders them, not both.");
+            if (effect.Impose is null && effect.Act is null)
             {
                 if (effect.Say is null)
-                    throw new ArgumentException("an effect needs a text to say, or actions to impose.");
+                    throw new ArgumentException("an effect needs a text to say, or actions to impose or order.");
                 continue;
             }
             if (effect.Freeze)
-                throw new ArgumentException("imposed actions already freeze the combat: no \"freeze\" with them.");
-            ValidateImposed(effect.Impose, tags);
+                throw new ArgumentException("\"freeze\" is for a message alone, not with actions.");
+            if (effect.Impose is { } imposed)
+                ValidateActions(imposed, tags, "imposed on", heroesOnly: true);
+            if (effect.Act is { } ordered)
+                ValidateActions(ordered, tags, "ordered to", heroesOnly: false);
         }
     }
 
     /// <summary>
-    /// Au moins une action, au plus une par héros ; chacune pour un héros, avec une compétence qu'il a, visée comme elle
-    /// le demande.
+    /// Au moins une action, au plus une par unité ; chacune pour une unité repérée (un héros, pour une action imposée),
+    /// avec une compétence qu'elle a, visée comme elle le demande. <paramref name="verb"/> : « imposed on », « ordered
+    /// to », pour les messages.
     /// </summary>
-    private static void ValidateImposed(IReadOnlyList<ImposedAction> actions, IReadOnlyDictionary<string, UnitSetup> tags)
+    private static void ValidateActions(IReadOnlyList<ScriptAction> actions, IReadOnlyDictionary<string, UnitSetup> tags, string verb,
+        bool heroesOnly)
     {
         if (actions.Count == 0 || actions.Any(a => a is null))
-            throw new ArgumentException("imposed actions need at least one action, without null entries.");
+            throw new ArgumentException($"actions {verb} units need at least one action, without null entries.");
         if (actions.GroupBy(a => a.Unit).FirstOrDefault(g => g.Count() > 1) is { } twice)
-            throw new ArgumentException($"two actions are imposed on '{twice.Key}' at once.");
+            throw new ArgumentException($"two actions are {verb} '{twice.Key}' at once.");
         foreach (var action in actions)
         {
             if (action.Unit is null || !tags.TryGetValue(action.Unit, out var unit))
-                throw new ArgumentException($"an action is imposed on an unknown unit tag '{action.Unit}'.");
-            if (!IsHero(unit))
-                throw new ArgumentException($"an action is imposed on '{action.Unit}', which is not a hero.");
+                throw new ArgumentException($"an action is {verb} an unknown unit tag '{action.Unit}'.");
+            if (heroesOnly && !IsHero(unit))
+                throw new ArgumentException($"an action is {verb} '{action.Unit}', which is not a hero.");
             if (action.Skill is null && action.MoveTo is null)
-                throw new ArgumentException($"the action imposed on '{action.Unit}' needs a skill or a cell to move to.");
+                throw new ArgumentException($"the action {verb} '{action.Unit}' needs a skill or a cell to move to.");
             if (action.Skill is null && (action.Target is not null || action.Cell is not null))
-                throw new ArgumentException($"the action imposed on '{action.Unit}' has a target but no skill.");
+                throw new ArgumentException($"the action {verb} '{action.Unit}' has a target but no skill.");
             if (action.Target is { } target && !tags.ContainsKey(target))
-                throw new ArgumentException($"the action imposed on '{action.Unit}' aims at an unknown unit tag '{target}'.");
+                throw new ArgumentException($"the action {verb} '{action.Unit}' aims at an unknown unit tag '{target}'.");
             if (action.Skill is { } id)
             {
                 var skill = unit.Definition.Skills.FirstOrDefault(s => s.Id == id)
                     ?? throw new ArgumentException($"'{action.Unit}' has no skill '{id}' to use.");
-                ValidateAim(action, skill);
+                ValidateAim(action, skill, verb);
             }
         }
     }
 
     /// <summary>
-    /// La visée d'une compétence imposée n'est pas libre : une zone vise une case, une compétence sur soi rien, les autres
-    /// une unité (plus une case pour celles qui la déplacent quelque part, comme la télékinésie). Le reste se vérifie au
-    /// moment d'imposer (une visée impossible y est abandonnée).
+    /// La visée d'une compétence du script n'est pas libre : une zone vise une case, une compétence sur soi rien, un
+    /// sauvetage ou une télékinésie une unité et la case où elle va, les autres une unité seule. Le reste se vérifie au
+    /// moment d'agir (une visée impossible y est abandonnée).
     /// </summary>
-    private static void ValidateAim(ImposedAction action, SkillDefinition skill)
+    private static void ValidateAim(ScriptAction action, SkillDefinition skill, string verb)
     {
+        // Les compétences à visée particulière (chaîne, mouvement du lanceur, réanimation à distance, tourniquet) se
+        // vérifient seulement au moment d'agir.
+        if (skill.Chain is not null || skill.SelfMove is not null || skill.RevivesAlly || skill.ForcedMove?.Type == ForcedMoveType.Spin)
+            return;
         var (fits, aims) = skill.Zone is not null ? (action.Cell is not null && action.Target is null, "a cell")
             : skill.Target == SkillTargeting.Self ? (action.Cell is null && action.Target is null, "nothing")
-            : (action.Target is not null, "a unit");
+            : skill.IsRescue || skill.ForcedMove?.Type == ForcedMoveType.Place
+                ? (action.Target is not null && action.Cell is not null, "a unit and a cell (where it goes)")
+            : (action.Target is not null && action.Cell is null, "a unit (and no cell)");
         if (!fits)
-            throw new ArgumentException($"the skill '{skill.Id}' imposed on '{action.Unit}' must aim at {aims}.");
+            throw new ArgumentException($"the skill '{skill.Id}' {verb} '{action.Unit}' must aim at {aims}.");
     }
 
     /// <summary>Un héros : du camp des joueurs, ni civil, ni personne à protéger, ni structure.</summary>

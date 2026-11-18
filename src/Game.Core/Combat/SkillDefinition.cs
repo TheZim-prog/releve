@@ -274,6 +274,12 @@ public sealed record SkillDefinition
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Id : Name;
 
+    /// <summary>
+    /// Réservée au script de mission (un coup scénarisé, comme celui qui fait tomber le télépathe au prologue) : l'IA ne
+    /// la choisit jamais d'elle-même, seul un ordre du script (effet <c>act</c>) la déclenche.
+    /// </summary>
+    public bool ScriptOnly { get; init; }
+
     /// <summary>Effet renforcé sur les robots (ex. IEM : états plus longs, dégâts en plus), ou <c>null</c>.</summary>
     public RobotBonusDefinition? VsRobots { get; init; }
 

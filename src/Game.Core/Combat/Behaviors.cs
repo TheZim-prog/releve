@@ -27,6 +27,12 @@ public static class Behaviors
     public const string Inert = "inert";
 
     /// <summary>
+    /// Scénarisé (un allié du jeu, comme le télépathe du prologue) : n'agit jamais de lui-même, seulement sur ordre du
+    /// script de mission (effet <c>act</c>).
+    /// </summary>
+    public const string Scripted = "scripted";
+
+    /// <summary>
     /// Prudent (une personne à protéger qui ne se bat pas) : n'attaque jamais ; attaqué depuis sa dernière action, il
     /// recule loin de l'adversaire le plus proche ; sinon il attend sur place.
     /// </summary>
@@ -56,7 +62,7 @@ public static class Behaviors
         Basic => BasicInstance,
         Beacon => BeaconInstance,
         Gunner => GunnerInstance,
-        Inert => InertInstance,
+        Inert or Scripted => InertInstance, // n'agir que sur ordre du script, c'est ne jamais agir de soi-même
         Cautious => CautiousInstance,
         Flee => FleeInstance,
         _ => null,

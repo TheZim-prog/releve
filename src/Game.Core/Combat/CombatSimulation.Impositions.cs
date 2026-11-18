@@ -1,4 +1,3 @@
-using Game.Core.Grids;
 using Game.Core.Scripts;
 
 namespace Game.Core.Combat;
@@ -7,33 +6,33 @@ namespace Game.Core.Combat;
 public sealed partial class CombatSimulation
 {
     // Actions imposées pas encore faites, dans l'ordre du script.
-    private readonly List<Imposition> _impositions = new();
+    private readonly List<ResolvedAction> _impositions = new();
 
     // Jauge de chaque héros avant qu'on la remplisse pour son action imposée : rendue si l'action est abandonnée.
     private readonly Dictionary<UnitId, int> _gaugesBeforeImposition = new();
 
     /// <summary>Actions imposées pas encore faites (vide d'ordinaire). Tant qu'il y en a, le combat est figé.</summary>
-    public IReadOnlyList<Imposition> ImposedActions => _impositions.AsReadOnly();
+    public IReadOnlyList<ResolvedAction> ImposedActions => _impositions.AsReadOnly();
 
     /// <summary>La consigne des actions imposées en cours (affichée jusqu'à ce qu'elles soient faites), ou <c>null</c>.</summary>
     public ScriptMessage? Instruction { get; private set; }
 
     /// <summary>L'action imposée à cette unité, ou <c>null</c>.</summary>
-    public Imposition? ImposedOn(UnitId unit) => _impositions.Find(i => i.Unit == unit);
+    public ResolvedAction? ImposedOn(UnitId unit) => _impositions.Find(i => i.Unit == unit);
 
     /// <summary>
     /// Impose ces actions, avec leur consigne : chaque héros debout reçoit la sienne, jauge pleine, et perd son ordre à
     /// l'avance (un héros à terre, ou dont la cible n'est pas là, n'en reçoit pas : elle est abandonnée). Puis celles
     /// déjà impossibles sont abandonnées, et un héros joué par l'IA fait la sienne aussitôt.
     /// </summary>
-    private void Impose(IReadOnlyList<ImposedAction> actions, string? speaker, string? say)
+    private void Impose(IReadOnlyList<ScriptAction> actions, string? speaker, string? say)
     {
         foreach (var action in actions)
         {
-            if (Tagged(action.Unit) is not { } unit)
+            if (Resolve(action) is not { } resolved)
                 continue; // pas (encore) sur la carte
-            var target = action.Target is { } tag ? Tagged(tag)?.Id : null;
-            if (unit.Status != UnitStatus.Active || (action.Target is not null && target is null))
+            var unit = FindUnit(resolved.Unit)!;
+            if (unit.Status != UnitStatus.Active || (action.Target is not null && resolved.Target is null))
             {
                 _events.Add(new ImposedActionEnded(CurrentTick, unit.Id, Done: false));
                 continue;
@@ -42,7 +41,7 @@ public sealed partial class CombatSimulation
                 _events.Add(new OrderCancelled(CurrentTick, unit.Id));
             _gaugesBeforeImposition[unit.Id] = unit.Gauge;
             SetGauge(unit, Rules.GaugeCapacity);
-            _impositions.Add(new Imposition(unit.Id, action.Skill, target, action.Cell, action.MoveTo));
+            _impositions.Add(resolved);
             _events.Add(new ActionImposed(CurrentTick, unit.Id));
         }
         // La consigne n'a de sens que si une action au moins est imposée.
@@ -51,10 +50,8 @@ public sealed partial class CombatSimulation
         SettleImpositions();
     }
 
-    private Unit? Tagged(string tag) => _units.Find(u => u.Tag == tag);
-
     /// <summary>Un héros vient de faire son action imposée : les autres sont revues, et le script reprend s'il n'en reste plus.</summary>
-    private void CompleteImposition(Imposition imposition)
+    private void CompleteImposition(ResolvedAction imposition)
     {
         EndImposition(imposition, done: true);
         SettleImpositions();
@@ -76,7 +73,7 @@ public sealed partial class CombatSimulation
             foreach (var imposition in _impositions.ToList())
             {
                 var unit = FindUnit(imposition.Unit)!;
-                var plan = ControllerOf(unit) is null || RunsItsOwnAi(unit) ? FirstPlanFor(imposition, unit) : null;
+                var plan = ControllerOf(unit) is null || RunsItsOwnAi(unit) ? FirstPlanFor(imposition, unit, scriptOrder: false) : null;
                 if (plan is null)
                 {
                     EndImposition(imposition, done: false);
@@ -100,44 +97,12 @@ public sealed partial class CombatSimulation
         unit.Behavior is not null && unit.DominatedBy is null && !unit.HasStatus(StatusKind.Confused) && !unit.IsFleeing;
 
     /// <summary>L'action est faite ou abandonnée ; abandonnée, le héros retrouve la jauge qu'il avait avant.</summary>
-    private void EndImposition(Imposition imposition, bool done)
+    private void EndImposition(ResolvedAction imposition, bool done)
     {
         _impositions.Remove(imposition);
         _gaugesBeforeImposition.Remove(imposition.Unit, out var gauge);
         if (!done && FindUnit(imposition.Unit) is { Status: UnitStatus.Active } unit && unit.Gauge == Rules.GaugeCapacity)
             unit.Gauge = gauge;
         _events.Add(new ImposedActionEnded(CurrentTick, imposition.Unit, done));
-    }
-
-    /// <summary>
-    /// Une activation valide qui respecte l'action imposée, ou <c>null</c> s'il n'y en a aucune : sur place d'abord, puis
-    /// depuis chaque case atteignable (dans l'ordre du calcul des chemins, déterministe) quand le déplacement est libre.
-    /// </summary>
-    private ActivationPlan? FirstPlanFor(Imposition imposition, Unit unit)
-    {
-        if (unit.Status != UnitStatus.Active)
-            return null;
-        var use = imposition.Skill is { } skill ? new SkillUse(skill, imposition.Target, imposition.Cell) : null;
-        foreach (var moveTo in Destinations(imposition, unit))
-        {
-            if (ValidateActivation(new ActivateCommand(unit.Id, moveTo, use)).Plan is { } plan)
-                return plan;
-        }
-        return null;
-    }
-
-    private IEnumerable<Cell?> Destinations(Imposition imposition, Unit unit)
-    {
-        if (imposition.MoveTo is { } imposed)
-        {
-            yield return imposed;
-            yield break;
-        }
-        yield return null;
-        foreach (var cell in ReachableCells(unit.Id).Keys)
-        {
-            if (cell != unit.Position)
-                yield return cell;
-        }
     }
 }

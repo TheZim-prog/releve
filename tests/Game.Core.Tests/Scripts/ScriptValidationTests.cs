@@ -75,7 +75,7 @@ public class ScriptValidationTests
         Assert.Contains("share the tag", Refusal(setup));
     }
 
-    private static CombatSetup Imposing(params ImposedAction[] actions) =>
+    private static CombatSetup Imposing(params ScriptAction[] actions) =>
         Fight(Trigger("lesson", null, new ScriptEffect { Say = "Frappez", Impose = actions })) with
         {
             Units = new[] { Unit(1, team: 0, 0, 0) with { Tag = "hero" }, Unit(2, team: 1, 3, 0) with { Tag = "boss" } },
@@ -84,10 +84,8 @@ public class ScriptValidationTests
     [Fact]
     public void WellFormedImposedActions_AreAccepted()
     {
-        _ = new CombatSimulation(Imposing(new ImposedAction { Unit = "hero", Skill = "strike", Target = "boss", MoveTo = new Cell(1, 0) }));
-        _ = new CombatSimulation(Imposing(new ImposedAction { Unit = "hero", MoveTo = new Cell(1, 1) }));
-        // Une unité et une case : pour une compétence qui déplace sa cible quelque part (télékinésie).
-        _ = new CombatSimulation(Imposing(new ImposedAction { Unit = "hero", Skill = "strike", Target = "boss", Cell = new Cell(2, 1) }));
+        _ = new CombatSimulation(Imposing(new ScriptAction { Unit = "hero", Skill = "strike", Target = "boss", MoveTo = new Cell(1, 0) }));
+        _ = new CombatSimulation(Imposing(new ScriptAction { Unit = "hero", MoveTo = new Cell(1, 1) }));
     }
 
     [Theory]
@@ -97,10 +95,11 @@ public class ScriptValidationTests
     [InlineData("hero", null, null, null, "needs a skill or a cell")]
     [InlineData("hero", null, "boss", 1, "has a target but no skill")]
     [InlineData("hero", "strike", null, 1, "'strike' imposed on 'hero' must aim at a unit")]
+    [InlineData("hero", "strike", "boss", 1, "must aim at a unit (and no cell)")]
     [InlineData("hero", "strike", "king", null, "unknown unit tag 'king'")]
     public void AMalformedImposedAction_IsRefused(string unit, string? skill, string? target, int? cell, string message)
     {
-        var action = new ImposedAction
+        var action = new ScriptAction
         {
             Unit = unit, Skill = skill, Target = target,
             Cell = cell is null ? null : new Cell(1, 1),
@@ -124,19 +123,19 @@ public class ScriptValidationTests
             Effects = new[] { new StatusEffect { Status = StatusKind.Hasted, DurationMs = 1000 } },
         };
         var hero = Unit(1, team: 0, 0, 0, skills: new[] { zone, self }) with { Tag = "hero" };
-        CombatSetup With(ImposedAction action) => Imposing(action) with { Units = new[] { hero, Unit(2, team: 1, 3, 0) with { Tag = "boss" } } };
+        CombatSetup With(ScriptAction action) => Imposing(action) with { Units = new[] { hero, Unit(2, team: 1, 3, 0) with { Tag = "boss" } } };
 
-        _ = new CombatSimulation(With(new ImposedAction { Unit = "hero", Skill = "blast", Cell = new Cell(2, 0) }));
-        _ = new CombatSimulation(With(new ImposedAction { Unit = "hero", Skill = "focus" }));
-        Assert.Contains("must aim at a cell", Refusal(With(new ImposedAction { Unit = "hero", Skill = "blast", Target = "boss" })));
-        Assert.Contains("must aim at nothing", Refusal(With(new ImposedAction { Unit = "hero", Skill = "focus", Target = "boss" })));
+        _ = new CombatSimulation(With(new ScriptAction { Unit = "hero", Skill = "blast", Cell = new Cell(2, 0) }));
+        _ = new CombatSimulation(With(new ScriptAction { Unit = "hero", Skill = "focus" }));
+        Assert.Contains("must aim at a cell", Refusal(With(new ScriptAction { Unit = "hero", Skill = "blast", Target = "boss" })));
+        Assert.Contains("must aim at nothing", Refusal(With(new ScriptAction { Unit = "hero", Skill = "focus", Target = "boss" })));
     }
 
     [Fact]
     public void TwoActionsForTheSameHero_AreRefused() =>
         Assert.Contains("two actions are imposed on 'hero'", Refusal(Imposing(
-            new ImposedAction { Unit = "hero", Skill = "strike", Target = "boss" },
-            new ImposedAction { Unit = "hero", MoveTo = new Cell(1, 1) })));
+            new ScriptAction { Unit = "hero", Skill = "strike", Target = "boss" },
+            new ScriptAction { Unit = "hero", MoveTo = new Cell(1, 1) })));
 
     [Fact]
     public void ImposedActions_CannotAlsoFreeze()
@@ -145,16 +144,65 @@ public class ScriptValidationTests
         {
             Script = new[]
             {
-                Trigger("lesson", null, new ScriptEffect { Freeze = true, Impose = new[] { new ImposedAction { Unit = "hero", MoveTo = new Cell(1, 1) } } }),
+                Trigger("lesson", null, new ScriptEffect { Freeze = true, Impose = new[] { new ScriptAction { Unit = "hero", MoveTo = new Cell(1, 1) } } }),
             },
         };
 
-        Assert.Contains("no \"freeze\"", Refusal(setup));
+        Assert.Contains("\"freeze\" is for a message alone", Refusal(setup));
     }
 
     [Fact]
-    public void AnEffect_NeedsATextOrImposedActions() =>
-        Assert.Contains("a text to say, or actions to impose", Refusal(Fight(Trigger("a", null, new ScriptEffect()))));
+    public void AnEffect_NeedsATextOrActions() =>
+        Assert.Contains("a text to say, or actions to impose or order", Refusal(Fight(Trigger("a", null, new ScriptEffect()))));
+
+    [Fact]
+    public void AnOrder_CanGoToAnyUnit_ButStillAimsAsItsSkillRequires()
+    {
+        CombatSetup Ordering(ScriptAction action) =>
+            Imposing() with { Script = new[] { Trigger("a", null, new ScriptEffect { Act = new[] { action } }) } };
+
+        _ = new CombatSimulation(Ordering(new ScriptAction { Unit = "boss", Skill = "strike", Target = "hero" }));
+        Assert.Contains("the skill 'strike' ordered to 'boss' must aim at a unit",
+            Refusal(Ordering(new ScriptAction { Unit = "boss", Skill = "strike", Cell = new Cell(0, 0) })));
+        Assert.Contains("an action is ordered to an unknown unit tag 'ghost'",
+            Refusal(Ordering(new ScriptAction { Unit = "ghost", MoveTo = new Cell(0, 1) })));
+    }
+
+    [Fact]
+    public void ARescue_MustSayWhereTheAllyIsDropped()
+    {
+        var rescue = new SkillDefinition
+        {
+            Id = "rescue", Target = SkillTargeting.Ally, Weight = SkillWeight.Light, Range = 6, MinDamage = 0, MaxDamage = 0,
+            CooldownMs = 0, RescueDropRadius = 4,
+        };
+        var setup = Imposing() with
+        {
+            Units = new[]
+            {
+                Unit(1, team: 0, 0, 0, skills: new[] { rescue }) with { Tag = "hero" },
+                Unit(3, team: 0, 0, 1) with { Tag = "mate" },
+                Unit(2, team: 1, 3, 0) with { Tag = "boss" },
+            },
+        };
+        CombatSetup With(ScriptAction action) => setup with { Script = new[] { Trigger("a", null, new ScriptEffect { Act = new[] { action } }) } };
+
+        _ = new CombatSimulation(With(new ScriptAction { Unit = "hero", Skill = "rescue", Target = "mate", Cell = new Cell(1, 1) }));
+        Assert.Contains("must aim at a unit and a cell",
+            Refusal(With(new ScriptAction { Unit = "hero", Skill = "rescue", Target = "mate" })));
+    }
+
+    [Fact]
+    public void AnEffect_CannotBothImposeAndOrder()
+    {
+        var action = new ScriptAction { Unit = "hero", MoveTo = new Cell(1, 1) };
+        var setup = Imposing() with
+        {
+            Script = new[] { Trigger("a", null, new ScriptEffect { Impose = new[] { action }, Act = new[] { action } }) },
+        };
+
+        Assert.Contains("either imposes actions or orders them", Refusal(setup));
+    }
 
     [Fact]
     public void AReinforcementTag_CanBeWatched()

@@ -33,6 +33,12 @@ public sealed record ScenarioUnit
     /// <summary>Repère de l'unité pour le script de mission (unique dans le scénario, vagues comprises).</summary>
     public string? Tag { get; init; }
 
+    /// <summary>
+    /// Comportement d'IA à la place de celui de son type, ou <c>null</c>. Un héros qui en a un n'est pas jouable : il est
+    /// commandé par le jeu (<c>"scripted"</c> : il n'agit que sur ordre du script).
+    /// </summary>
+    public string? Behavior { get; init; }
+
     public required int Team { get; init; }
     public required int X { get; init; }
     public required int Y { get; init; }

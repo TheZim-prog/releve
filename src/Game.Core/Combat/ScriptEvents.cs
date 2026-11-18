@@ -28,10 +28,17 @@ public sealed record ActionImposed(int Tick, UnitId Unit) : CombatEvent(Tick);
 public sealed record ImposedActionEnded(int Tick, UnitId Unit, bool Done) : CombatEvent(Tick);
 
 /// <summary>
+/// L'unité de repère <paramref name="Tag"/> n'a pas pu faire l'action que le script lui ordonnait : absente
+/// (<paramref name="Unit"/> <c>null</c> : pas encore arrivée), ou action impossible (hors de combat, étourdie, en fuite,
+/// sans ligne de vue…), ou annulée en chemin. Faite, elle produit les événements de toute action.
+/// </summary>
+public sealed record ScriptedActionFailed(int Tick, string Tag, UnitId? Unit) : CombatEvent(Tick);
+
+/// <summary>
 /// Une action imposée, ses repères résolus : la compétence (ou <c>null</c> : déplacement seul) sur une unité ou une case,
 /// et la case d'arrivée imposée (ou <c>null</c> : libre).
 /// </summary>
-public sealed record Imposition(UnitId Unit, string? Skill, UnitId? Target, Cell? Cell, Cell? MoveTo)
+public sealed record ResolvedAction(UnitId Unit, string? Skill, UnitId? Target, Cell? Cell, Cell? MoveTo)
 {
     /// <summary>L'activation respecte-t-elle ce qui est imposé ?</summary>
     public bool Allows(ActivateCommand command) =>
