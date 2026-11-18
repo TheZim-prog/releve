@@ -68,6 +68,11 @@ public partial class CombatView : Node3D
     private bool? _won;
     private bool _frozen;
 
+    // Dernier message du script qui ne fige pas le combat, et depuis combien de temps il est affiché (en s).
+    private const double MessageSeconds = 6;
+    private ScriptMessage? _lastMessage;
+    private double _lastMessageAge;
+
     private UnitId? _selected;
     private Cell? _ghost;
     private Aiming? _aiming;
@@ -125,6 +130,7 @@ public partial class CombatView : Node3D
         AddChild(_hud);
         _hud.ActionPressed += OnActionPressed;
         _hud.HeroPressed += SelectIfControllable;
+        _hud.ContinuePressed += ContinueScript;
         StartCombat();
         ApplyDevArguments();
     }
@@ -164,6 +170,7 @@ public partial class CombatView : Node3D
 
         _won = null;
         _shownOrders = null;
+        _lastMessage = null;
         // En réseau, le joueur n'a qu'un héros : il est choisi d'emblée.
         _selected = _session is NetworkCombat { MyHero: { } mine } ? mine : null;
         _ghost = null;
@@ -217,6 +224,23 @@ public partial class CombatView : Node3D
             ClearPlan(keepSelection: Selected is not null);
         UpdateOverlays();
         UpdateHud();
+        UpdateDialogue(delta);
+    }
+
+    /// <summary>
+    /// Le message qui fige le combat, avec « Continuer » (lu dans la simulation : il est là aussi après une reconnexion) ;
+    /// sinon le dernier message qui ne le fige pas, quelques secondes.
+    /// </summary>
+    private void UpdateDialogue(double delta)
+    {
+        if (!_session.IsPaused)
+            _lastMessageAge += delta;
+        if (_sim.FrozenMessage is { } frozen)
+            _hud.ShowDialogue(frozen.Speaker, frozen.Text, frozen: true);
+        else if (_lastMessage is { Freezes: false } message && _lastMessageAge < MessageSeconds)
+            _hud.ShowDialogue(message.Speaker, message.Text, frozen: false);
+        else
+            _hud.HideDialogue();
     }
 
     /// <summary>Réaction de l'affichage à un événement : journal, chiffres flottants, décor, dômes.</summary>
@@ -230,6 +254,10 @@ public partial class CombatView : Node3D
             // Refusé au départ, il reste choisi : sa jauge est pleine, le joueur rejoue.
             case OrderExecuted x when x.Unit == _selected && _ghost is null && _aiming is null:
                 _selected = null;
+                break;
+            case ScriptMessageShown m:
+                _lastMessage = m.Message;
+                _lastMessageAge = 0;
                 break;
             case UnitDamaged d:
                 Float(d.Unit, $"-{d.Amount}", new Color(1f, 0.35f, 0.3f));

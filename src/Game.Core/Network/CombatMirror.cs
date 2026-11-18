@@ -17,7 +17,7 @@ public sealed class CombatMirror
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(state);
         Launch = state.Launch;
-        Simulation = CombatSimulation.Replay(state.Launch.BuildSetup(content), state.Log, state.Tick);
+        Simulation = CombatSimulation.Replay(state.Launch.BuildSetup(content), state.Log, state.Step);
     }
 
     public CombatLaunch Launch { get; }
@@ -32,8 +32,8 @@ public sealed class CombatMirror
     public IReadOnlyList<CombatEvent> Apply(TickPlayed tick)
     {
         ArgumentNullException.ThrowIfNull(tick);
-        if (tick.Tick != Simulation.CurrentTick + 1)
-            throw new DesyncException($"Received tick {tick.Tick}, expected {Simulation.CurrentTick + 1}.");
+        if (tick.Step != Simulation.Step + 1)
+            throw new DesyncException($"Received step {tick.Step}, expected {Simulation.Step + 1}.");
         foreach (var command in tick.Commands)
         {
             Simulation.Submit(command);
@@ -41,7 +41,7 @@ public sealed class CombatMirror
         }
         var events = Simulation.Tick();
         if (Simulation.Checksum() != tick.Checksum)
-            throw new DesyncException($"State differs from the server's after tick {tick.Tick}.");
+            throw new DesyncException($"State differs from the server's after step {tick.Step}.");
         return events;
     }
 

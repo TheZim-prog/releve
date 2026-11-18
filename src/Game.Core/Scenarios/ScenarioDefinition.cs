@@ -2,6 +2,7 @@ using Game.Core.Combat;
 using Game.Core.Grids;
 using Game.Core.Objectives;
 using Game.Core.Progression;
+using Game.Core.Scripts;
 
 namespace Game.Core.Scenarios;
 
@@ -31,6 +32,9 @@ public sealed record ScenarioDefinition
 
     /// <summary>Renforts qui arrivent en cours de combat (aucun par défaut).</summary>
     public IReadOnlyList<ScenarioWave>? Waves { get; init; }
+
+    /// <summary>Script de mission : déclencheurs et leurs effets (aucun par défaut).</summary>
+    public IReadOnlyList<ScriptTrigger>? Script { get; init; }
 
     /// <summary>
     /// Lit un scénario ; sa carte est soit écrite dedans, soit désignée parmi <paramref name="maps"/> (elle y est alors
@@ -121,8 +125,11 @@ public sealed record ScenarioDefinition
             {
                 Objectives = Objectives ?? ObjectiveDefinition.Default,
                 Waves = waves,
+                Script = Script ?? Array.Empty<ScriptTrigger>(),
             };
-            setup.ValidateObjectives(); // dès le chargement des données, pas au lancement du combat
+            // Dès le chargement des données, pas au lancement du combat.
+            setup.ValidateObjectives();
+            setup.ValidateScript();
             return setup;
         }
         catch (ArgumentException e)
@@ -146,7 +153,7 @@ public sealed record ScenarioDefinition
             // Un héros n'est ni poursuivi ni protégé : les marques passent pour que la vérification des objectifs le refuse.
             return hero.Definition.ToSetup(id, unit.Team, cell, gauge, hero.Points) with
             {
-                IsPursued = unit.Pursued, IsProtected = unit.Protected,
+                IsPursued = unit.Pursued, IsProtected = unit.Protected, Tag = unit.Tag,
             };
         }
         if (!units.TryGetValue(unit.Unit!, out var definition))
@@ -155,7 +162,7 @@ public sealed record ScenarioDefinition
             throw new ArgumentException($"{unit.Label} is a civilian, it cannot lead minions.");
         return definition.ToSetup(id, unit.Team, cell) with
         {
-            MinionsOnFall = unit.Leader, IsPursued = unit.Pursued, IsProtected = unit.Protected,
+            MinionsOnFall = unit.Leader, IsPursued = unit.Pursued, IsProtected = unit.Protected, Tag = unit.Tag,
         };
     }
 }

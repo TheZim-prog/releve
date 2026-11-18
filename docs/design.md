@@ -432,3 +432,9 @@
 - **Déconnexion en combat : pause automatique** jusqu'au retour du joueur (le combat reprend seul s'il était en pause pour ça), ou jusqu'à ce qu'un joueur relance.
 - Ordre de travail : cœur du combat en C# pur + tests → affichage Godot en solo → réseau → carte du monde.
 - **Besoin identifié** : un **système de scripts de mission** (actions imposées, événements déclenchés, alliés aux coups prédéfinis), indispensable pour la première mission du prologue et les moments scénarisés.
+- ✅ **Scripts de mission, règles retenues** :
+  - **Déclencheurs** décrits par le scénario : des conditions (temps de combat écoulé, une unité repérée hors de combat, un autre déclencheur terminé), toutes requises, et des effets joués dans l'ordre, une seule fois.
+  - **Messages** : chaque message dit s'il **fige le combat**. Un message figé arrête le temps (jauges, recharges, renforts, comptes à rebours) et toute activation jusqu'à ce qu'**un joueur, n'importe lequel, clique « Continuer »** : on s'en sert pour les explications du tutoriel. Un message non figé s'affiche pendant que le combat continue (répliques d'ambiance). Les ordres à l'avance restent permis pendant le gel et partent une fois le temps revenu.
+  - **Actions imposées** (à venir) : le combat est figé, la jauge du héros concerné est pleine, et **seule l'action demandée est acceptée** ; le temps repart quand elle est faite. Plusieurs héros peuvent avoir chacun leur action imposée en même temps (tout le monde agit ensemble).
+  - **Allié aux coups prédéfinis** (à venir) : le télépathe du prologue n'agit **que sur ordre des déclencheurs** (« quand X, le télépathe utilise telle compétence sur telle cible »).
+  - **Chute scénarisée** (à venir) : par un **coup scripté d'un ennemi** (un déclencheur ordonne au caïd ou à un sbire une action précise sur le télépathe, avec des dégâts réglés en données), pas par un effet invisible.

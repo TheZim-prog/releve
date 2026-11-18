@@ -89,8 +89,8 @@ public class TcpTests(ITestOutputHelper output)
         // Chaque client rejoue les ticks reçus jusqu'au 20e : même état que l'autre, empreintes vérifiées au passage.
         foreach (var (inbox, mirror) in new[] { alice, bob }.Zip(mirrors))
         {
-            await inbox.WaitFor<TickPlayed>(t => t.Tick >= 20);
-            foreach (var tick in inbox.All.OfType<TickPlayed>().Where(t => t.Tick <= 20))
+            await inbox.WaitFor<TickPlayed>(t => t.Step >= 20);
+            foreach (var tick in inbox.All.OfType<TickPlayed>().Where(t => t.Step <= 20))
                 mirror.Apply(tick);
         }
         Assert.Equal(mirrors[0].Simulation.Checksum(), mirrors[1].Simulation.Checksum());

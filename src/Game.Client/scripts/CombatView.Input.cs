@@ -80,6 +80,10 @@ public partial class CombatView
             case Key.Tab:
                 SelectNextReady();
                 break;
+            // Combat figé : Entrée continue le message, sauf si un fantôme est posé (le déplacement seul part en ordre à l'avance).
+            case Key.Enter or Key.KpEnter when _sim.FrozenMessage is not null && _ghost is null:
+                ContinueScript();
+                break;
             case Key.Enter or Key.KpEnter:
                 MoveOnly();
                 break;
@@ -88,6 +92,13 @@ public partial class CombatView
                     ArmAction(reviver.Skills.Count);
                 break;
         }
+    }
+
+    /// <summary>« Continuer » le message qui fige le combat (n'importe quel joueur, pour tout le monde).</summary>
+    private void ContinueScript()
+    {
+        if (_sim.FrozenMessage is { } message)
+            _session.ContinueScript(message.Number);
     }
 
     /// <summary>Bouton d'action n° i : compétence i, puis interagir, puis déplacement seul (le dernier).</summary>

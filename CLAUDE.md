@@ -63,11 +63,11 @@ Déjà fait :
 2. **Contenu** : les 6 héros et les ennemis du prologue, et les **6 arbres de compétences complets** (toutes les compétences, variantes et passifs codés), en données.
 3. **Réseau** : serveur dédié, salon, combat en réseau par journal de commandes, export Windows.
 4. **Objectifs de mission** (`docs/design.md` 3.3 et 3.5), décrits par le scénario : élimination, sauvetage, poursuite, course contre la montre, protection (personnes ou structure), objectifs principaux et secondaires, chefs dont les sbires fuient ou se rendent, vagues de renforts. Mode d'emploi dans `data/README.md`.
+5. **Missions d'essai** : un scénario court par type d'objectif et un scénario combiné (`data/scenarios/objectives/`), choisissables dans le menu, joués jusqu'au bout par les tests avec des héros IA.
 
-Prochaines étapes possibles (à choisir avec moi) :
-- **Une mission d'essai** qui combine ces objectifs, pour les éprouver en jouant (aucun scénario ne s'en sert encore).
-- **Scripts de mission** (principe 7) : actions imposées, événements déclenchés, alliés aux actions prédéfinies, pour le tutoriel du prologue.
-- Ensuite seulement : la carte du monde et la campagne (`docs/design.md` sections 4 et 5).
+En cours : **scripts de mission** (principe 7) : événements déclenchés, actions imposées, alliés aux actions prédéfinies. On construit d'abord le moteur de scripts (en données, testé, avec un scénario de démonstration) ; le tutoriel du prologue lui-même vient **en dernier** (`docs/design.md` 6.2).
+
+Ensuite seulement : la carte du monde et la campagne (`docs/design.md` sections 4 et 5).
 
 ## Façon de travailler
 

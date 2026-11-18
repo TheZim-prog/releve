@@ -56,18 +56,23 @@ internal static class ContentTestKit
 
     /// <summary>
     /// Joue le combat jusqu'à son issue (au plus 10 minutes de jeu) et vérifie qu'il se termine, que plus aucun objectif
-    /// n'est en cours, et qu'il se rejoue à l'identique. Renvoie le combat joué et son issue en clair.
+    /// n'est en cours, et qu'il se rejoue à l'identique. Un message figé du script est continué au pas suivant, comme
+    /// par un joueur pressé. Renvoie le combat joué et son issue en clair.
     /// </summary>
     public static (CombatSimulation Sim, string Outcome) PlayToTheEnd(CombatSetup setup, string name)
     {
         var sim = new CombatSimulation(setup);
         var maxTicks = Rules.TicksPerSecond * 60 * 10;
-        while (sim.CurrentTick < maxTicks && sim.Outcome is null)
+        while (sim.CurrentTick < maxTicks && sim.Step < 2 * maxTicks && sim.Outcome is null)
+        {
+            if (sim.FrozenMessage is { } message)
+                sim.Submit(new ContinueCommand(message.Number));
             sim.Tick();
+        }
 
         Assert.True(sim.Outcome is not null, $"Combat '{name}' still running after {maxTicks} ticks.");
         Assert.DoesNotContain(sim.Objectives, o => o.State == ObjectiveState.InProgress);
-        Assert.Equal(sim.EventLog, CombatSimulation.Replay(setup, sim.CommandLog, sim.CurrentTick).EventLog);
+        Assert.Equal(sim.EventLog, CombatSimulation.Replay(setup, sim.CommandLog, sim.Step).EventLog);
         var outcome = sim.Outcome == true ? "victoire" : "défaite";
         return (sim, $"[{name}] {sim.CurrentTick / (double)Rules.TicksPerSecond:0.0} s, {outcome}");
     }

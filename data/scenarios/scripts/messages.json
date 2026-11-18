@@ -1,0 +1,44 @@
+// Essai des scripts de mission : des messages. Le premier fige le combat (« Continuer » pour reprendre), les autres
+// s'affichent sans l'arrêter. Ils partent au début, à une heure donnée, quand une unité repérée tombe, ou à la suite
+// d'un autre message. Le caïd est le chef : ses hommes fuient quand il tombe.
+{
+  "id": "scripts-messages",
+  "name": "Script : messages",
+  "seed": 201,
+  "mapId": "street",
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4 },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+
+    { "unit": "kingpin", "team": 1, "x": 16, "y": 4, "leader": "flee", "tag": "kingpin" },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 3, "tag": "first-thug" },
+    { "unit": "brawler", "team": 1, "x": 13, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 17, "y": 1 }
+  ],
+  "script": [
+    {
+      "id": "briefing",
+      "do": [
+        { "speaker": "Télépathe", "say": "Le caïd est au fond de la rue, avec ses hommes. Restez groupés.", "freeze": true },
+        { "say": "Ce message-là ne fige pas le combat : il passe au journal." }
+      ]
+    },
+    {
+      "id": "taunt",
+      "when": { "atMs": 6000 },
+      "do": [ { "speaker": "Le caïd", "say": "Vous n'auriez jamais dû venir ici !" } ]
+    },
+    {
+      "id": "first-down",
+      "when": { "unitDown": "first-thug" },
+      "do": [ { "speaker": "Télépathe", "say": "Un de moins. Le caïd ne tiendra plus longtemps.", "freeze": true } ]
+    },
+    {
+      "id": "encouragement",
+      "when": { "after": "first-down", "atMs": 15000 },
+      "do": [ { "speaker": "Combattant", "say": "On le tient, on avance !" } ]
+    }
+  ]
+}

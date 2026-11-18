@@ -27,7 +27,7 @@ public partial class Hud : CanvasLayer
 
     private static readonly string HelpText = string.Join('\n',
         "Clic : héros, case (fantôme), cible",
-        "Entrée ou bouton : déplacement seul (vers le fantôme)",
+        "Entrée ou bouton : déplacement seul (vers le fantôme), ou continuer un message",
         "1-9 ou boutons : compétence   R : interagir (relever, objet)",
         "F1-F6 ou cartes à gauche : choisir un héros   Tab : prêt suivant",
         "Clic droit / Échap : annuler",
@@ -47,6 +47,10 @@ public partial class Hud : CanvasLayer
     private Label _hint = null!;
     private Label _banner = null!;
     private VBoxContainer _heroBar = null!;
+    private Control _dialogue = null!;
+    private Label _speaker = null!;
+    private Label _speech = null!;
+    private Button _continue = null!;
 
     private readonly StyleBoxFlat _cardStyle = CardStyle(new Color(0, 0, 0, 0.6f), new Color(0.3f, 0.3f, 0.35f));
     private readonly StyleBoxFlat _cardReady = CardStyle(new Color(0.15f, 0.12f, 0, 0.7f), new Color(1f, 0.85f, 0.2f));
@@ -57,6 +61,9 @@ public partial class Hud : CanvasLayer
 
     /// <summary>Clic sur la carte d'un héros.</summary>
     public event Action<UnitId>? HeroPressed;
+
+    /// <summary>Clic sur « Continuer » sous un message qui fige le combat.</summary>
+    public event Action? ContinuePressed;
 
     public override void _Ready()
     {
@@ -94,8 +101,40 @@ public partial class Hud : CanvasLayer
         _banner.AddThemeColorOverride("font_outline_color", Colors.Black);
         _banner.AddThemeConstantOverride("outline_size", 10);
         AddChild(_banner);
+        AddDialogue();
         SetStatus("");
     }
+
+    // --- Messages du script ---
+
+    /// <summary>En haut au centre : qui parle, le texte, et « Continuer » si le message fige le combat.</summary>
+    private void AddDialogue()
+    {
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 6);
+        _speaker = TextLabel(16, 0);
+        _speaker.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.4f));
+        _speech = TextLabel(18, 560);
+        _continue = new Button { Text = "Continuer (Entrée)", FocusMode = Control.FocusModeEnum.None, SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd };
+        _continue.Pressed += () => ContinuePressed?.Invoke();
+        box.AddChild(_speaker);
+        box.AddChild(_speech);
+        box.AddChild(_continue);
+        _dialogue = Panel(box, new Vector2(0, 12), Corner.TopCenter);
+        AddChild(_dialogue);
+        HideDialogue();
+    }
+
+    public void ShowDialogue(string? speaker, string text, bool frozen)
+    {
+        _speaker.Text = speaker ?? "";
+        _speaker.Visible = speaker is not null;
+        _speech.Text = text;
+        _continue.Visible = frozen;
+        _dialogue.Visible = true;
+    }
+
+    public void HideDialogue() => _dialogue.Visible = false;
 
     // --- Héros choisi ---
 
@@ -281,6 +320,7 @@ public partial class Hud : CanvasLayer
     private enum Corner
     {
         TopLeft,
+        TopCenter,
         TopRight,
         BottomRight,
         BottomCenter,
@@ -300,6 +340,7 @@ public partial class Hud : CanvasLayer
         var (horizontal, vertical) = corner switch
         {
             Corner.TopLeft => (0f, 0f),
+            Corner.TopCenter => (0.5f, 0f),
             Corner.TopRight => (1f, 0f),
             Corner.BottomRight => (1f, 1f),
             _ => (0.5f, 1f),

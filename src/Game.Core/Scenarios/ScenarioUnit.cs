@@ -30,6 +30,9 @@ public sealed record ScenarioUnit
     /// </summary>
     public bool Protected { get; init; }
 
+    /// <summary>Repère de l'unité pour le script de mission (unique dans le scénario, vagues comprises).</summary>
+    public string? Tag { get; init; }
+
     public required int Team { get; init; }
     public required int X { get; init; }
     public required int Y { get; init; }

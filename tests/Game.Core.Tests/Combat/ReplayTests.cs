@@ -106,7 +106,7 @@ public class ReplayTests
             new LoggedCommand(3, new ActivateCommand(new UnitId(1), new Cell(2, 0))),
         };
 
-        Assert.Throws<ArgumentException>(() => CombatSimulation.Replay(setup, log, untilTick: 10));
+        Assert.Throws<ArgumentException>(() => CombatSimulation.Replay(setup, log, untilStep: 10));
     }
 
     [Fact]

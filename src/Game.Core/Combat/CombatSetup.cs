@@ -1,5 +1,6 @@
 using Game.Core.Grids;
 using Game.Core.Objectives;
+using Game.Core.Scripts;
 
 namespace Game.Core.Combat;
 
@@ -38,8 +39,20 @@ public sealed record CombatSetup(CombatRules Rules, Grid Grid, IReadOnlyList<Uni
         init => _waves = ReadOnlyCopy(value);
     }
 
+    private readonly IReadOnlyList<ScriptTrigger> _script = Array.Empty<ScriptTrigger>();
+
+    /// <summary>Script de mission : déclencheurs et leurs effets (aucun par défaut).</summary>
+    public IReadOnlyList<ScriptTrigger> Script
+    {
+        get => _script;
+        init => _script = ReadOnlyCopy(value);
+    }
+
     /// <summary>Objectifs valides et réalisables avec cette carte et ces unités (cf. <see cref="MissionValidator"/>).</summary>
     public void ValidateObjectives() => MissionValidator.Validate(this);
+
+    /// <summary>Script bien formé, repères d'unités uniques (cf. <see cref="ScriptValidator"/>).</summary>
+    public void ValidateScript() => ScriptValidator.Validate(this);
 
     internal static IReadOnlyList<T> ReadOnlyCopy<T>(IReadOnlyList<T> items)
     {

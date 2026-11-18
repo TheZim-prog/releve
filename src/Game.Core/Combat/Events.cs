@@ -302,6 +302,9 @@ public enum RejectionReason
 
     /// <summary>Pas d'obstacle bas à prendre (Lancer de décor, Barricade) : aucun au contact, ou à portée et en vue.</summary>
     NoScenery,
+
+    /// <summary>Le script de mission fige le combat (un message attend « Continuer ») : on n'agit qu'après.</summary>
+    TimeFrozen,
 }
 
 public static class RejectionReasons
@@ -312,8 +315,11 @@ public static class RejectionReasons
     /// </summary>
     public static bool OnlyNeedsTime(this RejectionReason reason) =>
         reason is RejectionReason.NotReady or RejectionReason.Stunned or RejectionReason.Charging or RejectionReason.OnCooldown
-            or RejectionReason.Immobilized or RejectionReason.Disarmed;
+            or RejectionReason.Immobilized or RejectionReason.Disarmed or RejectionReason.TimeFrozen;
 }
 
-/// <summary>Commande telle qu'appliquée, avec son tick : de quoi rejouer le combat à l'identique.</summary>
-public sealed record LoggedCommand(int Tick, CombatCommand Command);
+/// <summary>
+/// Commande telle qu'appliquée, avec le pas de simulation où elle l'a été (<see cref="CombatSimulation.Step"/>) : de quoi
+/// rejouer le combat à l'identique.
+/// </summary>
+public sealed record LoggedCommand(int Step, CombatCommand Command);

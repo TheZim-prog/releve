@@ -73,6 +73,7 @@ public static class Texts
         RejectionReason.OutOfRange => "hors de portée",
         RejectionReason.NoLineOfSight => "pas de ligne de vue",
         RejectionReason.NoScenery => "pas d'obstacle à prendre",
+        RejectionReason.TimeFrozen => "combat figé, « Continuer » d'abord",
         _ => reason.ToString(),
     };
 
@@ -136,6 +137,10 @@ public static class Texts
         return (Math.Max(0, objective.EndTick!.Value - sim.CurrentTick) + ticksPerSecond - 1) / ticksPerSecond;
     }
 
+    /// <summary>Un message du script pour le journal : « Télépathe : « Restez groupés. » », ou le texte seul.</summary>
+    public static string ScriptLine(ScriptMessage message) =>
+        message.Speaker is { } speaker ? $"{speaker} : « {message.Text} »" : message.Text;
+
     /// <summary>Ligne de journal pour un événement, ou <c>null</c> pour ceux qui ne méritent pas d'y figurer.</summary>
     public static string? Describe(CombatEvent e, CombatSimulation sim)
     {
@@ -145,6 +150,7 @@ public static class Texts
 
         return e switch
         {
+            ScriptMessageShown m => ScriptLine(m.Message),
             ObjectiveCompleted o => $"Objectif réussi : {O(o.Objective)}",
             ObjectiveFailed o => $"Objectif raté : {O(o.Objective)}",
             WaveArrived w => $"Des renforts arrivent ! ({w.Units.Count} unité{(w.Units.Count > 1 ? "s" : "")})",

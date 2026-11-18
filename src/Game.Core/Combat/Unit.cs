@@ -41,6 +41,9 @@ public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinitio
 
     /// <summary>Personne à protéger (objectif Protection) : un allié commandé par le jeu ; s'il tombe, la protection est ratée.</summary>
     public bool IsProtected { get; init; }
+
+    /// <summary>Repère de l'unité pour le script de mission (unique dans le combat), ou <c>null</c>.</summary>
+    public string? Tag { get; init; }
 }
 
 /// <summary>
@@ -95,11 +98,15 @@ public sealed class Unit
         IsPursued = setup.IsPursued;
         IsFleeing = setup.IsPursued;
         IsProtected = setup.IsProtected;
+        Tag = setup.Tag;
         _rules = rules;
         StatusEndTicks = _statusEndTicks.AsReadOnly();
     }
 
     public UnitId Id { get; }
+
+    /// <summary>Repère de l'unité pour le script de mission, ou <c>null</c>.</summary>
+    public string? Tag { get; }
 
     /// <summary>Camp actuel (change pendant une domination).</summary>
     public int Team { get; internal set; }
@@ -237,6 +244,12 @@ public sealed class Unit
     /// prochaine activation). Les dégâts sans attaquant (brûlure) et le tir ami ne comptent pas.
     /// </summary>
     public bool AttackedSinceActivation { get; internal set; }
+
+    /// <summary>
+    /// Elle a été mise hors de combat au moins une fois (à terre ou retirée), même si on l'a relevée depuis : ce
+    /// qu'attend un déclencheur <c>unitDown</c> du script.
+    /// </summary>
+    public bool HasFallen { get; internal set; }
 
     /// <summary>Activations déjà faites (pour les unités à nombre d'activations limité).</summary>
     public int Activations { get; internal set; }

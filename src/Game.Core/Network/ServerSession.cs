@@ -113,7 +113,7 @@ public sealed class ServerSession
             EndCombat(new CombatAborted());
             throw;
         }
-        Broadcast(new TickPlayed(simulation.CurrentTick, commands.Select(c => c.Command).ToList(), simulation.Checksum()));
+        Broadcast(new TickPlayed(simulation.Step, commands.Select(c => c.Command).ToList(), simulation.Checksum()));
 
         if (simulation.Outcome is { } victory)
             EndCombat(new CombatOver(victory));
@@ -181,7 +181,7 @@ public sealed class ServerSession
         {
             // Reconnexion : tout le combat, à rejouer ; s'il était en pause pour les déconnexions, il reprend quand
             // tout le monde est revenu.
-            peer.Send(new CombatState(_launch!, simulation.CommandLog.ToList(), simulation.CurrentTick, _paused, _pausedBy));
+            peer.Send(new CombatState(_launch!, simulation.CommandLog.ToList(), simulation.Step, _paused, _pausedBy));
             if (_paused && _pausedBy is null && _players.All(p => p.Peer is not null))
                 SetPaused(false, byPlayer: null);
         }
@@ -244,8 +244,10 @@ public sealed class ServerSession
             return;
         }
         // Son héros, ou une unité qu'il domine (une domination finie ou un héros à terre : la simulation tranchera).
+        // « Continuer » un message du script ne vise aucune unité : n'importe quel joueur le peut.
         var unit = simulation.FindUnit(valid.Unit);
-        if (player.Hero is not { } hero || unit is null || !CombatLaunch.IsCommandedBy(unit, hero))
+        if (valid is not ContinueCommand
+            && (player.Hero is not { } hero || unit is null || !CombatLaunch.IsCommandedBy(unit, hero)))
         {
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotYourUnit));
             return;
@@ -273,6 +275,8 @@ public sealed class ServerSession
         };
         if (command is CancelOrderCommand cancel)
             return new CancelOrderCommand(cancel.Unit);
+        if (command is ContinueCommand resume)
+            return new ContinueCommand(resume.Message);
         if (activation is null || (activation.Skill is { } skill && skill.SkillId is null)
             || (activation.Interaction is { } interaction && !Enum.IsDefined(interaction.Kind)))
             return null;

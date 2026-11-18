@@ -8,6 +8,7 @@ namespace Game.Core.Combat;
 [JsonDerivedType(typeof(ActivateCommand), "activate")]
 [JsonDerivedType(typeof(OrderCommand), "order")]
 [JsonDerivedType(typeof(CancelOrderCommand), "cancelOrder")]
+[JsonDerivedType(typeof(ContinueCommand), "continue")]
 public abstract record CombatCommand(UnitId Unit);
 
 /// <summary>
@@ -64,3 +65,10 @@ public sealed record OrderCommand(ActivateCommand Activation) : CombatCommand(Ac
 
 /// <summary>Annule l'ordre en attente de l'unité, s'il y en a un.</summary>
 public sealed record CancelOrderCommand(UnitId Unit) : CombatCommand(Unit);
+
+/// <summary>
+/// Fait continuer le message figé n° <paramref name="Message"/> du script : le temps reprend. Une commande de joueur
+/// (n'importe lequel, même sans héros), pas d'unité : son <see cref="CombatCommand.Unit"/> est vide. Sans effet si ce
+/// message n'est plus celui qui fige le combat (deux joueurs ont cliqué en même temps).
+/// </summary>
+public sealed record ContinueCommand(int Message) : CombatCommand(default(UnitId));

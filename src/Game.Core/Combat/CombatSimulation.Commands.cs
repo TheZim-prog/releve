@@ -19,6 +19,9 @@ public sealed partial class CombatSimulation
                 if (_orders.RemoveAll(o => o.Unit == cancel.Unit) > 0)
                     _events.Add(new OrderCancelled(CurrentTick, cancel.Unit));
                 break;
+            case ContinueCommand resume:
+                Continue(resume);
+                break;
             default:
                 throw new ArgumentException($"Unknown command type {command.GetType().Name}.", nameof(command));
         }
@@ -95,11 +98,22 @@ public sealed partial class CombatSimulation
         return orders;
     }
 
-    /// <summary>Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation.</summary>
-    private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command, bool ignoreTiming = false) =>
-        FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null
-            ? (null, RejectionReason.NotControllable)
-            : ValidateActivation(command, ignoreTiming);
+    /// <summary>
+    /// Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation ; tant que
+    /// le script fige le combat, une activation valide par ailleurs est refusée (un ordre à l'avance attend, lui).
+    /// </summary>
+    private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command, bool ignoreTiming = false)
+    {
+        if (FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null)
+            return (null, RejectionReason.NotControllable);
+        if (!ignoreTiming && IsTimeFrozen)
+        {
+            // La vraie raison d'abord (case inaccessible, hors de portée…) ; « figé » seulement s'il suffit d'attendre.
+            var (_, reason) = ValidateActivation(command, ignoreTiming: true);
+            return (null, reason ?? RejectionReason.TimeFrozen);
+        }
+        return ValidateActivation(command, ignoreTiming);
+    }
 
     /// <summary>
     /// Prévisualisation : la commande d'un joueur serait-elle acceptée dans l'état actuel ? <c>null</c> si oui, sinon la

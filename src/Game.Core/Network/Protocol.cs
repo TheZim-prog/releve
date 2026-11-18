@@ -117,17 +117,18 @@ public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Her
 public sealed record LobbyState(string ScenarioId, IReadOnlyList<PlayerInfo> Players) : ServerMessage;
 
 /// <summary>
-/// Le combat : son lancement, les commandes déjà jouées et le tick atteint (vide et 0 au début ; à rejouer à la
-/// reconnexion), et la pause. <paramref name="PausedBy"/> : joueur qui l'a mise, ou <c>null</c> (déconnexion).
+/// Le combat : son lancement, les commandes déjà jouées et le pas de simulation atteint (vide et 0 au début ; à rejouer
+/// à la reconnexion), et la pause. <paramref name="PausedBy"/> : joueur qui l'a mise, ou <c>null</c> (déconnexion).
 /// </summary>
-public sealed record CombatState(CombatLaunch Launch, IReadOnlyList<LoggedCommand> Log, int Tick, bool Paused, int? PausedBy)
+public sealed record CombatState(CombatLaunch Launch, IReadOnlyList<LoggedCommand> Log, int Step, bool Paused, int? PausedBy)
     : ServerMessage;
 
 /// <summary>
-/// Le tick <paramref name="Tick"/> est joué, avec ces commandes soumises juste avant, dans cet ordre.
-/// <paramref name="Checksum"/> : empreinte de l'état du serveur après ce tick, pour détecter une désynchronisation.
+/// Le pas de simulation <paramref name="Step"/> est joué (cf. <see cref="CombatSimulation.Step"/> : un tick de combat,
+/// sauf quand le script fige le combat), avec ces commandes soumises juste avant, dans cet ordre.
+/// <paramref name="Checksum"/> : empreinte de l'état du serveur après ce pas, pour détecter une désynchronisation.
 /// </summary>
-public sealed record TickPlayed(int Tick, IReadOnlyList<CombatCommand> Commands, ulong Checksum) : ServerMessage;
+public sealed record TickPlayed(int Step, IReadOnlyList<CombatCommand> Commands, ulong Checksum) : ServerMessage;
 
 /// <summary>Pause mise ou levée ; <paramref name="ByPlayer"/> : <c>null</c> pour une pause automatique (déconnexion).</summary>
 public sealed record PauseChanged(bool Paused, int? ByPlayer) : ServerMessage;

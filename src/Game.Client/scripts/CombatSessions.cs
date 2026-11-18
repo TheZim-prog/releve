@@ -37,6 +37,9 @@ public interface ICombatSession
 
     void Submit(CombatCommand command);
 
+    /// <summary>Fait continuer le message n° <paramref name="message"/> qui fige le combat (pour tout le monde).</summary>
+    void ContinueScript(int message);
+
     void TogglePause();
 
     IReadOnlyList<ActivateCommand> PlannedOrders();
@@ -93,6 +96,9 @@ public sealed class SoloCombat : ICombatSession
     public IReadOnlyList<string> TakeNotices() => Array.Empty<string>();
     public bool CanCommand(Unit unit) => Simulation.IsPlayerControlled(unit.Id);
     public void Submit(CombatCommand command) => Simulation.Submit(command);
+
+    public void ContinueScript(int message) => Simulation.Submit(new ContinueCommand(message));
+
     public void TogglePause() => IsPaused = !IsPaused;
     public IReadOnlyList<ActivateCommand> PlannedOrders() => Simulation.PlannedOrders();
     public string? ControllerName(UnitId hero) => null;
@@ -195,6 +201,8 @@ public sealed class NetworkCombat : ICombatSession
         _client.Send(new SendCommand(command));
         Mirror.Sent(command);
     }
+
+    public void ContinueScript(int message) => Submit(new ContinueCommand(message));
 
     public void TogglePause() => _client.Send(new SetPause(!IsPaused));
     public IReadOnlyList<ActivateCommand> PlannedOrders() => Mirror.PlannedOrders();

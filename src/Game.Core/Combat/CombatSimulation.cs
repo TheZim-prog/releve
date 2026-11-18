@@ -11,7 +11,8 @@ namespace Game.Core.Combat;
 /// dans leur ordre d'arrivée (la première validée l'emporte en cas de conflit) ; les ordres à l'avance dont
 /// l'unité peut agir partent, dans l'ordre où ils ont été donnés ; les unités IA prêtes agissent ; les jauges
 /// se remplissent ; les unités IA qui passent le seuil fixent leur intention ; les objectifs avancent, et l'issue
-/// du combat peut tomber.
+/// du combat peut tomber ; enfin le script de mission avance. Il passe aussi en tout début de pas, et peut figer le
+/// combat : les pas suivants n'appliquent alors que les commandes, sans faire passer le temps, jusqu'à « Continuer ».
 /// </para>
 /// <para>
 /// L'IA fait partie de la simulation : ses décisions sont déterministes et se rejouent d'elles-mêmes,
@@ -66,6 +67,7 @@ public sealed partial class CombatSimulation
         }
         SetUpWaves(setup.Waves);
         SetUpObjectives(setup);
+        SetUpScript(setup);
     }
 
     public CombatRules Rules { get; }
@@ -73,8 +75,17 @@ public sealed partial class CombatSimulation
     /// <summary>Le terrain du combat (non modifiable hors de la simulation).</summary>
     public Grid Grid => _grid;
 
-    /// <summary>Numéro du dernier tick joué (0 avant le premier).</summary>
+    /// <summary>
+    /// Numéro du dernier tick de combat joué (0 avant le premier) : l'horloge du combat, arrêtée tant que le script le
+    /// fige.
+    /// </summary>
     public int CurrentTick { get; private set; }
+
+    /// <summary>
+    /// Nombre de pas de simulation joués (appels à <see cref="Tick"/>), temps figé compris : l'horloge du journal des
+    /// commandes, du rejeu et du réseau. Égal à <see cref="CurrentTick"/> tant que le combat n'a jamais été figé.
+    /// </summary>
+    public int Step { get; private set; }
 
     /// <summary>
     /// Unités (retirées comprises), dans l'ordre de mise en place (ordre de traitement des jauges) : celles du début, puis
@@ -106,17 +117,30 @@ public sealed partial class CombatSimulation
     public void Submit(CombatCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (command is not (ActivateCommand or OrderCommand or CancelOrderCommand))
+        if (command is not (ActivateCommand or OrderCommand or CancelOrderCommand or ContinueCommand))
             throw new ArgumentException($"Unknown command type {command.GetType().Name}.", nameof(command));
         _pending.Enqueue(command);
     }
 
-    /// <summary>Joue un tick et renvoie les événements qu'il a produits.</summary>
+    /// <summary>
+    /// Joue un pas de simulation et renvoie les événements qu'il a produits. D'ordinaire, c'est un tick de combat ; tant
+    /// que le script fige le combat, le temps ne s'écoule pas : seules les commandes sont appliquées (« Continuer », ordres
+    /// à l'avance qui attendront) et le script avance. Le script passe aussi en tout début de pas : un message figé
+    /// prévu dès le début s'affiche avant que quiconque agisse.
+    /// </summary>
     public IReadOnlyList<CombatEvent> Tick()
     {
-        CurrentTick++;
+        Step++;
         var firstEvent = _events.Count;
+        RunScript();
+        if (IsTimeFrozen)
+        {
+            ApplyPendingCommands();
+            RunScript();
+            return _events.GetRange(firstEvent, _events.Count - firstEvent);
+        }
 
+        CurrentTick++;
         BringReinforcements();
         ExpireStatuses();
         ExpireTempHp();
@@ -124,13 +148,7 @@ public sealed partial class CombatSimulation
         ExpireGuards();
         RenewGroundEffects();
         ReleaseCharges();
-
-        while (_pending.TryDequeue(out var command))
-        {
-            _commandLog.Add(new LoggedCommand(CurrentTick, command));
-            Apply(command);
-        }
-
+        ApplyPendingCommands();
         ExecuteOrders();
 
         // Par index : une action pourrait ajouter une unité (invocation) à la liste pendant la boucle.
@@ -150,25 +168,37 @@ public sealed partial class CombatSimulation
 
         UpdateIntentions();
         UpdateObjectives();
+        RunScript();
 
         return _events.GetRange(firstEvent, _events.Count - firstEvent);
     }
 
+    /// <summary>Les commandes soumises depuis le pas précédent, dans leur ordre d'arrivée, notées au journal.</summary>
+    private void ApplyPendingCommands()
+    {
+        while (_pending.TryDequeue(out var command))
+        {
+            _commandLog.Add(new LoggedCommand(Step, command));
+            Apply(command);
+        }
+    }
+
     /// <summary>
-    /// Rejoue un combat depuis son état initial et son journal de commandes, jusqu'au tick <paramref name="untilTick"/>.
+    /// Rejoue un combat depuis son état initial et son journal de commandes, jusqu'au pas <paramref name="untilStep"/>
+    /// (cf. <see cref="Step"/>).
     /// </summary>
-    public static CombatSimulation Replay(CombatSetup setup, IEnumerable<LoggedCommand> commandLog, int untilTick)
+    public static CombatSimulation Replay(CombatSetup setup, IEnumerable<LoggedCommand> commandLog, int untilStep)
     {
         var simulation = new CombatSimulation(setup);
         var commands = new Queue<LoggedCommand>(commandLog);
 
-        while (simulation.CurrentTick < untilTick)
+        while (simulation.Step < untilStep)
         {
-            var nextTick = simulation.CurrentTick + 1;
-            while (commands.TryPeek(out var logged) && logged.Tick <= nextTick)
+            var nextStep = simulation.Step + 1;
+            while (commands.TryPeek(out var logged) && logged.Step <= nextStep)
             {
-                if (logged.Tick < nextTick)
-                    throw new ArgumentException($"Command log is not ordered by tick (tick {logged.Tick} found at tick {nextTick}).", nameof(commandLog));
+                if (logged.Step < nextStep)
+                    throw new ArgumentException($"Command log is not ordered by step (step {logged.Step} found at step {nextStep}).", nameof(commandLog));
                 simulation.Submit(commands.Dequeue().Command);
             }
             simulation.Tick();
@@ -195,6 +225,12 @@ public sealed partial class CombatSimulation
         Add((long)_random.State);
         Add(Outcome is { } victory ? (victory ? 1 : 2) : 0);
         Add(_wavesArrived);
+        Add(Step);
+        Add(_messagesShown);
+        Add(FrozenMessage?.Number ?? 0);
+        Add(_scriptQueue.Count);
+        foreach (var state in _triggerStates)
+            Add((int)state);
         foreach (var objective in _objectives)
             Add((int)objective.State);
         foreach (var device in Devices)
@@ -233,7 +269,7 @@ public sealed partial class CombatSimulation
             Add(unit.PendingGauge);
             Add((int)unit.Status);
             Add((unit.IsFleeing ? 1 : 0) | (unit.Escaped ? 2 : 0) | (unit.Surrendered ? 4 : 0) | (unit.FellAsLeader ? 8 : 0)
-                | (unit.AttackedSinceActivation ? 16 : 0));
+                | (unit.AttackedSinceActivation ? 16 : 0) | (unit.HasFallen ? 32 : 0));
             Add(unit.Team);
             Add((int)unit.SpentReactions);
             Add(unit.Guard is null ? 0 : 1 + (int)unit.Guard.Against);

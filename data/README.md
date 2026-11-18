@@ -83,6 +83,25 @@ montrent un par type (élimination avec chef et renforts, sauvetage, poursuite, 
 relais), plus une mission combinée. Les personnes à protéger sont dans `units/allies.json`, les structures dans
 `units/structures.json`. Leurs valeurs sont des valeurs d'essai, à ajuster en jouant.
 
+**Écrire un script de mission** : donner un repère aux unités dont le script parle (`"tag": "kingpin"` dans les unités
+ou les vagues, unique dans le scénario), puis une liste `"script"` de déclencheurs :
+
+```json
+"script": [
+  { "id": "briefing", "do": [ { "speaker": "Télépathe", "say": "Restez groupés.", "freeze": true } ] },
+  { "id": "taunt", "when": { "atMs": 6000 }, "do": [ { "speaker": "Le caïd", "say": "Partez !" } ] },
+  { "id": "first-down", "when": { "unitDown": "first-thug", "after": "briefing" }, "do": [ { "say": "Un de moins." } ] }
+]
+```
+
+Un déclencheur part une seule fois, quand **toutes** ses conditions sont réunies (sans `when` : dès le début) :
+`atMs` (temps de combat écoulé, le temps figé ne compte pas), `unitDown` (l'unité de ce repère est à terre ou hors
+du combat), `after` (cet autre déclencheur est terminé). Ses effets se jouent dans l'ordre. Pour l'instant, un effet est
+un message : `say` (le texte), `speaker` (qui parle ; sans lui, c'est une indication du jeu) et `"freeze": true` pour
+**figer le combat** jusqu'à ce qu'un joueur clique « Continuer » (ou Entrée) ; les effets suivants attendent. Un
+déclencheur est terminé quand tous ses effets le sont. Le script s'arrête à la fin du combat : un message prévu pour la
+chute du dernier ennemi ne s'affichera pas. Exemple jouable : « Script : messages » (`scenarios/scripts/`).
+
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et
 seulement des compétences déjà codées dans l'équipement.

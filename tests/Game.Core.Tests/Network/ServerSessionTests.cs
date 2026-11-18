@@ -2,6 +2,7 @@ using Game.Core.Combat;
 using Game.Core.Grids;
 using Game.Core.Network;
 using Game.Core.Scenarios;
+using Game.Core.Scripts;
 using static Game.Core.Tests.Combat.CombatTestKit;
 
 namespace Game.Core.Tests.Network;
@@ -34,7 +35,16 @@ public class ServerSessionTests
             ["hero-c"] = Unit(0, 0, 0, 0).Definition with { Id = "hero-c" },
             ["thug"] = Unit(0, 1, 0, 0, hp: 60, behavior: Behaviors.Basic).Definition with { Id = "thug" },
         },
-        Scenarios = new Dictionary<string, ScenarioDefinition> { ["test"] = ScenarioDefinition.FromJson(ScenarioJson) },
+        Scenarios = new Dictionary<string, ScenarioDefinition>
+        {
+            ["test"] = ScenarioDefinition.FromJson(ScenarioJson),
+            // Le même combat, figé dès le début par un message du script.
+            ["scripted"] = ScenarioDefinition.FromJson(ScenarioJson) with
+            {
+                Id = "scripted",
+                Script = new[] { new ScriptTrigger { Id = "intro", Do = new[] { new ScriptEffect { Say = "Écoutez", Freeze = true } } } },
+            },
+        },
         Version = "v1",
     };
 
@@ -53,9 +63,9 @@ public class ServerSessionTests
             Say(new JoinRequest(name, protocol, code ?? Protocol.CodeVersion, content));
     }
 
-    private static (ServerSession Session, FakeClient Alice, FakeClient Bob) TwoPlayersInCombat()
+    private static (ServerSession Session, FakeClient Alice, FakeClient Bob) TwoPlayersInCombat(string scenario = "test")
     {
-        var session = new ServerSession(Content, "test");
+        var session = new ServerSession(Content, scenario);
         var alice = new FakeClient(session);
         var bob = new FakeClient(session);
         alice.Join("Alice");
@@ -124,7 +134,7 @@ public class ServerSessionTests
 
         var state = alice.Last<CombatState>();
         Assert.Equal(state.Launch.Heroes, bob.Last<CombatState>().Launch.Heroes);
-        Assert.Equal(0, state.Tick);
+        Assert.Equal(0, state.Step);
         Assert.NotNull(session.Simulation);
         // Le héros que personne n'a choisi est joué par l'IA.
         var mirror = new CombatMirror(Content, state);
@@ -161,6 +171,32 @@ public class ServerSessionTests
         }
         Assert.Equal(new Cell(2, 0), session.Simulation!.Get(1).Position);
         Assert.Equal(new Cell(2, 2), session.Simulation!.Get(2).Position);
+    }
+
+    [Fact]
+    public void AnyPlayer_ContinuesAFrozenMessage_AndAReconnectingClientReplaysIt()
+    {
+        var (session, alice, bob) = TwoPlayersInCombat("scripted");
+        var mirror = new CombatMirror(Content, alice.Last<CombatState>());
+        for (var i = 0; i < 5; i++)
+            session.Tick();
+        Assert.True(session.Simulation!.IsTimeFrozen);
+
+        bob.Say(new SendCommand(new ContinueCommand(session.Simulation.FrozenMessage!.Number)));
+        for (var i = 0; i < 5; i++)
+            session.Tick();
+
+        Assert.False(session.Simulation.IsTimeFrozen);
+        Assert.Equal((10, 4), (session.Simulation.Step, session.Simulation.CurrentTick));
+        foreach (var tick in alice.Received.OfType<TickPlayed>())
+            mirror.Apply(tick);
+        AssertSameState(session.Simulation, mirror.Simulation);
+
+        // Reconnexion : le journal (« Continuer » compris) repasse par le JSON et se rejoue jusqu'au même pas.
+        var carol = new FakeClient(session);
+        session.Disconnect(bob);
+        carol.Join("Bob");
+        AssertSameState(session.Simulation, new CombatMirror(Content, carol.Last<CombatState>()).Simulation);
     }
 
     [Fact]
@@ -341,7 +377,7 @@ public class ServerSessionTests
         var tick = alice.Last<TickPlayed>();
 
         Assert.Throws<DesyncException>(() => mirror.Apply(tick with { Checksum = tick.Checksum + 1 }));
-        Assert.Throws<DesyncException>(() => new CombatMirror(Content, alice.Last<CombatState>()).Apply(tick with { Tick = 2 }));
+        Assert.Throws<DesyncException>(() => new CombatMirror(Content, alice.Last<CombatState>()).Apply(tick with { Step = 2 }));
     }
 
     [Fact]

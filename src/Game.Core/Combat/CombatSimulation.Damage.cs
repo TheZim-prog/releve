@@ -298,6 +298,7 @@ public sealed partial class CombatSimulation
     private void TakeOutOfAction(Unit unit, UnitStatus status)
     {
         unit.Status = status;
+        unit.HasFallen = true;
         unit.TempHp = 0;
         EndTauntsOf(unit);
         foreach (var effect in unit.StatusEndTicks.Keys.ToList())
