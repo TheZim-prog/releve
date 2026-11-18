@@ -32,6 +32,8 @@ public partial class CombatView
         var header = $"{unit.Definition.Name} — {Texts.Hp(unit)} PV — jauge {100 * unit.Gauge / _data.Rules.GaugeCapacity} %"
                      + (HasOrder(unit.Id) ? " — ORDRE DONNÉ" : unit.IsReady ? " — PRÊT" : "")
                      + (_ghost is not null ? " — déplacement prévu" : "");
+        if (_sim.ImposedOn(unit.Id) is { } imposed)
+            header += $"\nAction demandée : {Texts.Imposed(imposed, _sim)}";
         var states = unit.StatusEndTicks.Keys.Select(Texts.Status).ToList();
         if (unit.Guard is { } guard)
             states.Add(Texts.Guard(guard.Against));

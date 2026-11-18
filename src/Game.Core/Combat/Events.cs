@@ -305,6 +305,12 @@ public enum RejectionReason
 
     /// <summary>Le script de mission fige le combat (un message attend « Continuer ») : on n'agit qu'après.</summary>
     TimeFrozen,
+
+    /// <summary>Le script impose une autre action à ce héros : seule celle-là lui est permise.</summary>
+    NotTheImposedAction,
+
+    /// <summary>Ce héros a une action imposée : elle se fait tout de suite, pas en ordre à l'avance.</summary>
+    ImposedActionIsNow,
 }
 
 public static class RejectionReasons

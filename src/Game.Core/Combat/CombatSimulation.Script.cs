@@ -22,14 +22,21 @@ public sealed partial class CombatSimulation
     private readonly Queue<(int Trigger, int Effect)> _scriptQueue = new();
     private int _messagesShown;
 
-    // L'effet du message figé en cours (son déclencheur se termine quand on continue, si c'était son dernier effet).
-    private (int Trigger, int Effect) _frozenEffect;
+    // L'effet qui fige le combat (message figé ou actions imposées) : son déclencheur se termine avec lui, si c'était
+    // son dernier effet.
+    private (int Trigger, int Effect) _blockingEffect;
+
+    // Pas de simulation commencé figé : ses commandes sont jugées figées jusqu'au bout.
+    private bool _inFrozenStep;
 
     /// <summary>Le message qui fige le combat en attendant « Continuer », ou <c>null</c>.</summary>
     public ScriptMessage? FrozenMessage { get; private set; }
 
-    /// <summary>Le script fige le combat : le temps ne s'écoule plus et personne n'agit.</summary>
-    public bool IsTimeFrozen => FrozenMessage is not null;
+    /// <summary>
+    /// Le script fige le combat : le temps ne s'écoule plus et personne n'agit, sauf les héros qui ont une action imposée
+    /// (et seulement pour la faire).
+    /// </summary>
+    public bool IsTimeFrozen => FrozenMessage is not null || _impositions.Count > 0;
 
     private void SetUpScript(CombatSetup setup)
     {
@@ -76,29 +83,37 @@ public sealed partial class CombatSimulation
         if (_followed[trigger] >= 0 && _triggerStates[_followed[trigger]] != TriggerState.Done)
             return false;
         // Une chute compte même si l'unité a été relevée depuis (les autres conditions ont pu tarder).
-        if (when.UnitDown is { } tag && _units.Find(u => u.Tag == tag) is not { HasFallen: true })
+        if (when.UnitDown is { } tag && Tagged(tag) is not { HasFallen: true })
             return false;
         return true;
     }
 
-    /// <summary>Joue les effets en attente, dans l'ordre, jusqu'à ce qu'un message fige le combat.</summary>
+    /// <summary>Joue les effets en attente, dans l'ordre, jusqu'à ce que l'un d'eux fige le combat.</summary>
     private void PlayQueuedEffects()
     {
         while (!IsTimeFrozen && _scriptQueue.TryDequeue(out var next))
         {
             var effect = _script[next.Trigger].Do[next.Effect];
-            var message = new ScriptMessage(++_messagesShown, effect.Speaker, effect.Say!, effect.Freeze);
-            _events.Add(new ScriptMessageShown(CurrentTick, message));
-            if (effect.Freeze)
-            {
-                FrozenMessage = message;
-                _frozenEffect = next;
-            }
+            if (effect.Impose is { } actions)
+                Impose(actions, effect.Speaker, effect.Say);
             else
             {
-                FinishEffect(next);
+                var message = Show(effect.Speaker, effect.Say!, effect.Freeze);
+                if (effect.Freeze)
+                    FrozenMessage = message;
             }
+            if (IsTimeFrozen)
+                _blockingEffect = next;
+            else
+                FinishEffect(next);
         }
+    }
+
+    private ScriptMessage Show(string? speaker, string text, bool freezes)
+    {
+        var message = new ScriptMessage(++_messagesShown, speaker, text, freezes);
+        _events.Add(new ScriptMessageShown(CurrentTick, message));
+        return message;
     }
 
     /// <summary>Un effet est joué jusqu'au bout : son déclencheur est terminé si c'était le dernier.</summary>
@@ -118,6 +133,6 @@ public sealed partial class CombatSimulation
             return;
         FrozenMessage = null;
         _events.Add(new TimeResumed(CurrentTick, message.Number));
-        FinishEffect(_frozenEffect);
+        FinishEffect(_blockingEffect);
     }
 }

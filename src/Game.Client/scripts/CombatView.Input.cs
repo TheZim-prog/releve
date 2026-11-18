@@ -212,6 +212,18 @@ public partial class CombatView
     /// </summary>
     private void TrySubmit(ActivateCommand command)
     {
+        // Action imposée par le script : le combat est figé, les ordres attendraient ; elle part tout de suite.
+        if (_sim.ImposedOn(command.Unit) is not null)
+        {
+            if (_sim.Check(command) is { } refused)
+            {
+                _hud.Log($"Impossible : {Texts.Rejection(refused)}"); // le plan reste, à corriger
+                return;
+            }
+            _session.Submit(command);
+            ClearPlan(keepSelection: false);
+            return;
+        }
         if (_sim.Check(command, ignoreTiming: true) is { } reason)
         {
             _hud.Log($"Impossible : {Texts.Rejection(reason)}");

@@ -102,6 +102,24 @@ un message : `say` (le texte), `speaker` (qui parle ; sans lui, c'est une indica
 déclencheur est terminé quand tous ses effets le sont. Le script s'arrête à la fin du combat : un message prévu pour la
 chute du dernier ennemi ne s'affichera pas. Exemple jouable : « Script : messages » (`scenarios/scripts/`).
 
+**Imposer des actions** (tutoriel) : un effet `"impose"` donne à des héros repérés chacun une action, à faire en même
+temps ; `say` (et `speaker`) en donne la consigne, affichée jusque-là :
+
+```json
+{ "say": "Combattant : étourdis-le. Speedster : va en (6, 5).", "impose": [
+    { "unit": "fighter", "skill": "stunning-blow", "target": "thug" },
+    { "unit": "speedster", "moveTo": { "x": 6, "y": 5 } } ] }
+```
+
+Le combat est figé, ces héros ont la jauge pleine et ne peuvent faire **que** l'action demandée ; le temps reprend quand
+toutes sont faites. `skill` est une compétence du héros, visée comme elle le demande : `target` (un repère) pour une
+compétence sur une unité, plus `cell` pour celles qui la déplacent quelque part (télékinésie) ; `cell` seule pour une
+zone ; rien pour une compétence sur soi (le jeu refuse au lancement une visée qui ne va pas). Le déplacement, lui, peut
+rester libre : `moveTo` impose la case d'arrivée, et sans lui le héros se place où il veut avant d'agir ; sans `skill`,
+c'est un déplacement seul. Une action devenue impossible (cible tombée, héros étourdi, confus ou dominé) est abandonnée
+et le héros retrouve sa jauge d'avant ; un héros joué par l'IA fait la sienne lui-même. Exemple jouable : « Script :
+actions imposées ».
+
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et
 seulement des compétences déjà codées dans l'équipement.

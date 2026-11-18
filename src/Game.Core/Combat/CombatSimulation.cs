@@ -135,7 +135,11 @@ public sealed partial class CombatSimulation
         RunScript();
         if (IsTimeFrozen)
         {
+            // Tout le pas reste figé, même si le gel est levé en cours de route (« Continuer », dernière action imposée) :
+            // les commandes suivantes de ce pas sont jugées comme pendant le gel.
+            _inFrozenStep = true;
             ApplyPendingCommands();
+            _inFrozenStep = false;
             RunScript();
             return _events.GetRange(firstEvent, _events.Count - firstEvent);
         }
@@ -231,6 +235,8 @@ public sealed partial class CombatSimulation
         Add(_scriptQueue.Count);
         foreach (var state in _triggerStates)
             Add((int)state);
+        foreach (var imposition in _impositions)
+            Add(imposition.Unit.Value);
         foreach (var objective in _objectives)
             Add((int)objective.State);
         foreach (var device in Devices)

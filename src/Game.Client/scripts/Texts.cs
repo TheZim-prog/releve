@@ -74,6 +74,8 @@ public static class Texts
         RejectionReason.NoLineOfSight => "pas de ligne de vue",
         RejectionReason.NoScenery => "pas d'obstacle à prendre",
         RejectionReason.TimeFrozen => "combat figé, « Continuer » d'abord",
+        RejectionReason.NotTheImposedAction => "ce n'est pas l'action demandée",
+        RejectionReason.ImposedActionIsNow => "l'action demandée se fait tout de suite, pas en ordre",
         _ => reason.ToString(),
     };
 
@@ -141,6 +143,20 @@ public static class Texts
     public static string ScriptLine(ScriptMessage message) =>
         message.Speaker is { } speaker ? $"{speaker} : « {message.Text} »" : message.Text;
 
+    /// <summary>Ce que le script impose à un héros : « Frappe sur Cogneur », « déplacement en (3, 4) ».</summary>
+    public static string Imposed(Imposition imposed, CombatSimulation sim)
+    {
+        var unit = sim.FindUnit(imposed.Unit);
+        var action = imposed.Skill is { } skill ? unit?.FindSkill(skill)?.DisplayName ?? skill : "déplacement";
+        if (imposed.Target is { } target)
+            action += $" sur {sim.FindUnit(target)?.Definition.Name ?? $"#{target.Value}"}";
+        if (imposed.Cell is { } cell)
+            action += $" en ({cell.X}, {cell.Y})";
+        if (imposed.MoveTo is { } to)
+            action += imposed.Skill is null ? $" en ({to.X}, {to.Y})" : $", depuis ({to.X}, {to.Y})";
+        return action;
+    }
+
     /// <summary>Ligne de journal pour un événement, ou <c>null</c> pour ceux qui ne méritent pas d'y figurer.</summary>
     public static string? Describe(CombatEvent e, CombatSimulation sim)
     {
@@ -151,6 +167,7 @@ public static class Texts
         return e switch
         {
             ScriptMessageShown m => ScriptLine(m.Message),
+            ImposedActionEnded { Done: false } x => $"{N(x.Unit)} : action demandée devenue impossible, abandonnée",
             ObjectiveCompleted o => $"Objectif réussi : {O(o.Objective)}",
             ObjectiveFailed o => $"Objectif raté : {O(o.Objective)}",
             WaveArrived w => $"Des renforts arrivent ! ({w.Units.Count} unité{(w.Units.Count > 1 ? "s" : "")})",

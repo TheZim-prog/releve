@@ -72,6 +72,7 @@ public partial class CombatView : Node3D
     private const double MessageSeconds = 6;
     private ScriptMessage? _lastMessage;
     private double _lastMessageAge;
+    private int _lastInstruction;
 
     private UnitId? _selected;
     private Cell? _ghost;
@@ -228,8 +229,9 @@ public partial class CombatView : Node3D
     }
 
     /// <summary>
-    /// Le message qui fige le combat, avec « Continuer » (lu dans la simulation : il est là aussi après une reconnexion) ;
-    /// sinon le dernier message qui ne le fige pas, quelques secondes.
+    /// Le message qui fige le combat, avec « Continuer », ou la consigne des actions imposées tant qu'elles ne sont pas
+    /// faites (lus dans la simulation : ils sont là aussi après une reconnexion) ; sinon le dernier message qui ne fige
+    /// pas le combat, quelques secondes (pas une consigne, finie avec ses actions).
     /// </summary>
     private void UpdateDialogue(double delta)
     {
@@ -237,7 +239,12 @@ public partial class CombatView : Node3D
             _lastMessageAge += delta;
         if (_sim.FrozenMessage is { } frozen)
             _hud.ShowDialogue(frozen.Speaker, frozen.Text, frozen: true);
-        else if (_lastMessage is { Freezes: false } message && _lastMessageAge < MessageSeconds)
+        else if (_sim.Instruction is { } instruction)
+        {
+            _lastInstruction = instruction.Number;
+            _hud.ShowDialogue(instruction.Speaker, instruction.Text, frozen: false);
+        }
+        else if (_lastMessage is { Freezes: false } message && message.Number != _lastInstruction && _lastMessageAge < MessageSeconds)
             _hud.ShowDialogue(message.Speaker, message.Text, frozen: false);
         else
             _hud.HideDialogue();
@@ -258,6 +265,11 @@ public partial class CombatView : Node3D
             case ScriptMessageShown m:
                 _lastMessage = m.Message;
                 _lastMessageAge = 0;
+                break;
+            // Action imposée à un héros du joueur : il est choisi d'emblée, sauf si le héros choisi en a déjà une.
+            case ActionImposed a when (_selected is not { } current || _sim.ImposedOn(current) is null)
+                                      && _sim.FindUnit(a.Unit) is { } imposed && IsControllable(imposed):
+                Select(a.Unit);
                 break;
             case UnitDamaged d:
                 Float(d.Unit, $"-{d.Amount}", new Color(1f, 0.35f, 0.3f));

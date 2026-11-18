@@ -1,3 +1,5 @@
+using Game.Core.Grids;
+
 namespace Game.Core.Combat;
 
 /// <summary>
@@ -10,5 +12,34 @@ public sealed record ScriptMessageShown(int Tick, ScriptMessage Message) : Comba
 /// <summary>Un joueur a fait continuer le message figé n° <paramref name="Message"/> : le temps reprend.</summary>
 public sealed record TimeResumed(int Tick, int Message) : CombatEvent(Tick);
 
-/// <summary>Un message du script : son numéro, qui parle (ou <c>null</c>), le texte, et s'il fige le combat.</summary>
+/// <summary>
+/// Un message du script : son numéro, qui parle (ou <c>null</c>), le texte, et s'il fige le combat jusqu'à « Continuer »
+/// (la consigne d'actions imposées ne l'attend pas : elle dure tant qu'elles ne sont pas faites).
+/// </summary>
 public sealed record ScriptMessage(int Number, string? Speaker, string Text, bool Freezes);
+
+/// <summary>Le script impose une action à ce héros (cf. <see cref="CombatSimulation.ImposedActions"/>) ; sa jauge est pleine.</summary>
+public sealed record ActionImposed(int Tick, UnitId Unit) : CombatEvent(Tick);
+
+/// <summary>
+/// L'action imposée à ce héros est faite (<paramref name="Done"/>), ou abandonnée parce qu'elle est devenue impossible
+/// (cible tombée, héros étourdi…).
+/// </summary>
+public sealed record ImposedActionEnded(int Tick, UnitId Unit, bool Done) : CombatEvent(Tick);
+
+/// <summary>
+/// Une action imposée, ses repères résolus : la compétence (ou <c>null</c> : déplacement seul) sur une unité ou une case,
+/// et la case d'arrivée imposée (ou <c>null</c> : libre).
+/// </summary>
+public sealed record Imposition(UnitId Unit, string? Skill, UnitId? Target, Cell? Cell, Cell? MoveTo)
+{
+    /// <summary>L'activation respecte-t-elle ce qui est imposé ?</summary>
+    public bool Allows(ActivateCommand command) =>
+        command.Unit == Unit
+        && command.Interaction is null
+        && (MoveTo is null || command.MoveTo == MoveTo)
+        && (Skill is null
+            ? command.Skill is null
+            : command.Skill is { } use && use.SkillId == Skill
+                && (Target is null || use.Target == Target) && (Cell is null || use.Cell == Cell));
+}

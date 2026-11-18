@@ -31,9 +31,14 @@ public sealed partial class CombatSimulation
     {
         var (plan, reason) = ValidatePlayerCommand(command);
         if (plan is null)
+        {
             Reject(command, reason!.Value);
-        else
-            ApplyActivation(plan);
+            return;
+        }
+        ApplyActivation(plan);
+        // Pendant des actions imposées, seule une action imposée passe la validation.
+        if (ImposedOn(plan.Unit.Id) is { } imposition)
+            CompleteImposition(imposition);
     }
 
     /// <summary>Enregistre un ordre à l'avance, sauf s'il est impossible pour une autre raison que le temps.</summary>
@@ -99,14 +104,22 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation ; tant que
-    /// le script fige le combat, une activation valide par ailleurs est refusée (un ordre à l'avance attend, lui).
+    /// Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation. Tant que le
+    /// script fige le combat, une activation valide par ailleurs est refusée (un ordre à l'avance attend, lui), sauf
+    /// l'action imposée à un héros : celle-là seule lui est permise, même pas un ordre à l'avance.
     /// </summary>
     private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command, bool ignoreTiming = false)
     {
         if (FindUnit(command.Unit) is { } commanded && ControllerOf(commanded) is not null)
             return (null, RejectionReason.NotControllable);
-        if (!ignoreTiming && IsTimeFrozen)
+        if (ImposedOn(command.Unit) is { } imposed)
+        {
+            if (ignoreTiming)
+                return (null, RejectionReason.ImposedActionIsNow);
+            var result = ValidateActivation(command);
+            return result.Plan is not null && !imposed.Allows(command) ? (null, RejectionReason.NotTheImposedAction) : result;
+        }
+        if (!ignoreTiming && (IsTimeFrozen || _inFrozenStep))
         {
             // La vraie raison d'abord (case inaccessible, hors de portée…) ; « figé » seulement s'il suffit d'attendre.
             var (_, reason) = ValidateActivation(command, ignoreTiming: true);

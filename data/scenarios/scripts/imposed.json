@@ -1,0 +1,45 @@
+// Essai des scripts de mission : des actions imposées, comme au tutoriel. Après un message figé, le combattant et le
+// speedster ont chacun une action imposée, à faire en même temps (le combat reste figé jusque-là) : étourdir le cogneur
+// (déplacement libre avant de frapper), et aller sur une case précise. Ensuite, combat libre ; le caïd est le chef.
+{
+  "id": "scripts-imposed",
+  "name": "Script : actions imposées",
+  "seed": 202,
+  "mapId": "street",
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 1, "y": 3 },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 4, "tag": "fighter" },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5, "tag": "speedster" },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+
+    { "unit": "brawler", "team": 1, "x": 4, "y": 4, "tag": "thug" },
+    { "unit": "brawler", "team": 1, "x": 12, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 2 },
+    { "unit": "kingpin", "team": 1, "x": 15, "y": 4, "leader": "flee" }
+  ],
+  "script": [
+    {
+      "id": "briefing",
+      "do": [ { "speaker": "Télépathe", "say": "Un cogneur s'approche. Combattant, Speedster : je vous guide.", "freeze": true } ]
+    },
+    {
+      "id": "lesson",
+      "when": { "after": "briefing" },
+      "do": [
+        {
+          "speaker": "Télépathe",
+          "say": "Combattant : Coup étourdissant sur le cogneur. Speedster : contourne-le, va en (6, 5). En même temps !",
+          "impose": [
+            { "unit": "fighter", "skill": "stunning-blow", "target": "thug" },
+            { "unit": "speedster", "moveTo": { "x": 6, "y": 5 } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "debrief",
+      "when": { "after": "lesson" },
+      "do": [ { "speaker": "Télépathe", "say": "Parfait. Étourdi, il ne peut plus agir un moment. À vous de jouer !", "freeze": true } ]
+    }
+  ]
+}
