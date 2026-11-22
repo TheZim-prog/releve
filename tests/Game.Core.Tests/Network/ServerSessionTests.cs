@@ -320,6 +320,56 @@ public class ServerSessionTests
         };
     }
 
+    private static (int, string, int?) Summary(FakeClient client) =>
+        client.Last<LobbyState>().Campaign is { } c ? (c.Reputation, c.Tier, c.LastMission) : throw new InvalidOperationException("No campaign.");
+
+    [Fact]
+    public void AtTheAcademy_APlayerRecruitsTheirHeroes_SeenByEveryone()
+    {
+        // Le catalogue des héros et le contenu partagent les mêmes unités : celles du combat de test, plus l'archétype « hero ».
+        var units = new Dictionary<string, UnitDefinition>(Content.Units) { ["hero"] = Progression.ProgressionTestKit.Units["hero"] };
+        var catalog = new Game.Core.Progression.HeroCatalog(Progression.ProgressionTestKit.Rules, units,
+            Progression.ProgressionTestKit.Skills, new[] { Progression.ProgressionTestKit.Tree }, Array.Empty<Game.Core.Progression.HeroSheet>());
+        var content = new GameContent
+        {
+            Rules = Content.Rules, Units = units, Scenarios = Content.Scenarios, Version = "v1", Heroes = catalog, Reputation = ReputationRules,
+        };
+        var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");
+        try
+        {
+            var session = new ServerSession(content, "test", Game.Core.Campaign.CampaignKeeper.Open(path, ReputationRules.Scale));
+            var alice = new FakeClient(session);
+            var bob = new FakeClient(session);
+            alice.Join("Alice");
+            bob.Join("Bob");
+
+            alice.Say(new RecruitHero(new Game.Core.Campaign.Recruit("Rempart", "hero", new[] { "a1", "b1", "a3" })));
+            Assert.Equal(new RecruitRefused(Game.Core.Campaign.RecruitRefusal.InvalidSkills), alice.Received[^1]);
+            alice.Say(new RecruitHero(new Game.Core.Campaign.Recruit("Rempart", "hero", new[] { "a1", "a2", "a3" })));
+
+            Assert.Equal(new HeroInfo("hero-1", "Rempart", "hero", 1, "Alice", Mine: true, IsDead: false),
+                Assert.Single(alice.Last<LobbyState>().Campaign!.Heroes!));
+            Assert.False(Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes!).Mine);
+            Assert.Equal("Rempart", Game.Core.Campaign.CampaignStore.Load(path).Heroes.Single().Name);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void WithoutACampaign_TheAcademyIsClosed()
+    {
+        var session = new ServerSession(Content, "test");
+        var alice = new FakeClient(session);
+        alice.Join("Alice");
+
+        alice.Say(new RecruitHero(new Game.Core.Campaign.Recruit("Rempart", "hero", new[] { "a1", "a2", "a3" })));
+
+        Assert.Equal(new RequestRefused(RequestRefusal.NoCampaign), alice.Received[^1]);
+    }
+
     [Fact]
     public void WithACampaign_PlayersAreEnrolled_AndEachCombatsReportIsSaved()
     {
@@ -329,14 +379,14 @@ public class ServerSessionTests
             var session = new ServerSession(WithReputation(), "test", Game.Core.Campaign.CampaignKeeper.Open(path, ReputationRules.Scale));
             var alice = new FakeClient(session);
             alice.Join("Alice");
-            Assert.Equal(new CampaignInfo(0, "Neutres", null), alice.Last<LobbyState>().Campaign);
+            Assert.Equal((0, "Neutres", (int?)null), Summary(alice));
 
             alice.Say(new PickHero(HeroA));
             alice.Say(new StartCombatRequest());
             for (var i = 0; i < 2000 && session.Simulation is not null; i++)
                 session.Tick();
 
-            Assert.Equal(new CampaignInfo(2, "Neutres", 2), alice.Last<LobbyState>().Campaign);
+            Assert.Equal((2, "Neutres", (int?)2), Summary(alice));
             var saved = Game.Core.Campaign.CampaignStore.Load(path);
             Assert.Equal(2, saved.Reputation);
             Assert.Equal(new Game.Core.Campaign.CampaignPlayer(UidOf("Alice"), "Alice", 0), Assert.Single(saved.Players));

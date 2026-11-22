@@ -142,8 +142,11 @@ public partial class Main
                 ShowMenu(Texts.JoinRefusal(refused.Reason), error: true);
                 break;
             case LobbyState lobby:
+                var recruited = MyHeroCount(lobby) > MyHeroCount(_lobby);
                 _lobby = lobby;
-                if (_networkCombat is not null)
+                if (_academyScreen is not null)
+                    _academyScreen.Refresh(lobby, recruited);
+                else if (_networkCombat is not null)
                     _networkCombat.UpdatePlayers(lobby.Players);
                 else if (_lobbyScreen is not null)
                     _lobbyScreen.Refresh(lobby);
@@ -169,17 +172,28 @@ public partial class Main
             case CombatAborted:
                 ShowLobby("Le combat a été abandonné (erreur du serveur).", error: true);
                 break;
+            case RecruitRefused refused:
+                _academyScreen?.SetStatus(Texts.RecruitRefusal(refused.Reason), error: true);
+                break;
             case RequestRefused refused:
                 _lobbyScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
+                _academyScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
                 break;
         }
     }
 
-    /// <summary>Outils de développement : choisir son héros et lancer tout seuls (--pick, --start).</summary>
+    private static int MyHeroCount(LobbyState? lobby) => lobby?.Campaign?.Heroes?.Count(h => h.Mine) ?? 0;
+
+    /// <summary>Outils de développement : choisir son héros et lancer tout seuls (--pick, --start), ouvrir l'académie (--academy).</summary>
     private void DevLobbyActions(LobbyState lobby)
     {
         if (_networkCombat is not null || _playerId is not { } me)
             return;
+        if (_devAcademy && lobby.Campaign is not null && _lobbyScreen is not null)
+        {
+            _devAcademy = false;
+            CallDeferred(nameof(ShowAcademy));
+        }
         if (_devPick is { } pick && lobby.Players.FirstOrDefault(p => p.Id == me)?.Hero is null)
         {
             _client?.Send(new PickHero(new Game.Core.Combat.UnitId(pick)));

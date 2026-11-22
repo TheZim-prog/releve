@@ -20,7 +20,9 @@ public static class CampaignStore
         if (state.Format != CampaignState.CurrentFormat)
             throw new InvalidDataException($"Campaign save '{path}' has format {state.Format}; this game reads format {CampaignState.CurrentFormat}.");
         if (state.Players is null || state.Heroes is null || state.Materials is null
-            || state.Players.Any(p => p is null || !PlayerIdentity.IsValid(p.Uid)) || state.Heroes.Any(h => h is null))
+            || state.Players.Any(p => p is null || !PlayerIdentity.IsValid(p.Uid) || p.Name is null)
+            || state.Heroes.Any(h => h?.Id is null || h.Name is null || h.Owner is null || h.Sheet?.Archetype is null
+                                     || h.Sheet.Learned is null || h.Sheet.Equipped is null))
             throw new InvalidDataException($"Campaign save '{path}' is incomplete or damaged (players, heroes, materials).");
         return state;
     }

@@ -79,6 +79,8 @@ ses paliers nommés (chacun commence à sa valeur `from`, le premier au minimum)
 **Tenir une campagne** : le serveur dédié la tient avec `--campaign <fichier>` (créé s'il n'existe pas) ; une partie
 hébergée depuis le jeu tient celle de l'hôte (`campaign.json` dans les données du jeu sur son PC). Chaque joueur y est
 inscrit à son arrivée, et le bilan de réputation de chaque combat terminé s'ajoute à celle du groupe, affichée au salon.
+Au salon, le bouton « Académie » permet à chacun de créer ses héros : jusqu'à `heroesPerPlayer` héros vivants
+(`progression.json`, le duo), chacun avec son archétype, son nom et ses points de compétence de départ dans son arbre.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

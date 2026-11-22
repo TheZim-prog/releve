@@ -78,7 +78,46 @@ public sealed class ServerSession
             case SetPause pause:
                 Pause(player, pause.Paused);
                 break;
+            case RecruitHero recruit:
+                RecruitFor(player, recruit.Recruit);
+                break;
         }
+    }
+
+    /// <summary>L'académie : le joueur recrute un héros dans la campagne (au salon seulement).</summary>
+    private void RecruitFor(Player player, Recruit? recruit)
+    {
+        if (_campaign is null || _content.Heroes is not { } catalog)
+        {
+            player.Peer!.Send(new RequestRefused(RequestRefusal.NoCampaign));
+            return;
+        }
+        if (Simulation is not null)
+        {
+            player.Peer!.Send(new RequestRefused(RequestRefusal.NotInLobby));
+            return;
+        }
+        if (recruit is null)
+        {
+            player.Peer!.Send(new RequestRefused(RequestRefusal.UnknownCommand));
+            return;
+        }
+        if (Academy.Check(_campaign.State, catalog, player.Uid, recruit) is { } refusal)
+        {
+            player.Peer!.Send(new RecruitRefused(refusal));
+            return;
+        }
+        try
+        {
+            _campaign.Update(state => Academy.Enlist(state, catalog, player.Uid, recruit));
+        }
+        catch
+        {
+            // Sauvegarde impossible : le joueur le sait, et l'erreur remonte au serveur, qui la journalise.
+            player.Peer!.Send(new RequestRefused(RequestRefusal.CampaignUnavailable));
+            throw;
+        }
+        BroadcastLobby();
     }
 
     /// <summary>
@@ -365,16 +404,24 @@ public sealed class ServerSession
 
     private Player? PlayerOf(IPeer peer) => _players.Find(p => p.Peer == peer);
 
-    private void BroadcastLobby() =>
-        Broadcast(new LobbyState(_scenarioId, _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero)).ToList(),
-            CampaignSummary()));
+    /// <summary>Le salon, à chacun : le résumé de campagne marque ses propres héros.</summary>
+    private void BroadcastLobby()
+    {
+        var players = _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero)).ToList();
+        foreach (var player in _players)
+            player.Peer?.Send(new LobbyState(_scenarioId, players, CampaignSummary(player.Uid)));
+    }
 
-    private CampaignInfo? CampaignSummary()
+    private CampaignInfo? CampaignSummary(string viewer)
     {
         if (_campaign?.State is not { } state)
             return null;
         var tier = _content.Reputation?.Scale.TierOf(state.Reputation).Name ?? "";
-        return new CampaignInfo(state.Reputation, tier, _lastMission);
+        var heroes = state.Heroes
+            .Select(h => new HeroInfo(h.Id, h.Name, h.Sheet.Archetype, h.Sheet.Level, state.PlayerOf(h.Owner)?.Name ?? "?",
+                Mine: h.Owner == viewer, h.IsDead))
+            .ToList();
+        return new CampaignInfo(state.Reputation, tier, _lastMission, heroes);
     }
 
     private void Broadcast(ServerMessage message)

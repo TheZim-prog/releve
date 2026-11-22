@@ -175,6 +175,7 @@ public partial class LobbyScreen : Control
     private VBoxContainer _heroList = null!;
     private Label _players = null!;
     private Label _campaign = null!;
+    private Button _academy = null!;
     private Label _status = null!;
     private Button _start = null!;
 
@@ -193,6 +194,10 @@ public partial class LobbyScreen : Control
     public event Action<UnitId?>? HeroPicked;
     public event Action? StartPressed;
     public event Action? LeavePressed;
+    public event Action? AcademyPressed;
+
+    /// <summary>Ce jeu sait ouvrir l'académie (son contenu a des arbres de compétences).</summary>
+    public bool AcademyAvailable { get; set; }
 
     public override void _Ready()
     {
@@ -202,6 +207,9 @@ public partial class LobbyScreen : Control
             column.AddChild(Ui.Text(_hostInfo, 14, HorizontalAlignment.Center));
         _campaign = Ui.Text("", 16, HorizontalAlignment.Center);
         column.AddChild(_campaign);
+        _academy = Ui.Button("Académie (tes héros)", () => AcademyPressed?.Invoke(), 36);
+        _academy.Visible = false;
+        column.AddChild(_academy);
         column.AddChild(Ui.Text("Choisis ton héros (les autres seront joués par l'IA) :", 16));
         _heroList = new VBoxContainer();
         _heroList.AddThemeConstantOverride("separation", 6);
@@ -244,6 +252,7 @@ public partial class LobbyScreen : Control
             ? $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0})"
               + (campaign.LastMission is { } last ? $", dernière mission {last:+0;-0;0}" : "")
             : "";
+        _academy.Visible = AcademyAvailable && lobby.Campaign?.Heroes is not null;
         var missing = lobby.Players.Count(p => p.Hero is null);
         _start.Disabled = missing > 0;
         _start.Text = missing > 0 ? $"Lancer le combat (en attente de {missing} choix)" : "Lancer le combat";

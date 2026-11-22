@@ -28,7 +28,20 @@ public static class Texts
         Game.Core.Network.RequestRefusal.NotAHero => "Ce n'est pas un héros jouable.",
         Game.Core.Network.RequestRefusal.NotYourUnit => "Ordre refusé : cette unité n'est pas à toi.",
         Game.Core.Network.RequestRefusal.TooManyCommands => "Ordre refusé : trop d'ordres en attente.",
+        Game.Core.Network.RequestRefusal.NoCampaign => "Cette partie ne tient pas de campagne.",
+        Game.Core.Network.RequestRefusal.NotInLobby => "Pas pendant un combat.",
+        Game.Core.Network.RequestRefusal.CampaignUnavailable => "La campagne n'a pas pu être sauvegardée (disque plein ?) : rien n'a changé.",
         _ => $"Refusé ({reason}).",
+    };
+
+    public static string RecruitRefusal(Game.Core.Campaign.RecruitRefusal reason) => reason switch
+    {
+        Game.Core.Campaign.RecruitRefusal.NotEnrolled => "Tu n'es pas inscrit dans cette campagne.",
+        Game.Core.Campaign.RecruitRefusal.DuoFull => "Ton duo est déjà au complet.",
+        Game.Core.Campaign.RecruitRefusal.InvalidName => $"Donne-lui un nom (1 à {Game.Core.Campaign.Academy.MaxNameLength} caractères).",
+        Game.Core.Campaign.RecruitRefusal.UnknownArchetype => "Archétype inconnu.",
+        Game.Core.Campaign.RecruitRefusal.InvalidSkills => "Ce choix de compétences ne respecte pas l'arbre.",
+        _ => $"Recrutement refusé ({reason}).",
     };
 
     /// <summary>Les PV d'une unité, avec ses PV temporaires s'il lui en reste : « 120/160 (+40) ».</summary>

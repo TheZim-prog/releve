@@ -74,8 +74,8 @@ Déjà fait :
 
 On construit la campagne avant de finir le prologue (dont les missions passent par le QG et l'académie). Étapes :
 1. ✅ **État de campagne** (`Game.Core/Campaign`) : joueurs reconnus par un identifiant unique, leurs héros, pot commun, réputation bornée lue en paliers, date de chaque joueur, chapitre ; tenu et sauvegardé par le serveur (`--campaign`, ou la partie hébergée), bilan de chaque combat ajouté, réputation affichée au salon.
-2. **QG minimal** : panneau de quêtes (scénarios existants), récompenses (XP, matériaux) et bilan appliqués au retour ; campagne solo par un serveur dans le jeu.
-3. **Académie** : créer une recrue (progression de la section 2).
+2. ✅ **Académie** (`Game.Core/Campaign/Academy.cs`) : chaque joueur crée son duo (archétype libre, nom, points de compétence de départ dans les paliers ouverts), depuis le salon d'une partie avec campagne.
+3. **QG minimal** : panneau de quêtes jouées avec ses propres héros (les scénarios gagnent des places pour les héros des joueurs), récompenses (XP par paliers en données, matériaux) et bilan appliqués au retour ; campagne solo par un serveur dans le jeu.
 4. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
 5. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
 

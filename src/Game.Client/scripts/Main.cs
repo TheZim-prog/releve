@@ -12,7 +12,7 @@ namespace Game.Client;
 /// Outils de développement (arguments après « -- ») : --scenario=&lt;id&gt; choisit le scénario (solo et partie
 /// hébergée) ; --solo (et --ai-heroes=on) lance directement le combat solo ;
 /// --host ou --join=adresse, avec --name=, --port=, --pick=&lt;n° du héros&gt; et --start=&lt;nb de joueurs&gt;, enchaînent
-/// connexion, choix du héros et lancement ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
+/// connexion, choix du héros et lancement ; --academy ouvre l'académie au salon ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
 /// puis quitte.
 /// </para>
 /// </summary>
@@ -30,6 +30,7 @@ public partial class Main : Node
     private Node? _screen;
     private MenuScreen? _menu;
     private LobbyScreen? _lobbyScreen;
+    private AcademyScreen? _academyScreen;
     private NetworkCombat? _networkCombat;
 
     private GameServer? _server;
@@ -49,6 +50,7 @@ public partial class Main : Node
     private double _screenshotIn;
     private int? _devPick;
     private int? _devStartWith;
+    private bool _devAcademy;
 
     /// <summary>Valeur d'un argument de développement « --nom=valeur » (ou « --nom » seul : chaîne vide), sinon <c>null</c>.</summary>
     public static string? DevArg(string name)
@@ -85,6 +87,7 @@ public partial class Main : Node
             _devPick = pick;
         if (int.TryParse(DevArg("start"), out var start))
             _devStartWith = start;
+        _devAcademy = DevArg("academy") is not null;
         if (DevArg("scenario") is { } scenario)
         {
             if (_content.Scenarios.ContainsKey(scenario))
@@ -131,6 +134,7 @@ public partial class Main : Node
         _screen = screen;
         _menu = screen as MenuScreen;
         _lobbyScreen = screen as LobbyScreen;
+        _academyScreen = screen as AcademyScreen;
         AddChild(screen);
     }
 
@@ -182,10 +186,24 @@ public partial class Main : Node
         lobby.HeroPicked += hero => _client?.Send(new PickHero(hero));
         lobby.StartPressed += () => _client?.Send(new StartCombatRequest());
         lobby.LeavePressed += () => ShowMenu();
+        lobby.AcademyPressed += ShowAcademy;
+        lobby.AcademyAvailable = _content.Heroes is not null;
         Show(lobby);
         if (_lobby is not null)
             lobby.Refresh(_lobby);
         lobby.SetStatus(status, error);
+    }
+
+    /// <summary>L'académie de la campagne du serveur (depuis le salon).</summary>
+    private void ShowAcademy()
+    {
+        if (_content.Heroes is null || _lobby?.Campaign is null)
+            return;
+        var academy = new AcademyScreen(_content);
+        academy.RecruitPressed += recruit => _client?.Send(new RecruitHero(recruit));
+        academy.BackPressed += () => ShowLobby();
+        Show(academy);
+        academy.Refresh(_lobby);
     }
 
     private void ShowNetworkCombat(CombatState state)

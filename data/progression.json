@@ -2,6 +2,9 @@
 {
   "maxLevel": 20,
 
+  // Héros vivants par joueur : son duo (docs/design.md 2.1). Il en recrute un nouveau à l'académie quand l'un meurt.
+  "heroesPerPlayer": 2,
+
   // Points de stats : un par niveau gagné (19 au niveau 20).
   "statPointsPerLevel": 1,
 

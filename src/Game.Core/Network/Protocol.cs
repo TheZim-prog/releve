@@ -51,6 +51,7 @@ public static class Protocol
 [JsonDerivedType(typeof(StartCombatRequest), "start")]
 [JsonDerivedType(typeof(SendCommand), "command")]
 [JsonDerivedType(typeof(SetPause), "pause")]
+[JsonDerivedType(typeof(RecruitHero), "recruit")]
 public abstract record ClientMessage;
 
 /// <summary>
@@ -75,6 +76,9 @@ public sealed record SendCommand(CombatCommand Command) : ClientMessage;
 /// <summary>En combat : mettre en pause ou relancer (n'importe quel joueur, pour tout le monde).</summary>
 public sealed record SetPause(bool Paused) : ClientMessage;
 
+/// <summary>Au salon, avec une campagne : recruter un héros à l'académie (cf. <see cref="Campaign.Academy"/>).</summary>
+public sealed record RecruitHero(Campaign.Recruit Recruit) : ClientMessage;
+
 // --- Serveur → client ---
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -87,6 +91,7 @@ public sealed record SetPause(bool Paused) : ClientMessage;
 [JsonDerivedType(typeof(CombatOver), "combatOver")]
 [JsonDerivedType(typeof(CombatAborted), "combatAborted")]
 [JsonDerivedType(typeof(RequestRefused), "refused")]
+[JsonDerivedType(typeof(RecruitRefused), "recruitRefused")]
 public abstract record ServerMessage;
 
 /// <summary>Le joueur est accepté sous l'identifiant <paramref name="PlayerId"/>.</summary>
@@ -132,10 +137,14 @@ public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Her
 public sealed record LobbyState(string ScenarioId, IReadOnlyList<PlayerInfo> Players, CampaignInfo? Campaign = null) : ServerMessage;
 
 /// <summary>
-/// Ce que le salon montre de la campagne : la réputation du groupe et son palier, et le bilan de la dernière mission
-/// (<c>null</c> avant la première depuis le lancement du serveur).
+/// Ce que le salon montre de la campagne : la réputation du groupe et son palier, le bilan de la dernière mission
+/// (<c>null</c> avant la première depuis le lancement du serveur), et les héros des joueurs (vu par le destinataire :
+/// <see cref="HeroInfo.Mine"/> marque les siens).
 /// </summary>
-public sealed record CampaignInfo(int Reputation, string Tier, int? LastMission);
+public sealed record CampaignInfo(int Reputation, string Tier, int? LastMission, IReadOnlyList<HeroInfo>? Heroes = null);
+
+/// <summary>Un héros de la campagne, tel que le salon le montre ; <paramref name="Owner"/> : le nom de son joueur.</summary>
+public sealed record HeroInfo(string Id, string Name, string Archetype, int Level, string Owner, bool Mine, bool IsDead);
 
 /// <summary>
 /// Le combat : son lancement, les commandes déjà jouées et le pas de simulation atteint (vide et 0 au début ; à rejouer
@@ -179,6 +188,15 @@ public enum RequestRefusal
 
     /// <summary>Trop de commandes en attente du prochain tick (pendant une pause, par exemple).</summary>
     TooManyCommands,
+
+    /// <summary>Ce serveur ne tient pas de campagne (ou son contenu n'a pas d'arbres de compétences).</summary>
+    NoCampaign,
+
+    /// <summary>La campagne n'a pas pu être sauvegardée (disque plein, fichier protégé) : rien n'a changé.</summary>
+    CampaignUnavailable,
 }
 
 public sealed record RequestRefused(RequestRefusal Reason) : ServerMessage;
+
+/// <summary>Le recrutement demandé à l'académie est impossible, pour cette raison.</summary>
+public sealed record RecruitRefused(Campaign.RecruitRefusal Reason) : ServerMessage;

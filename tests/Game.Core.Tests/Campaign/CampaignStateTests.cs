@@ -104,6 +104,8 @@ public class CampaignStateTests
         {
             File.WriteAllText(path, """{ "format": 1, "players": null }""");
             Assert.Throws<InvalidDataException>(() => CampaignStore.Load(path));
+            File.WriteAllText(path, """{ "format": 1, "heroes": [ { "id": "hero-1", "name": "X", "owner": "uid-a", "sheet": null } ] }""");
+            Assert.Throws<InvalidDataException>(() => CampaignStore.Load(path));
         }
         finally
         {

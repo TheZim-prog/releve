@@ -26,6 +26,9 @@ public sealed record ProgressionRules
     /// <summary>Paliers d'une branche, du premier au dernier.</summary>
     public required IReadOnlyList<TierRules> Tiers { get; init; }
 
+    /// <summary>Héros vivants qu'un joueur peut avoir à la fois (son duo, cf. docs/design.md 2.1).</summary>
+    public required int HeroesPerPlayer { get; init; }
+
     public static ProgressionRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<ProgressionRules>(json);
@@ -46,6 +49,8 @@ public sealed record ProgressionRules
     {
         if (MaxLevel < 1 || StatPointsPerLevel < 0 || StartingSkillPoints < 0 || LevelsPerSkillPoint < 1 || BranchesPerTree < 1)
             throw new ArgumentException("Progression rules need positive levels, branches and skill point pace.");
+        if (HeroesPerPlayer < 1)
+            throw new ArgumentException("A player needs room for at least one hero.");
         if (ActiveSlots is null || ActiveSlots.Count == 0 || ActiveSlots.Any(s => s is null) || ActiveSlots[0].FromLevel != 1)
             throw new ArgumentException("Active slots must be given from level 1.");
         for (var i = 0; i < ActiveSlots.Count; i++)
