@@ -12,6 +12,9 @@ public sealed record ScriptMessageShown(int Tick, ScriptMessage Message) : Comba
 /// <summary>Un joueur a fait continuer le message figé n° <paramref name="Message"/> : le temps reprend.</summary>
 public sealed record TimeResumed(int Tick, int Message) : CombatEvent(Tick);
 
+/// <summary>Le script met (<paramref name="Locked"/>) ou lève le verrou du tutoriel (cf. <see cref="CombatSimulation.IsLocked"/>).</summary>
+public sealed record ScriptLockChanged(int Tick, bool Locked) : CombatEvent(Tick);
+
 /// <summary>
 /// Un message du script : son numéro, qui parle (ou <c>null</c>), le texte, et s'il fige le combat jusqu'à « Continuer »
 /// (la consigne d'actions imposées ne l'attend pas : elle dure tant qu'elles ne sont pas faites).

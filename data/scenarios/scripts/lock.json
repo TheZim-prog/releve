@@ -1,0 +1,59 @@
+// Essai des scripts de mission : le verrou du tutoriel et la condition « unité prête ». Sous le verrou, le temps s'écoule
+// mais personne n'agit hors du script : le speedster, rapide, rejoue deux fois (un déplacement, puis une attaque) avant
+// que le colosse, lent, soit prêt ; le combattant et le tech attendent, jauge pleine, et les ennemis aussi. Le verrou
+// levé, c'est le combat libre.
+{
+  "id": "scripts-lock",
+  "name": "Script : verrou et jauges",
+  "seed": 204,
+  "mapId": "street",
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 2, "y": 3, "tag": "colossus" },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 4, "tag": "speedster" },
+    { "hero": "prologue-fighter", "team": 0, "x": 1, "y": 5 },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 2 },
+
+    { "unit": "brawler", "team": 1, "x": 6, "y": 4, "tag": "thug" },
+    { "unit": "brawler", "team": 1, "x": 12, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 2 }
+  ],
+  "script": [
+    {
+      "id": "briefing",
+      "do": [
+        { "lock": true },
+        { "speaker": "Tech", "say": "Regardez vos jauges : chacun agit quand la sienne est pleine.", "freeze": true }
+      ]
+    },
+    {
+      "id": "watch",
+      "when": { "after": "briefing" },
+      "do": [ { "say": "Le speedster sera prêt bien avant le colosse. Une jauge pleine le reste tant qu'on n'agit pas." } ]
+    },
+    {
+      "id": "first-move",
+      "when": { "after": "watch", "unitReady": "speedster" },
+      "do": [ { "say": "Speedster : approche-toi du cogneur, en (5, 4).", "impose": [ { "unit": "speedster", "moveTo": { "x": 5, "y": 4 } } ] } ]
+    },
+    {
+      "id": "second-turn",
+      "when": { "after": "first-move", "unitReady": "speedster" },
+      "do": [ { "say": "Déjà prêt ! Un déplacement seul ne vide que la moitié de la jauge. Speedster : frappe le cogneur.",
+                "impose": [ { "unit": "speedster", "skill": "flurry", "target": "thug" } ] } ]
+    },
+    {
+      "id": "colossus-turn",
+      "when": { "after": "second-turn", "unitReady": "colossus" },
+      "do": [ { "say": "Le colosse est enfin prêt. Colosse : frappe le cogneur.",
+                "impose": [ { "unit": "colossus", "skill": "punch", "target": "thug" } ] } ]
+    },
+    {
+      "id": "free",
+      "when": { "after": "colossus-turn" },
+      "do": [
+        { "lock": false },
+        { "speaker": "Tech", "say": "Chacun son rythme. À vous de jouer !", "freeze": true }
+      ]
+    }
+  ]
+}

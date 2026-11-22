@@ -105,8 +105,8 @@ public sealed partial class CombatSimulation
 
     /// <summary>
     /// Commande d'un joueur : refusée pour une unité commandée par l'IA, sinon validée comme toute activation. Tant que le
-    /// script fige le combat, une activation valide par ailleurs est refusée (un ordre à l'avance attend, lui), sauf
-    /// l'action imposée à un héros : celle-là seule lui est permise, même pas un ordre à l'avance.
+    /// script fige le combat ou le verrouille, une activation valide par ailleurs est refusée (un ordre à l'avance attend,
+    /// lui), sauf l'action imposée à un héros : celle-là seule lui est permise, même pas un ordre à l'avance.
     /// </summary>
     private (ActivationPlan? Plan, RejectionReason? Reason) ValidatePlayerCommand(ActivateCommand command, bool ignoreTiming = false)
     {
@@ -119,11 +119,15 @@ public sealed partial class CombatSimulation
             var result = ValidateActivation(command);
             return result.Plan is not null && !imposed.Allows(command) ? (null, RejectionReason.NotTheImposedAction) : result;
         }
-        if (!ignoreTiming && (IsTimeFrozen || _inFrozenStep))
+        var held = ignoreTiming ? null
+            : IsTimeFrozen || _inFrozenStep ? RejectionReason.TimeFrozen
+            : IsLocked ? RejectionReason.ScriptLocked
+            : (RejectionReason?)null;
+        if (held is not null)
         {
-            // La vraie raison d'abord (case inaccessible, hors de portée…) ; « figé » seulement s'il suffit d'attendre.
+            // La vraie raison d'abord (case inaccessible, hors de portée…) ; figé ou verrouillé seulement s'il suffit d'attendre.
             var (_, reason) = ValidateActivation(command, ignoreTiming: true);
-            return (null, reason ?? RejectionReason.TimeFrozen);
+            return (null, reason ?? held);
         }
         return ValidateActivation(command, ignoreTiming);
     }

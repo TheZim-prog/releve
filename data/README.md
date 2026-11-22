@@ -96,7 +96,8 @@ ou les vagues, unique dans le scénario), puis une liste `"script"` de déclench
 
 Un déclencheur part une seule fois, quand **toutes** ses conditions sont réunies (sans `when` : dès le début) :
 `atMs` (temps de combat écoulé, le temps figé ne compte pas), `unitDown` (l'unité de ce repère est à terre ou hors
-du combat), `after` (cet autre déclencheur est terminé). Ses effets se jouent dans l'ordre. Pour l'instant, un effet est
+du combat), `unitReady` (l'unité de ce repère est prête à agir : debout, jauge pleine, ni étourdie ni en train de
+charger), `after` (cet autre déclencheur est terminé). Ses effets se jouent dans l'ordre. Pour l'instant, un effet est
 un message : `say` (le texte), `speaker` (qui parle ; sans lui, c'est une indication du jeu) et `"freeze": true` pour
 **figer le combat** jusqu'à ce qu'un joueur clique « Continuer » (ou Entrée) ; les effets suivants attendent. Un
 déclencheur est terminé quand tous ses effets le sont. Le script s'arrête à la fin du combat : un message prévu pour la
@@ -135,6 +136,16 @@ allié qui n'agit **que** sur ordre, donner `"behavior": "scripted"` à son entr
 marqué n'est pas jouable, et il ne suffit pas à éviter la défaite si tous les autres tombent (`behavior` remplace le
 comportement de n'importe quelle unité, renforts compris, s'il convient à son type). Une compétence marquée `"scriptOnly": true` (comme le Tir traître du caïd)
 n'est jamais choisie par l'IA d'elle-même. Exemple jouable : « Script : allié et coups scénarisés ».
+
+**Verrouiller le combat** (tutoriel) : un effet `{ "lock": true }`, seul dans son effet, met le verrou ;
+`{ "lock": false }` le lève. Sous le verrou, le temps s'écoule (les jauges se remplissent), mais personne n'agit hors
+du script : les héros ne font que leurs actions imposées (un ordre à l'avance attend la levée du verrou), les ennemis
+et les alliés du jeu que les actions ordonnées, et les civils et les fuyards (qui ne prennent pas d'ordres) restent sur
+place. Les gadgets agissent comme d'habitude, et ce qui ne se décide pas suit son cours : une attaque chargée déjà
+lancée part, les attaques d'opportunité jouent. Une condition `unitReady` sur une unité hors de combat est remplie
+(elle ne sera jamais prête : l'action imposée qui suit est abandonnée), pour que le script ne reste pas bloqué. Avec
+`unitReady`, c'est ce qui permet de montrer les jauges : le speedster rejoue deux fois avant que le colosse soit prêt.
+Exemple jouable : « Script : verrou et jauges ».
 
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et

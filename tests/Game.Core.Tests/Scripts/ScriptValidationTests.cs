@@ -58,6 +58,32 @@ public class ScriptValidationTests
         Assert.Contains("unknown unit tag 'king'", Refusal(Fight(Trigger("a", new ScriptCondition { UnitDown = "king" }))));
 
     [Fact]
+    public void AnUnknownTagToWaitFor_IsRefused() =>
+        Assert.Contains("unitReady names an unknown unit tag 'king'", Refusal(Fight(Trigger("a", new ScriptCondition { UnitReady = "king" }))));
+
+    [Fact]
+    public void WaitingForAStructureToBeReady_IsRefused()
+    {
+        var relay = new UnitDefinition
+        {
+            Id = "relay", Name = "Relais", MaxHp = 50, Initiative = 0, Mobility = 0, OnDefeat = DefeatOutcome.Removed,
+            OpportunityAttacksPerCycle = 0, Behavior = Behaviors.Inert, Skills = Array.Empty<SkillDefinition>(), BasicAttack = null,
+            IsStructure = true,
+        }.ToSetup(new UnitId(3), team: 0, new Cell(1, 1)) with { Tag = "relay" };
+        var setup = Fight(Trigger("a", new ScriptCondition { UnitReady = "relay" }));
+
+        Assert.Contains("a structure", Refusal(setup with { Units = setup.Units.Append(relay).ToArray() }));
+    }
+
+    [Fact]
+    public void TheLock_StandsAlone() =>
+        Assert.Contains("stands alone", Refusal(Fight(Trigger("a", null, new ScriptEffect { Lock = true, Say = "Attendez" }))));
+
+    [Fact]
+    public void TheLock_IsAnEffectOnItsOwn() =>
+        _ = new CombatSimulation(Fight(Trigger("a", null, new ScriptEffect { Lock = true }), Trigger("b", null, new ScriptEffect { Lock = false })));
+
+    [Fact]
     public void ALoopOfTriggers_IsRefused()
     {
         var setup = Fight(

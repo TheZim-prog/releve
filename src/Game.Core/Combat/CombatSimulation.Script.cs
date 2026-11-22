@@ -38,6 +38,15 @@ public sealed partial class CombatSimulation
     /// </summary>
     public bool IsTimeFrozen => FrozenMessage is not null || _impositions.Count > 0;
 
+    /// <summary>
+    /// Verrou du tutoriel : le temps s'écoule, mais les héros ne font que leurs actions imposées et les unités du jeu
+    /// (hors gadgets) que les ordres du script. Mis et levé par le script.
+    /// </summary>
+    public bool IsLocked { get; private set; }
+
+    /// <summary>L'unité attend le script pour agir : le verrou tient tout le monde, sauf les gadgets.</summary>
+    private bool HeldByLock(Unit unit) => IsLocked && unit.SummonedBy is null;
+
     private void SetUpScript(CombatSetup setup)
     {
         setup.ValidateScript();
@@ -85,6 +94,10 @@ public sealed partial class CombatSimulation
         // Une chute compte même si l'unité a été relevée depuis (les autres conditions ont pu tarder).
         if (when.UnitDown is { } tag && Tagged(tag) is not { HasFallen: true })
             return false;
+        // Une unité hors de combat ne sera jamais prête : plus rien à attendre (l'action qui suit sera abandonnée), le
+        // script ne doit pas rester bloqué.
+        if (when.UnitReady is { } ready && Tagged(ready) is not ({ IsReady: true } or { Status: not UnitStatus.Active }))
+            return false;
         return true;
     }
 
@@ -98,6 +111,8 @@ public sealed partial class CombatSimulation
                 Impose(imposed, effect.Speaker, effect.Say);
             else if (effect.Act is { } ordered)
                 Act(ordered, effect.Speaker, effect.Say);
+            else if (effect.Lock is { } locked)
+                SetLock(locked);
             else
             {
                 var message = Show(effect.Speaker, effect.Say!, effect.Freeze);
@@ -109,6 +124,14 @@ public sealed partial class CombatSimulation
             else
                 FinishEffect(next);
         }
+    }
+
+    private void SetLock(bool locked)
+    {
+        if (IsLocked == locked)
+            return;
+        IsLocked = locked;
+        _events.Add(new ScriptLockChanged(CurrentTick, locked));
     }
 
     private ScriptMessage Show(string? speaker, string text, bool freezes)

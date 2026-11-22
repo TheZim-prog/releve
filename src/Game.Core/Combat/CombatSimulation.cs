@@ -160,7 +160,7 @@ public sealed partial class CombatSimulation
         for (var i = 0; i < _units.Count; i++)
         {
             var unit = _units[i];
-            if (unit.IsReady && ControllerOf(unit) is { } behavior)
+            if (unit.IsReady && !HeldByLock(unit) && ControllerOf(unit) is { } behavior)
                 RunAi(unit, behavior);
         }
 
@@ -234,6 +234,7 @@ public sealed partial class CombatSimulation
         Add(Step);
         Add(_messagesShown);
         Add(FrozenMessage?.Number ?? 0);
+        Add(IsLocked ? 1 : 0);
         Add(_scriptQueue.Count);
         foreach (var state in _triggerStates)
             Add((int)state);

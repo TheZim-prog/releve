@@ -314,6 +314,9 @@ public enum RejectionReason
 
     /// <summary>Compétence réservée au script de mission : seul un ordre du script la déclenche.</summary>
     ScriptOnly,
+
+    /// <summary>Verrou du tutoriel : le héros n'agit que sur action imposée (un ordre à l'avance attend la levée).</summary>
+    ScriptLocked,
 }
 
 public static class RejectionReasons
@@ -324,7 +327,8 @@ public static class RejectionReasons
     /// </summary>
     public static bool OnlyNeedsTime(this RejectionReason reason) =>
         reason is RejectionReason.NotReady or RejectionReason.Stunned or RejectionReason.Charging or RejectionReason.OnCooldown
-            or RejectionReason.Immobilized or RejectionReason.Disarmed or RejectionReason.TimeFrozen;
+            or RejectionReason.Immobilized or RejectionReason.Disarmed or RejectionReason.TimeFrozen
+            or RejectionReason.ScriptLocked;
 }
 
 /// <summary>

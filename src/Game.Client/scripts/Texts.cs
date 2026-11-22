@@ -75,6 +75,7 @@ public static class Texts
         RejectionReason.NoScenery => "pas d'obstacle à prendre",
         RejectionReason.TimeFrozen => "combat figé, « Continuer » d'abord",
         RejectionReason.NotTheImposedAction => "ce n'est pas l'action demandée",
+        RejectionReason.ScriptLocked => "pas maintenant, suivez les consignes",
         RejectionReason.ImposedActionIsNow => "l'action demandée se fait tout de suite, pas en ordre",
         RejectionReason.ScriptOnly => "compétence réservée au scénario",
         _ => reason.ToString(),

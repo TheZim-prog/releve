@@ -10,7 +10,8 @@ namespace Game.Core.Scripts;
 /// (ou abandonnées, devenues impossibles). <see cref="Say"/> sert alors de consigne, affichée jusque-là ;</item>
 /// <item>des actions ordonnées (<see cref="Act"/>, au plus une par unité) : chaque unité fait la sienne aussitôt, sans
 /// attendre sa jauge ni la recharge de la compétence (pas si elle est hors de combat, étourdie ou en train de charger) ;
-/// sa jauge repart ensuite comme après toute action. <see cref="Say"/> est alors une réplique, dite juste avant.</item>
+/// sa jauge repart ensuite comme après toute action. <see cref="Say"/> est alors une réplique, dite juste avant ;</item>
+/// <item>le verrou (<see cref="Lock"/>), mis ou levé, seul dans son effet.</item>
 /// </list>
 /// Les effets suivants attendent qu'un effet qui fige le combat soit terminé.
 /// </summary>
@@ -30,4 +31,13 @@ public sealed record ScriptEffect
 
     /// <summary>Actions ordonnées à des unités, faites aussitôt, ou <c>null</c>.</summary>
     public IReadOnlyList<ScriptAction>? Act { get; init; }
+
+    /// <summary>
+    /// Met (<c>true</c>) ou lève (<c>false</c>) le verrou du tutoriel, ou <c>null</c>. Verrouillé, le temps s'écoule mais
+    /// les héros ne font que leurs actions imposées, et les unités du jeu (ennemis, civils, alliés) que les ordres du
+    /// script ; les gadgets agissent comme d'habitude, et ce qui ne se décide pas (attaques chargées déjà lancées,
+    /// attaques d'opportunité et autres réactions) suit son cours. Civils et fuyards, qui ne prennent pas d'ordres,
+    /// restent sur place jusqu'à la levée.
+    /// </summary>
+    public bool? Lock { get; init; }
 }

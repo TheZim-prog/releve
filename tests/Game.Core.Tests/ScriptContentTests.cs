@@ -15,6 +15,7 @@ public class ScriptContentTests(ITestOutputHelper output)
     [InlineData("scripts-messages")]
     [InlineData("scripts-imposed")]
     [InlineData("scripts-allies")]
+    [InlineData("scripts-lock")]
     public void AScriptScenario_PlaysToTheEnd_AndReplays(string scenario)
     {
         var (sim, outcome) = PlayToTheEnd(new CombatLaunch(scenario, Array.Empty<HeroAssignment>()).BuildSetup(Content), scenario);
@@ -25,6 +26,24 @@ public class ScriptContentTests(ITestOutputHelper output)
         Assert.NotEmpty(sim.EventLog.OfType<ScriptMessageShown>());
         // Les héros de l'IA font les actions imposées eux-mêmes : aucune n'est abandonnée ; les ordres sont tous suivis.
         Assert.DoesNotContain(sim.EventLog, e => e is ImposedActionEnded { Done: false } or ScriptedActionFailed);
+    }
+
+    [Fact]
+    public void UnderTheLock_TheSpeedsterPlaysTwice_BeforeTheColossus_AndNobodyElseActs()
+    {
+        var setup = new CombatLaunch("scripts-lock", Array.Empty<HeroAssignment>()).BuildSetup(Content);
+        var speedster = setup.Units.Single(u => u.Tag == "speedster").Id;
+        var colossus = setup.Units.Single(u => u.Tag == "colossus").Id;
+
+        var (sim, _) = PlayToTheEnd(setup, "scripts-lock");
+
+        var unlocked = sim.EventLog.OfType<ScriptLockChanged>().Single(e => !e.Locked).Tick;
+        var lessons = sim.EventLog.OfType<ImposedActionEnded>().Where(e => e.Done).Select(e => e.Unit);
+        Assert.Equal(new[] { speedster, speedster, colossus }, lessons);
+        var actors = sim.EventLog.Where(e => e.Tick < unlocked)
+            .Select(e => e switch { UnitMoved m => m.Unit, SkillUsed s => s.Unit, _ => (UnitId?)null })
+            .OfType<UnitId>();
+        Assert.All(actors, a => Assert.Contains(a, new[] { speedster, colossus }));
     }
 
     [Fact]

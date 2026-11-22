@@ -64,6 +64,13 @@ public static class ScriptValidator
             throw new ArgumentException($"it follows an unknown trigger '{after}'.");
         if (when.UnitDown is { } tag && !tags.ContainsKey(tag))
             throw new ArgumentException($"unitDown names an unknown unit tag '{tag}'.");
+        if (when.UnitReady is { } ready)
+        {
+            if (!tags.TryGetValue(ready, out var unit))
+                throw new ArgumentException($"unitReady names an unknown unit tag '{ready}'.");
+            if (unit.Definition.IsStructure)
+                throw new ArgumentException($"unitReady names '{ready}', a structure, which never acts.");
+        }
     }
 
     private static void ValidateEffects(IReadOnlyList<ScriptEffect>? effects, IReadOnlyDictionary<string, UnitSetup> tags)
@@ -76,6 +83,12 @@ public static class ScriptValidator
                 throw new ArgumentException("a text to say cannot be blank.");
             if (effect.Speaker is { } speaker && (string.IsNullOrWhiteSpace(speaker) || effect.Say is null))
                 throw new ArgumentException("a speaker needs a text to say, and cannot be blank.");
+            if (effect.Lock is not null)
+            {
+                if (effect.Say is not null || effect.Freeze || effect.Impose is not null || effect.Act is not null)
+                    throw new ArgumentException("\"lock\" stands alone in its effect.");
+                continue;
+            }
             if (effect.Impose is not null && effect.Act is not null)
                 throw new ArgumentException("an effect either imposes actions or orders them, not both.");
             if (effect.Impose is null && effect.Act is null)
