@@ -65,10 +65,11 @@ Déjà fait :
 4. **Objectifs de mission** (`docs/design.md` 3.3 et 3.5), décrits par le scénario : élimination, sauvetage, poursuite, course contre la montre, protection (personnes ou structure), objectifs principaux et secondaires, chefs dont les sbires fuient ou se rendent, vagues de renforts. Mode d'emploi dans `data/README.md`.
 5. **Missions d'essai** : un scénario court par type d'objectif et un scénario combiné (`data/scenarios/objectives/`), choisissables dans le menu, joués jusqu'au bout par les tests avec des héros IA.
 
-6. **Scripts de mission** (principe 7), décrits par le scénario : déclencheurs (temps, unité tombée, déclencheur terminé), messages qui peuvent figer le combat, actions imposées aux héros, actions ordonnées aux unités du jeu (allié scénarisé, coup réservé au script). Démonstrations dans `data/scenarios/scripts/`, mode d'emploi dans `data/README.md`.
+6. **Scripts de mission** (principe 7), décrits par le scénario : déclencheurs (temps, unité tombée, unité prête, déclencheur terminé), messages qui peuvent figer le combat, actions imposées aux héros, actions ordonnées aux unités du jeu (allié scénarisé, coup réservé au script, décor qui s'effondre), départ d'une unité, verrou du tutoriel (personne n'agit hors du script). Démonstrations dans `data/scenarios/scripts/`, mode d'emploi dans `data/README.md`.
+7. **Mission 1 du prologue** (`docs/design.md` 6.2) : le tutoriel scénarisé puis le champ libre (`data/scenarios/prologue/mission-1.json`), jouée jusqu'au bout par les tests avec des héros IA.
 
 Prochaines étapes possibles (à choisir avec moi) :
-- **Le tutoriel du prologue** (`docs/design.md` 6.2, missions 1 et 2), avec le moteur de scripts.
+- **La mission 2 du prologue** (`docs/design.md` 6.2) : elle demande les dégâts collatéraux et la **réputation** (3.4), pas encore codés.
 - Ensuite : la carte du monde et la campagne (`docs/design.md` sections 4 et 5).
 
 ## Façon de travailler

@@ -166,9 +166,9 @@ public static class ScriptValidator
     }
 
     /// <summary>
-    /// La visée d'une compétence du script n'est pas libre : une zone vise une case, une compétence sur soi rien, un
-    /// sauvetage ou une télékinésie une unité et la case où elle va, les autres une unité seule. Le reste se vérifie au
-    /// moment d'agir (une visée impossible y est abandonnée).
+    /// La visée d'une compétence du script n'est pas libre : une zone ou une invocation (le gadget posé) vise une case,
+    /// une compétence sur soi rien, un sauvetage ou une télékinésie une unité et la case où elle va, les autres une unité
+    /// seule. Le reste se vérifie au moment d'agir (une visée impossible y est abandonnée).
     /// </summary>
     private static void ValidateAim(ScriptAction action, SkillDefinition skill, string verb)
     {
@@ -176,7 +176,7 @@ public static class ScriptValidator
         // vérifient seulement au moment d'agir.
         if (skill.Chain is not null || skill.SelfMove is not null || skill.RevivesAlly || skill.ForcedMove?.Type == ForcedMoveType.Spin)
             return;
-        var (fits, aims) = skill.Zone is not null ? (action.Cell is not null && action.Target is null, "a cell")
+        var (fits, aims) = skill.Zone is not null || skill.Summon is not null ? (action.Cell is not null && action.Target is null, "a cell")
             : skill.Target == SkillTargeting.Self ? (action.Cell is null && action.Target is null, "nothing")
             : skill.IsRescue || skill.ForcedMove?.Type == ForcedMoveType.Place
                 ? (action.Target is not null && action.Cell is not null, "a unit and a cell (where it goes)")

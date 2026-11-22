@@ -1,0 +1,160 @@
+// Prologue, mission 1 (docs/design.md 6.2) : les héros établis et le télépathe contre le caïd local. Tutoriel très
+// scénarisé, sous le verrou : 1. la jauge (le speedster rejoue deux fois avant que le colosse soit prêt) ; 2. se
+// déplacer et attaquer (tous en même temps, puis une compétence du combattant) ; 3. le contrôle (paralysie du télépathe,
+// étourdissement du combattant) ; 4. la blessure (le caïd frappe le combattant et abat le télépathe ; le speedster
+// l'exfiltre, et la balise de soin que le tech a posée au début soigne le combattant : un gadget a sa propre jauge, d'où
+// la pose dès le briefing) ; 5. le caïd fait s'effondrer une façade sur des civils, le colosse pose son dôme, le caïd
+// file. Puis champ libre : la mission est gagnée quand ses hommes sont hors de combat.
+//
+// Chaque étape attend que la jauge du héros concerné soit pleine (« unitReady ») : le tutoriel respecte la règle qu'il
+// enseigne. Les cases d'arrivée des actions imposées sont fixées quand la suite en dépend (le caïd doit atteindre le
+// combattant, voir le télépathe) : un joueur ne peut pas bloquer le script en se plaçant ailleurs. Les héros sans
+// joueur sont joués par l'IA. Textes provisoires.
+{
+  "id": "prologue-1",
+  "name": "Prologue 1 : La rue",
+  "seed": 301,
+  "mapId": "street",
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 3, "y": 7, "tag": "colossus" },
+    { "hero": "prologue-speedster", "team": 0, "x": 1, "y": 5, "tag": "speedster" },
+    { "hero": "prologue-fighter", "team": 0, "x": 3, "y": 6, "tag": "fighter" },
+    { "hero": "prologue-energetic", "team": 0, "x": 1, "y": 3, "tag": "energetic" },
+    { "hero": "prologue-tech", "team": 0, "x": 0, "y": 4, "tag": "tech" },
+    { "hero": "prologue-telepath", "team": 0, "x": 5, "y": 9, "tag": "telepath", "behavior": "scripted" },
+
+    { "unit": "unstable-facade", "team": 2, "x": 8, "y": 7, "tag": "facade" },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 8 },
+    { "unit": "civilian", "team": 2, "x": 8, "y": 8 },
+    { "unit": "civilian", "team": 2, "x": 9, "y": 8 },
+
+    { "unit": "kingpin", "team": 1, "x": 10, "y": 3, "tag": "kingpin" },
+    { "unit": "brawler", "team": 1, "x": 6, "y": 4, "tag": "thug-a" },
+    { "unit": "brawler", "team": 1, "x": 6, "y": 6, "tag": "thug-b" },
+    { "unit": "brawler", "team": 1, "x": 8, "y": 5, "tag": "thug-c" },
+    { "unit": "brawler", "team": 1, "x": 11, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 12, "y": 3 },
+    { "unit": "gunner", "team": 1, "x": 13, "y": 7 }
+  ],
+  "script": [
+    // --- Accueil ---
+    {
+      "id": "briefing",
+      "do": [
+        { "lock": true },
+        { "speaker": "Tech", "say": "Le caïd et sa bande. Des civils sont encore dans la rue : on fait ça proprement.", "freeze": true },
+        { "speaker": "Télépathe", "say": "Je reste en retrait. Je vous couvre.", "freeze": true },
+        { "say": "Tech : pose ta balise de nano-soin près du front, en (5, 4), depuis (2, 4). Un gadget agit seul, avec sa propre jauge : elle soignera les blessés autour d'elle.",
+          "impose": [ { "unit": "tech", "skill": "nano-heal", "cell": { "x": 5, "y": 4 }, "moveTo": { "x": 2, "y": 4 } } ] }
+      ]
+    },
+
+    // --- 1. La jauge ---
+    {
+      "id": "gauges",
+      "when": { "after": "briefing" },
+      "do": [ { "say": "Chacun agit quand sa jauge est pleine. Regardez : le speedster sera prêt bien avant le colosse." } ]
+    },
+    {
+      "id": "speedster-moves",
+      "when": { "after": "gauges", "unitReady": "speedster" },
+      "do": [ { "say": "Speedster : approche-toi du cogneur, en (5, 5).",
+                "impose": [ { "unit": "speedster", "moveTo": { "x": 5, "y": 5 } } ] } ]
+    },
+    {
+      "id": "speedster-strikes",
+      "when": { "after": "speedster-moves", "unitReady": "speedster" },
+      "do": [ { "say": "Déjà prêt : un déplacement seul ne vide que la moitié de la jauge. Speedster : frappe le cogneur.",
+                "impose": [ { "unit": "speedster", "skill": "flurry", "target": "thug-a", "moveTo": { "x": 5, "y": 5 } } ] } ]
+    },
+
+    // --- 2. Se déplacer et attaquer ---
+    {
+      "id": "all-together",
+      "when": { "after": "speedster-strikes", "unitReady": "colossus" },
+      "do": [
+        { "speaker": "Tech", "say": "Le colosse est enfin prêt. Tout le monde ensemble !", "freeze": true },
+        {
+          "say": "Une action chacun, en même temps : on peut se déplacer avant d'agir. Speedster, Combattant : le cogneur de devant, Combattant depuis (6, 5). Colosse : celui du bas, depuis (6, 7). Énergétique, depuis (4, 5), et Tech, depuis (3, 5) : celui du fond.",
+          "impose": [
+            { "unit": "colossus", "skill": "punch", "target": "thug-b", "moveTo": { "x": 6, "y": 7 } },
+            { "unit": "speedster", "skill": "flurry", "target": "thug-a", "moveTo": { "x": 5, "y": 5 } },
+            { "unit": "fighter", "skill": "combo", "target": "thug-a", "moveTo": { "x": 6, "y": 5 } },
+            { "unit": "energetic", "skill": "bolt", "target": "thug-c", "moveTo": { "x": 4, "y": 5 } },
+            { "unit": "tech", "skill": "shot", "target": "thug-c", "moveTo": { "x": 3, "y": 5 } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "precise-strike",
+      "when": { "after": "all-together", "unitReady": "fighter" },
+      "do": [ { "say": "Le combattant est de nouveau prêt. Les compétences frappent plus fort, puis se rechargent un moment. Combattant : Frappe précise sur le cogneur de devant.",
+                "impose": [ { "unit": "fighter", "skill": "precise-strike", "target": "thug-a", "moveTo": { "x": 6, "y": 5 } } ] } ]
+    },
+
+    // --- 3. Le contrôle ---
+    {
+      "id": "paralysis",
+      "when": { "after": "precise-strike" },
+      "do": [ { "speaker": "Télépathe", "say": "Celui du fond ne bougera plus.", "act": [ { "unit": "telepath", "skill": "paralysis", "target": "thug-c" } ] } ]
+    },
+    {
+      "id": "stun",
+      "when": { "after": "paralysis", "unitReady": "fighter" },
+      "do": [ { "say": "Étourdie, une unité ne peut plus agir : sa jauge est gelée. Combattant : Coup étourdissant sur le cogneur du bas.",
+                "impose": [ { "unit": "fighter", "skill": "stunning-blow", "target": "thug-b", "moveTo": { "x": 6, "y": 5 } } ] } ]
+    },
+
+    // --- 4. La blessure ---
+    {
+      "id": "kingpin-strikes",
+      "when": { "after": "stun" },
+      "do": [
+        { "speaker": "Le caïd", "say": "À mon tour !", "act": [ { "unit": "kingpin", "skill": "power-punch", "target": "fighter" } ] },
+        { "speaker": "Le caïd", "say": "Et toi, le vieux, tu as fait ton temps !", "act": [ { "unit": "kingpin", "skill": "treacherous-shot", "target": "telepath" } ] }
+      ]
+    },
+    {
+      "id": "telepath-down",
+      "when": { "after": "kingpin-strikes", "unitDown": "telepath" },
+      "do": [
+        { "speaker": "Combattant", "say": "Le vieux est à terre ! Sortez-le de là !", "freeze": true },
+        { "say": "Un héros à 0 PV tombe à terre : il ne peut plus rien faire jusqu'à ce qu'on le relève. Le combattant, lui, n'est que blessé : la balise du tech le soigne, elle agit seule dès que sa jauge est pleine." }
+      ]
+    },
+    {
+      "id": "rescue",
+      "when": { "after": "telepath-down", "unitReady": "speedster" },
+      "do": [ { "say": "Speedster : Sauvetage éclair, dépose le télépathe à l'abri en (1, 8).",
+                "impose": [ { "unit": "speedster", "skill": "flash-rescue", "target": "telepath", "cell": { "x": 1, "y": 8 } } ] } ]
+    },
+
+    // --- 5. Le caïd file ---
+    {
+      "id": "collapse",
+      "when": { "after": "rescue", "unitReady": "colossus" },
+      "do": [
+        { "speaker": "Le caïd", "say": "Vous voulez jouer les héros ? Sauvez-les, eux !",
+          "act": [ { "unit": "facade", "skill": "collapse", "cell": { "x": 8, "y": 8 } } ] },
+        { "say": "La façade va s'effondrer : la zone est marquée au sol. Colosse : ton dôme sur les civils, en (8, 8) !",
+          "impose": [ { "unit": "colossus", "skill": "dome", "cell": { "x": 8, "y": 8 }, "moveTo": { "x": 6, "y": 7 } } ] }
+      ]
+    },
+    {
+      "id": "escape",
+      "when": { "after": "collapse" },
+      "do": [ { "speaker": "Le caïd", "say": "On se reverra !", "leave": ["kingpin"] } ]
+    },
+
+    // --- Champ libre ---
+    {
+      "id": "free",
+      "when": { "after": "escape", "unitDown": "facade" },
+      "do": [
+        { "lock": false },
+        { "speaker": "Tech", "say": "Les civils sont saufs, mais il a filé. Finissons-en avec ses hommes !", "freeze": true }
+      ]
+    }
+  ]
+}

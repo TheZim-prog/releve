@@ -163,6 +163,11 @@ lancée part, les attaques d'opportunité jouent. Une condition `unitReady` sur 
 `unitReady`, c'est ce qui permet de montrer les jauges : le speedster rejoue deux fois avant que le colosse soit prêt.
 Exemple jouable : « Script : verrou et jauges ».
 
+**Les missions du prologue** sont dans `scenarios/prologue/` (« Prologue 1 : La rue » dans le menu) : le tutoriel
+scénarisé sous le verrou, puis le champ libre. Les héros sans joueur y sont joués par l'IA, qui fait aussi leurs
+actions imposées. Un test la joue jusqu'au bout et vérifie chaque étape : après une retouche (carte, dégâts, jauges),
+le lancer dit si une action imposée ou un ordre du script ne passe plus.
+
 **Changer le kit d'un héros prêt à jouer** : modifier `learned`, `equipped` et `passive` dans `heroes/`. Les règles de
 progression sont vérifiées : pas plus de cases que de points de compétence, un palier ouvert par les précédents, et
 seulement des compétences déjà codées dans l'équipement.

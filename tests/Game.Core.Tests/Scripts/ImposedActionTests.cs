@@ -115,6 +115,36 @@ public class ImposedActionTests
     }
 
     [Fact]
+    public void AnImposedCell_WhereTheHeroAlreadyStands_MeansStayingThere()
+    {
+        // « Reste où tu es » : frapper sans bouger passe, s'en aller est refusé.
+        var sim = Imposing(new ScriptAction { Unit = "fighter", Skill = "strike", Target = "a", MoveTo = new Cell(0, 1) });
+        sim.Tick();
+
+        sim.Submit(new ActivateCommand(Fighter, new Cell(0, 0), new SkillUse("strike", ThugA)));
+        Assert.Contains(sim.Tick(), e => e is CommandRejected { Reason: RejectionReason.NotTheImposedAction });
+        sim.Submit(Use(Fighter, "strike", ThugA));
+        sim.Tick();
+
+        Assert.Equal(new Cell(0, 1), sim.Get(1).Position);
+        Assert.False(sim.IsTimeFrozen);
+    }
+
+    [Fact]
+    public void AnAiHero_StaysOnItsImposedCell_WhenItIsAlreadyThere()
+    {
+        var setup = Fight(Trigger("lesson", null, Impose(null,
+            new ScriptAction { Unit = "fighter", Skill = "strike", Target = "a", MoveTo = new Cell(0, 1) })));
+        setup = setup with { Units = setup.Units.Select(u => u.Id == Fighter ? Unit(1, team: 0, 0, 1, behavior: Behaviors.Basic) with { Tag = "fighter" } : u).ToArray() };
+        var sim = new CombatSimulation(setup);
+
+        var events = sim.Tick();
+
+        Assert.Contains(new ImposedActionEnded(0, Fighter, Done: true), events);
+        Assert.Equal(new Cell(0, 1), sim.Get(1).Position);
+    }
+
+    [Fact]
     public void TimeResumes_OnlyWhenEveryImposedActionIsDone()
     {
         var sim = Imposing(Strike("fighter", "a"), Strike("runner", "b"));

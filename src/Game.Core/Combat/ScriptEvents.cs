@@ -43,11 +43,14 @@ public sealed record ScriptedActionFailed(int Tick, string Tag, UnitId? Unit) : 
 /// </summary>
 public sealed record ResolvedAction(UnitId Unit, string? Skill, UnitId? Target, Cell? Cell, Cell? MoveTo)
 {
-    /// <summary>L'activation respecte-t-elle ce qui est imposé ?</summary>
-    public bool Allows(ActivateCommand command) =>
+    /// <summary>
+    /// L'activation respecte-t-elle ce qui est imposé ? <paramref name="position"/> : la case de l'unité ; une case
+    /// d'arrivée imposée qui est déjà la sienne veut dire « reste où tu es » (sans déplacement).
+    /// </summary>
+    public bool Allows(ActivateCommand command, Cell position) =>
         command.Unit == Unit
         && command.Interaction is null
-        && (MoveTo is null || command.MoveTo == MoveTo)
+        && (MoveTo is null || (command.MoveTo ?? position) == MoveTo)
         && (Skill is null
             ? command.Skill is null
             : command.Skill is { } use && use.SkillId == Skill

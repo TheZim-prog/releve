@@ -85,7 +85,8 @@ public sealed partial class CombatSimulation
     {
         if (action.MoveTo is { } imposed)
         {
-            yield return imposed;
+            // Déjà sur la case imposée : il y reste.
+            yield return imposed == unit.Position ? null : imposed;
             yield break;
         }
         yield return null;

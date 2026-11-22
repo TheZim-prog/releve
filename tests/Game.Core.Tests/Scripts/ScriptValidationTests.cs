@@ -76,6 +76,25 @@ public class ScriptValidationTests
     }
 
     [Fact]
+    public void ASummon_IsImposedOnACell_NotOnAUnit()
+    {
+        var beacon = new UnitDefinition
+        {
+            Id = "beacon", Name = "Balise", MaxHp = 10, Initiative = 10, Mobility = 0, OnDefeat = DefeatOutcome.Removed,
+            OpportunityAttacksPerCycle = 0, Behavior = Behaviors.Inert, Skills = Array.Empty<SkillDefinition>(), BasicAttack = null,
+        };
+        var deploy = Strike with { Id = "deploy", MinDamage = 0, MaxDamage = 0, Range = 3, Summon = beacon };
+        CombatSetup Imposing(ScriptAction action)
+        {
+            var setup = Fight(Trigger("a", null, new ScriptEffect { Impose = new[] { action } }));
+            return setup with { Units = new[] { Unit(1, team: 0, 0, 0, skills: new[] { deploy }) with { Tag = "tech" }, setup.Units[1] } };
+        }
+
+        _ = new CombatSimulation(Imposing(new ScriptAction { Unit = "tech", Skill = "deploy", Cell = new Cell(1, 1) }));
+        Assert.Contains("must aim at a cell", Refusal(Imposing(new ScriptAction { Unit = "tech", Skill = "deploy", Target = "boss" })));
+    }
+
+    [Fact]
     public void TheLock_StandsAlone() =>
         Assert.Contains("stands alone", Refusal(Fight(Trigger("a", null, new ScriptEffect { Lock = true, Say = "Attendez" }))));
 

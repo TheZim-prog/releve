@@ -117,7 +117,9 @@ public sealed partial class CombatSimulation
             if (ignoreTiming)
                 return (null, RejectionReason.ImposedActionIsNow);
             var result = ValidateActivation(command);
-            return result.Plan is not null && !imposed.Allows(command) ? (null, RejectionReason.NotTheImposedAction) : result;
+            return result.Plan is not null && !imposed.Allows(command, result.Plan.Unit.Position)
+                ? (null, RejectionReason.NotTheImposedAction)
+                : result;
         }
         var held = ignoreTiming ? null
             : IsTimeFrozen || _inFrozenStep ? RejectionReason.TimeFrozen
