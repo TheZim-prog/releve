@@ -8,20 +8,29 @@ namespace Game.Client;
 // Connexion : héberger, rejoindre, se reconnecter, et répartir les messages du serveur entre le salon et le combat.
 public partial class Main
 {
-    private void Host(string name, int port)
+    /// <summary>Héberge la campagne de ce PC (<paramref name="withCampaign"/>), ou un combat libre du scénario choisi.</summary>
+    private void Host(string name, int port, bool withCampaign)
     {
         Disconnect();
         if (!ReloadContent())
             return;
-        Game.Core.Campaign.CampaignKeeper? campaign;
-        try
+        Game.Core.Campaign.CampaignKeeper? campaign = null;
+        if (withCampaign)
         {
-            campaign = HostedCampaign();
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
-        {
-            ShowMenu($"Sauvegarde de campagne illisible ({ProjectSettings.GlobalizePath(CampaignPath)}) : {e.Message}", error: true);
-            return;
+            try
+            {
+                campaign = HostedCampaign();
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+            {
+                ShowMenu($"Sauvegarde de campagne illisible ({ProjectSettings.GlobalizePath(CampaignPath)}) : {e.Message}", error: true);
+                return;
+            }
+            if (campaign is null)
+            {
+                ShowMenu("Ce contenu ne permet pas de campagne (reputation.json manque dans data/).", error: true);
+                return;
+            }
         }
         try
         {
@@ -146,6 +155,8 @@ public partial class Main
                 _lobby = lobby;
                 if (_academyScreen is not null)
                     _academyScreen.Refresh(lobby, recruited);
+                else if (_hqScreen is not null && _networkCombat is null)
+                    _hqScreen.Refresh(lobby);
                 else if (_networkCombat is not null)
                     _networkCombat.UpdatePlayers(lobby.Players);
                 else if (_lobbyScreen is not null)
@@ -178,6 +189,7 @@ public partial class Main
             case RequestRefused refused:
                 _lobbyScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
                 _academyScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
+                _hqScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
                 break;
         }
     }
@@ -189,7 +201,7 @@ public partial class Main
     {
         if (_networkCombat is not null || _playerId is not { } me)
             return;
-        if (_devAcademy && lobby.Campaign is not null && _lobbyScreen is not null)
+        if (_devAcademy && lobby.Campaign is not null && _hqScreen is not null)
         {
             _devAcademy = false;
             CallDeferred(nameof(ShowAcademy));

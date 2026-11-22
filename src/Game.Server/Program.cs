@@ -46,9 +46,11 @@ if (data is null)
 }
 
 var content = GameContent.Load(data);
-if (!content.Scenarios.ContainsKey(scenario))
+// Sans campagne, un combat libre : un scénario avec ses propres héros (pas une quête, qui attend les héros des joueurs).
+var freeCombats = content.Scenarios.Values.Where(s => s.HeroSlots is null).Select(s => s.Id).ToList();
+if (campaignPath is null && !freeCombats.Contains(scenario))
 {
-    Console.Error.WriteLine($"Unknown scenario '{scenario}' (available: {string.Join(", ", content.Scenarios.Keys)}).");
+    Console.Error.WriteLine($"Unknown free-combat scenario '{scenario}' (available: {string.Join(", ", freeCombats)}; quests are played with --campaign).");
     return 1;
 }
 void Log(string line) => Console.WriteLine($"{DateTime.Now:HH:mm:ss} {line}");

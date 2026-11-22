@@ -1,0 +1,17 @@
+// Quête d'essai (difficile) : la bande du dépôt, avec sa brute. Pour les recrues des joueurs (cases "heroSlots",
+// jusqu'à cinq). Valeurs d'essai, à régler en jouant.
+{
+  "id": "quest-depot",
+  "name": "La bande du dépôt",
+  "seed": 403,
+  "mapId": "street",
+  "heroSlots": [ { "x": 1, "y": 4 }, { "x": 1, "y": 3 }, { "x": 1, "y": 5 }, { "x": 0, "y": 3 }, { "x": 0, "y": 5 } ],
+  "units": [
+    { "unit": "brawler", "team": 1, "x": 9, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 10, "y": 5 },
+    { "unit": "brawler", "team": 1, "x": 12, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 15, "y": 2 },
+    { "unit": "gunner", "team": 1, "x": 16, "y": 6 },
+    { "unit": "brute", "team": 1, "x": 14, "y": 5 }
+  ]
+}

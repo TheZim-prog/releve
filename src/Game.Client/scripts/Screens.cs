@@ -59,7 +59,9 @@ public partial class MenuScreen : Control
     public event Action<string>? ScenarioChosen;
 
     public event Action? SoloPressed;
-    public event Action<string, int>? HostPressed;
+
+    /// <summary>Héberger : nom, port, et vrai pour la campagne (sinon, un combat libre du scénario choisi).</summary>
+    public event Action<string, int, bool>? HostPressed;
     public event Action<string, string, int>? JoinPressed;
 
     public string PlayerName { get; set; } = "";
@@ -89,10 +91,16 @@ public partial class MenuScreen : Control
         column.AddChild(Ui.Text("En groupe", 20));
         _name = Ui.Field(column, "Ton nom", PlayerName, "ex. Théo");
         _port = Ui.Field(column, "Port", Port.ToString());
-        _buttons.Add(Ui.Button("Héberger la partie", () =>
+        _buttons.Add(Ui.Button("Héberger la campagne (QG, quêtes)", () =>
         {
             if (Validate() is { } port)
-                HostPressed?.Invoke(_name.Text.Trim(), port);
+                HostPressed?.Invoke(_name.Text.Trim(), port, true);
+        }));
+        column.AddChild(_buttons[^1]);
+        _buttons.Add(Ui.Button("Héberger un combat libre (scénario ci-dessus)", () =>
+        {
+            if (Validate() is { } port)
+                HostPressed?.Invoke(_name.Text.Trim(), port, false);
         }));
         column.AddChild(_buttons[^1]);
         _address = Ui.Field(column, "Adresse de l'hôte (Tailscale)", Address, "100.x.y.z ou nom de la machine");
@@ -174,8 +182,6 @@ public partial class LobbyScreen : Control
     private readonly string _hostInfo;
     private VBoxContainer _heroList = null!;
     private Label _players = null!;
-    private Label _campaign = null!;
-    private Button _academy = null!;
     private Label _status = null!;
     private Button _start = null!;
 
@@ -194,10 +200,6 @@ public partial class LobbyScreen : Control
     public event Action<UnitId?>? HeroPicked;
     public event Action? StartPressed;
     public event Action? LeavePressed;
-    public event Action? AcademyPressed;
-
-    /// <summary>Ce jeu sait ouvrir l'académie (son contenu a des arbres de compétences).</summary>
-    public bool AcademyAvailable { get; set; }
 
     public override void _Ready()
     {
@@ -205,11 +207,6 @@ public partial class LobbyScreen : Control
         column.AddChild(Ui.Text("Salon", 32, HorizontalAlignment.Center));
         if (_hostInfo.Length > 0)
             column.AddChild(Ui.Text(_hostInfo, 14, HorizontalAlignment.Center));
-        _campaign = Ui.Text("", 16, HorizontalAlignment.Center);
-        column.AddChild(_campaign);
-        _academy = Ui.Button("Académie (tes héros)", () => AcademyPressed?.Invoke(), 36);
-        _academy.Visible = false;
-        column.AddChild(_academy);
         column.AddChild(Ui.Text("Choisis ton héros (les autres seront joués par l'IA) :", 16));
         _heroList = new VBoxContainer();
         _heroList.AddThemeConstantOverride("separation", 6);
@@ -248,11 +245,6 @@ public partial class LobbyScreen : Control
 
         _players.Text = "Joueurs : " + string.Join(", ", lobby.Players.Select(p =>
             p.Name + (p.Id == _me ? " (toi)" : "") + (p.Hero is null ? " — pas encore de héros" : "") + (p.Connected ? "" : " — déconnecté")));
-        _campaign.Text = lobby.Campaign is { } campaign
-            ? $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0})"
-              + (campaign.LastMission is { } last ? $", dernière mission {last:+0;-0;0}" : "")
-            : "";
-        _academy.Visible = AcademyAvailable && lobby.Campaign?.Heroes is not null;
         var missing = lobby.Players.Count(p => p.Hero is null);
         _start.Disabled = missing > 0;
         _start.Text = missing > 0 ? $"Lancer le combat (en attente de {missing} choix)" : "Lancer le combat";

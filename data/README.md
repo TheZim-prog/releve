@@ -17,6 +17,7 @@ Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`
 | `trees/` | Un arbre de compétences par archétype : branches, paliers, variantes, passifs. |
 | `heroes/` | Des héros prêts à jouer : ceux du prologue (`prologue.json`) et des héros d'essai (`trial.json`). Niveau, points de stats, cases achetées, équipement. |
 | `maps/` | Des cartes partagées entre scénarios (`"mapId": "street"` dans un scénario, au lieu d'écrire `"map"`). |
+| `quests/` | Les quêtes du panneau du QG : leur scénario, leur difficulté affichée, leurs récompenses. |
 | `scenarios/` | Les combats : la carte, les unités et les héros placés dessus, et les objectifs. Le scénario se choisit dans le menu du jeu. |
 
 ## Qui désigne qui
@@ -79,8 +80,16 @@ ses paliers nommés (chacun commence à sa valeur `from`, le premier au minimum)
 **Tenir une campagne** : le serveur dédié la tient avec `--campaign <fichier>` (créé s'il n'existe pas) ; une partie
 hébergée depuis le jeu tient celle de l'hôte (`campaign.json` dans les données du jeu sur son PC). Chaque joueur y est
 inscrit à son arrivée, et le bilan de réputation de chaque combat terminé s'ajoute à celle du groupe, affichée au salon.
-Au salon, le bouton « Académie » permet à chacun de créer ses héros : jusqu'à `heroesPerPlayer` héros vivants
-(`progression.json`, le duo), chacun avec son archétype, son nom et ses points de compétence de départ dans son arbre.
+Le salon d'une partie avec campagne est le **QG** : le panneau de quêtes, le héros que chacun déploie (ou il reste au
+QG), et l'académie, où chacun crée ses héros : jusqu'à `heroesPerPlayer` héros vivants (`progression.json`, le duo),
+chacun avec son archétype, son nom et ses points de compétence de départ dans son arbre. Au menu du jeu, « Héberger la
+campagne » ouvre ce QG ; « Héberger un combat libre » joue le scénario choisi, sans toucher à la campagne.
+
+**Écrire une quête** : un scénario avec des cases pour les héros des joueurs (`"heroSlots": [ { "x": 1, "y": 4 }, … ]`,
+une par héros, dans l'ordre de leur déploiement ; prévoir cinq cases pour un groupe complet), rangé dans
+`scenarios/quests/`, puis une entrée dans un fichier de `quests/` : `id`, `name`, `description`, `scenario`,
+`difficulty` (`veryEasy`, `easy`, `hard`, `veryHard` : le libellé affiché), `xp` (reçue par chaque héros participant) et
+`materials` (versés au pot commun, ex. `{ "materials": 3 }`). Ces scénarios ne sont pas proposés en combat libre.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

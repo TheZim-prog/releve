@@ -1,0 +1,14 @@
+// Quête d'essai (facile) : quelques voyous rackettent la rue. Pour les recrues des joueurs, placées sur les cases
+// "heroSlots" (jusqu'à cinq). Valeurs d'essai, à régler en jouant.
+{
+  "id": "quest-thugs",
+  "name": "Racket dans la rue",
+  "seed": 401,
+  "mapId": "street",
+  "heroSlots": [ { "x": 1, "y": 4 }, { "x": 1, "y": 3 }, { "x": 1, "y": 5 }, { "x": 0, "y": 3 }, { "x": 0, "y": 5 } ],
+  "units": [
+    { "unit": "brawler", "team": 1, "x": 10, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 11, "y": 5 },
+    { "unit": "gunner", "team": 1, "x": 15, "y": 2 }
+  ]
+}

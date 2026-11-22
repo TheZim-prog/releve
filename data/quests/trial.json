@@ -1,0 +1,23 @@
+// Quêtes d'essai du panneau du QG (docs/design.md 4.3 et 4.6) : chacune joue un scénario qui a des cases pour les héros
+// des joueurs ("heroSlots"). Difficulté affichée : veryEasy, easy, hard, veryHard. Récompenses : l'XP que reçoit chaque
+// héros participant, et les matériaux versés au pot commun. Valeurs d'essai, à régler en jouant.
+[
+  {
+    "id": "thugs", "name": "Racket dans la rue",
+    "description": "Trois voyous rackettent les commerçants. De quoi se faire la main.",
+    "scenario": "quest-thugs", "difficulty": "easy",
+    "xp": 20, "materials": { "materials": 3 }
+  },
+  {
+    "id": "market", "name": "Panique au marché",
+    "description": "Une bande sème la panique au marché : faites sortir les civils.",
+    "scenario": "quest-market", "difficulty": "easy",
+    "xp": 25, "materials": { "materials": 3 }
+  },
+  {
+    "id": "depot", "name": "La bande du dépôt",
+    "description": "Une bande bien armée, avec une brute, tient un dépôt. Mieux vaut y aller nombreux.",
+    "scenario": "quest-depot", "difficulty": "hard",
+    "xp": 40, "materials": { "materials": 6 }
+  }
+]

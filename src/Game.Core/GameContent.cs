@@ -29,6 +29,9 @@ public sealed class GameContent
     /// <summary>Ce que vaut chaque fait d'une mission pour la réputation (bilan de fin), ou <c>null</c> si ce contenu n'en a pas.</summary>
     public ReputationRules? Reputation { get; init; }
 
+    /// <summary>Les quêtes du panneau du QG (data/quests), par identifiant.</summary>
+    public IReadOnlyDictionary<string, Campaign.QuestDefinition> Quests { get; init; } = new Dictionary<string, Campaign.QuestDefinition>();
+
     /// <summary>Empreinte du contenu chargé : deux contenus de même version donnent les mêmes combats.</summary>
     public required string Version { get; init; }
 
@@ -39,10 +42,10 @@ public sealed class GameContent
         return ContentLoader.Load(dataDirectory);
     }
 
-    /// <summary>État initial du combat d'un scénario de ce contenu.</summary>
-    public CombatSetup SetupFor(string scenarioId) =>
+    /// <summary>État initial du combat d'un scénario de ce contenu, avec les héros des joueurs déployés s'il y en a.</summary>
+    public CombatSetup SetupFor(string scenarioId, IReadOnlyList<HeroSheet>? deployed = null) =>
         Scenarios.TryGetValue(scenarioId, out var scenario)
-            ? scenario.ToSetup(Rules, Units, Heroes)
+            ? scenario.ToSetup(Rules, Units, Heroes, deployed)
             : throw new ArgumentException($"Unknown scenario '{scenarioId}'.", nameof(scenarioId));
 
     /// <summary>

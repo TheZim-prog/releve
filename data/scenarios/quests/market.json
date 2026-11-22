@@ -1,0 +1,22 @@
+// Quête d'essai (facile) : une bande sème la panique au marché ; il faut que les civils s'en sortent. Pour les recrues
+// des joueurs (cases "heroSlots", jusqu'à cinq). Valeurs d'essai, à régler en jouant.
+{
+  "id": "quest-market",
+  "name": "Panique au marché",
+  "seed": 402,
+  "mapId": "street",
+  "heroSlots": [ { "x": 1, "y": 4 }, { "x": 1, "y": 3 }, { "x": 1, "y": 5 }, { "x": 0, "y": 3 }, { "x": 0, "y": 5 } ],
+  "units": [
+    { "unit": "civilian", "team": 2, "x": 8, "y": 2 },
+    { "unit": "civilian", "team": 2, "x": 9, "y": 6 },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 8 },
+
+    { "unit": "brawler", "team": 1, "x": 12, "y": 3 },
+    { "unit": "brawler", "team": 1, "x": 12, "y": 6 },
+    { "unit": "gunner", "team": 1, "x": 15, "y": 4 }
+  ],
+  "objectives": [
+    { "kind": "rescue", "minimum": 2 },
+    { "kind": "eliminate", "secondary": true }
+  ]
+}

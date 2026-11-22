@@ -13,14 +13,14 @@ public interface IPeer
 /// <summary>
 /// La partie côté serveur, indépendante du transport : salon, combat, pause, reconnexion. Le serveur fait foi : il
 /// fixe l'ordre des commandes et joue les ticks ; les clients rejouent ses <see cref="TickPlayed"/>. Un joueur est
-/// reconnu à son identifiant (<see cref="JoinRequest.PlayerUid"/>). Avec une campagne, chaque joueur y est inscrit, et le
-/// bilan de réputation de chaque combat terminé s'ajoute à celle du groupe (sauvegardée aussitôt).
+/// reconnu à son identifiant (<see cref="JoinRequest.PlayerUid"/>). Sans campagne, le salon joue le scénario du serveur
+/// et chacun y choisit un héros ; avec une campagne, le salon est le QG (cf. ServerSession.Campaign.cs).
 /// <para>
 /// Pas thread-safe : le transport appelle <see cref="Receive"/>, <see cref="Disconnect"/> et <see cref="Tick"/>
 /// depuis un seul fil (<see cref="Tick"/> au rythme de <see cref="CombatRules.TicksPerSecond"/>).
 /// </para>
 /// </summary>
-public sealed class ServerSession
+public sealed partial class ServerSession
 {
     private readonly GameContent _content;
     private readonly string _scenarioId;
@@ -81,48 +81,19 @@ public sealed class ServerSession
             case RecruitHero recruit:
                 RecruitFor(player, recruit.Recruit);
                 break;
+            case ChooseQuest choose:
+                ChooseQuestFor(player, choose.QuestId);
+                break;
+            case DeployHero deploy:
+                DeployFor(player, deploy.HeroId);
+                break;
         }
-    }
-
-    /// <summary>L'académie : le joueur recrute un héros dans la campagne (au salon seulement).</summary>
-    private void RecruitFor(Player player, Recruit? recruit)
-    {
-        if (_campaign is null || _content.Heroes is not { } catalog)
-        {
-            player.Peer!.Send(new RequestRefused(RequestRefusal.NoCampaign));
-            return;
-        }
-        if (Simulation is not null)
-        {
-            player.Peer!.Send(new RequestRefused(RequestRefusal.NotInLobby));
-            return;
-        }
-        if (recruit is null)
-        {
-            player.Peer!.Send(new RequestRefused(RequestRefusal.UnknownCommand));
-            return;
-        }
-        if (Academy.Check(_campaign.State, catalog, player.Uid, recruit) is { } refusal)
-        {
-            player.Peer!.Send(new RecruitRefused(refusal));
-            return;
-        }
-        try
-        {
-            _campaign.Update(state => Academy.Enlist(state, catalog, player.Uid, recruit));
-        }
-        catch
-        {
-            // Sauvegarde impossible : le joueur le sait, et l'erreur remonte au serveur, qui la journalise.
-            player.Peer!.Send(new RequestRefused(RequestRefusal.CampaignUnavailable));
-            throw;
-        }
-        BroadcastLobby();
     }
 
     /// <summary>
     /// Connexion perdue. Au salon, le joueur s'en va (son héros est libéré) ; en combat, il garde sa place et le combat
-    /// se met en pause jusqu'à son retour (ou jusqu'à ce qu'un joueur relance).
+    /// se met en pause jusqu'à son retour (ou jusqu'à ce qu'un joueur relance), s'il y joue une unité (un joueur resté
+    /// au QG ne bloque pas la quête des autres).
     /// </summary>
     public void Disconnect(IPeer peer)
     {
@@ -135,11 +106,14 @@ public sealed class ServerSession
         else
         {
             player.Peer = null;
-            if (!_paused)
+            if (!_paused && player.Hero is not null)
                 SetPaused(true, byPlayer: null);
         }
         BroadcastLobby();
     }
+
+    /// <summary>Tous les joueurs qui jouent une unité du combat sont là.</summary>
+    private bool AllCombatantsConnected => _players.All(p => p.Hero is null || p.Peer is not null);
 
     /// <summary>Joue un tick du combat (rien au salon ni en pause) et le diffuse avec ses commandes.</summary>
     public void Tick()
@@ -177,17 +151,10 @@ public sealed class ServerSession
         }
     }
 
-    /// <summary>Le bilan de réputation du combat terminé s'ajoute à celle du groupe (s'il y a une campagne et des règles).</summary>
-    private void RecordInCampaign(CombatSimulation simulation)
-    {
-        if (_campaign is null || _content.Reputation is not { } rules)
-            return;
-        var report = ReputationReport.Of(simulation, rules);
-        _lastMission = report.Total;
-        _campaign.Update(state => state.WithMissionReport(report, rules.Scale));
-    }
-
-    /// <summary>Fin du combat : tout le monde revient au salon, les absents en sont retirés.</summary>
+    /// <summary>
+    /// Fin du combat : tout le monde revient au salon, les absents en sont retirés. Au QG, les unités jouées ne valent
+    /// plus rien (chaque quête a les siennes) ; les héros déployés le restent.
+    /// </summary>
     private void EndCombat(ServerMessage end)
     {
         Broadcast(end);
@@ -197,6 +164,11 @@ public sealed class ServerSession
         _paused = false;
         _pausedBy = null;
         _players.RemoveAll(p => p.Peer is null);
+        if (IsCampaign)
+        {
+            foreach (var player in _players)
+                player.Hero = null;
+        }
         BroadcastLobby();
     }
 
@@ -272,7 +244,7 @@ public sealed class ServerSession
             // Reconnexion : tout le combat, à rejouer ; s'il était en pause pour les déconnexions, il reprend quand
             // tout le monde est revenu.
             peer.Send(new CombatState(_launch!, simulation.CommandLog.ToList(), simulation.Step, _paused, _pausedBy));
-            if (_paused && _pausedBy is null && _players.All(p => p.Peer is not null))
+            if (_paused && _pausedBy is null && AllCombatantsConnected)
                 SetPaused(false, byPlayer: null);
         }
     }
@@ -286,7 +258,8 @@ public sealed class ServerSession
         }
         if (hero is { } unit)
         {
-            if (!_playableHeroes.Contains(unit))
+            // Au QG, on ne choisit pas un héros du scénario : on déploie un des siens (DeployHero).
+            if (IsCampaign || !_playableHeroes.Contains(unit))
             {
                 player.Peer!.Send(new RequestRefused(RequestRefusal.NotAHero));
                 return;
@@ -308,17 +281,31 @@ public sealed class ServerSession
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotInLobby));
             return;
         }
+        if (IsCampaign)
+        {
+            StartQuest(player);
+            return;
+        }
         if (_players.Any(p => p.Hero is null))
         {
             player.Peer!.Send(new RequestRefused(RequestRefusal.HeroesMissing));
             return;
         }
-        _launch = new CombatLaunch(_scenarioId, _players.Select(p => new HeroAssignment(p.Hero!.Value, p.Id)).ToList());
-        Simulation = new CombatSimulation(_launch.BuildSetup(_content));
+        var launch = new CombatLaunch(_scenarioId, _players.Select(p => new HeroAssignment(p.Hero!.Value, p.Id)).ToList());
+        Launch(launch, launch.BuildSetup(_content));
+    }
+
+    private void Launch(CombatLaunch launch, CombatSetup setup)
+    {
+        _launch = launch;
+        Simulation = new CombatSimulation(setup);
         _queue.Clear();
         _paused = false;
         _pausedBy = null;
         Broadcast(new CombatState(_launch, Array.Empty<LoggedCommand>(), 0, Paused: false, PausedBy: null));
+        // Au QG, les unités jouées viennent d'être données : tout le monde doit savoir qui joue quoi.
+        if (IsCampaign)
+            BroadcastLobby();
     }
 
     private void Command(Player player, CombatCommand command)
@@ -404,24 +391,16 @@ public sealed class ServerSession
 
     private Player? PlayerOf(IPeer peer) => _players.Find(p => p.Peer == peer);
 
-    /// <summary>Le salon, à chacun : le résumé de campagne marque ses propres héros.</summary>
+    /// <summary>
+    /// Le salon, à chacun : le résumé de campagne marque ses propres héros. Le scénario annoncé est, au QG, celui de la
+    /// quête choisie (vide sans quête).
+    /// </summary>
     private void BroadcastLobby()
     {
-        var players = _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero)).ToList();
+        var players = _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero, p.Deployed)).ToList();
+        var scenario = IsCampaign ? ChosenQuest?.Scenario ?? "" : _scenarioId;
         foreach (var player in _players)
-            player.Peer?.Send(new LobbyState(_scenarioId, players, CampaignSummary(player.Uid)));
-    }
-
-    private CampaignInfo? CampaignSummary(string viewer)
-    {
-        if (_campaign?.State is not { } state)
-            return null;
-        var tier = _content.Reputation?.Scale.TierOf(state.Reputation).Name ?? "";
-        var heroes = state.Heroes
-            .Select(h => new HeroInfo(h.Id, h.Name, h.Sheet.Archetype, h.Sheet.Level, state.PlayerOf(h.Owner)?.Name ?? "?",
-                Mine: h.Owner == viewer, h.IsDead))
-            .ToList();
-        return new CampaignInfo(state.Reputation, tier, _lastMission, heroes);
+            player.Peer?.Send(new LobbyState(scenario, players, CampaignSummary(player.Uid)));
     }
 
     private void Broadcast(ServerMessage message)
@@ -436,6 +415,11 @@ public sealed class ServerSession
         public string Uid { get; } = uid;
         public string Name { get; set; } = "";
         public IPeer? Peer { get; set; }
+
+        /// <summary>L'unité qu'il joue (choisie au salon sans campagne ; donnée au lancement d'une quête).</summary>
         public UnitId? Hero { get; set; }
+
+        /// <summary>Au QG : le héros de campagne qu'il déploie, ou <c>null</c> (il reste au QG).</summary>
+        public string? Deployed { get; set; }
     }
 }

@@ -37,6 +37,12 @@ public sealed record ScenarioDefinition
     public IReadOnlyList<ScriptTrigger>? Script { get; init; }
 
     /// <summary>
+    /// Cases où se placent les héros des joueurs (une quête de campagne), dans l'ordre de leur déploiement ; aucune pour
+    /// un combat à héros fixes.
+    /// </summary>
+    public IReadOnlyList<Cell>? HeroSlots { get; init; }
+
+    /// <summary>
     /// Lit un scénario ; sa carte est soit écrite dedans, soit désignée parmi <paramref name="maps"/> (elle y est alors
     /// recopiée).
     /// </summary>
@@ -87,6 +93,13 @@ public sealed record ScenarioDefinition
             if (unit.Leader is not null && (unit.Hero is not null || unit.Team == CombatSimulation.PlayerTeam))
                 throw new ArgumentException($"Scenario '{Id}': {unit.Label} cannot lead minions (only an enemy unit can, not a hero).");
         }
+        foreach (var slot in HeroSlots ?? Array.Empty<Cell>())
+        {
+            if (!grid.IsWalkable(slot))
+                throw new ArgumentException($"Scenario '{Id}': the hero slot {slot} is a blocked cell.");
+            if (!taken.Add(slot))
+                throw new ArgumentException($"Scenario '{Id}': the hero slot {slot} is already taken.");
+        }
         if (Units.Where(u => u.Leader is not null).GroupBy(u => u.Team).FirstOrDefault(g => g.Count() > 1) is { } team)
             throw new ArgumentException($"Scenario '{Id}': team {team.Key} has more than one leader.");
         if (Waves?.Any(w => w is null) == true)
@@ -96,12 +109,20 @@ public sealed record ScenarioDefinition
     }
 
     /// <summary>
+    /// Identifiant de combat du n-ième héros déployé (à partir de 0) : après les unités du scénario.
+    /// </summary>
+    public UnitId DeployedUnitId(int index) => new(Units.Count + index + 1);
+
+    /// <summary>
     /// État initial du combat : la carte, et les unités (identifiants 1, 2, 3… dans l'ordre du scénario, jauges vides
     /// sauf Départ canon),
-    /// tirées du catalogue <paramref name="units"/> ou, pour les héros, de <paramref name="heroes"/>. Refuse une unité
-    /// ou un héros inconnu, ou dont les points de stats portent l'initiative au-delà de la capacité de la jauge.
+    /// tirées du catalogue <paramref name="units"/> ou, pour les héros, de <paramref name="heroes"/> ; puis les héros des
+    /// joueurs <paramref name="deployed"/>, sur les cases <see cref="HeroSlots"/> dans l'ordre (cf.
+    /// <see cref="DeployedUnitId"/>). Refuse une unité ou un héros inconnu, ou dont les points de stats portent
+    /// l'initiative au-delà de la capacité de la jauge, et plus de héros déployés que de cases.
     /// </summary>
-    public CombatSetup ToSetup(CombatRules rules, IReadOnlyDictionary<string, UnitDefinition> units, HeroCatalog? heroes = null)
+    public CombatSetup ToSetup(CombatRules rules, IReadOnlyDictionary<string, UnitDefinition> units, HeroCatalog? heroes = null,
+        IReadOnlyList<HeroSheet>? deployed = null)
     {
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(units);
@@ -110,7 +131,9 @@ public sealed record ScenarioDefinition
             throw new ArgumentException($"Scenario '{Id}': the heroes were built from another unit catalog.");
         try
         {
-            var placed = Units.Select((unit, index) => Place(unit, new UnitId(index + 1), units, heroes, rules)).ToList();
+            var placed = Units.Select((unit, index) => Place(unit, new UnitId(index + 1), units, heroes, rules))
+                .Concat(Deploy(deployed ?? Array.Empty<HeroSheet>(), heroes, rules))
+                .ToList();
             foreach (var unit in placed)
             {
                 if (rules.InitiativeWith(unit.Definition.Initiative, unit.Points ?? StatPoints.None) > rules.GaugeCapacity)
@@ -135,6 +158,24 @@ public sealed record ScenarioDefinition
         catch (ArgumentException e)
         {
             throw new ArgumentException($"Scenario '{Id}': {e.Message}", e);
+        }
+    }
+
+    /// <summary>Les héros des joueurs, sur les cases prévues, dans l'ordre.</summary>
+    private IEnumerable<UnitSetup> Deploy(IReadOnlyList<HeroSheet> deployed, HeroCatalog? heroes, CombatRules rules)
+    {
+        if (deployed.Count == 0)
+            yield break;
+        var slots = HeroSlots ?? Array.Empty<Cell>();
+        if (deployed.Count > slots.Count)
+            throw new ArgumentException($"{deployed.Count} heroes deployed, {slots.Count} hero slots.");
+        if (heroes is null)
+            throw new ArgumentException("this content has no heroes to deploy.");
+        for (var i = 0; i < deployed.Count; i++)
+        {
+            var hero = heroes.Unit(deployed[i]);
+            var gauge = hero.Definition.Passive == PassiveKind.FlyingStart ? rules.GaugeCapacity : 0;
+            yield return hero.Definition.ToSetup(DeployedUnitId(i), CombatSimulation.PlayerTeam, slots[i], gauge, hero.Points);
         }
     }
 

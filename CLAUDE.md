@@ -75,7 +75,11 @@ Déjà fait :
 On construit la campagne avant de finir le prologue (dont les missions passent par le QG et l'académie). Étapes :
 1. ✅ **État de campagne** (`Game.Core/Campaign`) : joueurs reconnus par un identifiant unique, leurs héros, pot commun, réputation bornée lue en paliers, date de chaque joueur, chapitre ; tenu et sauvegardé par le serveur (`--campaign`, ou la partie hébergée), bilan de chaque combat ajouté, réputation affichée au salon.
 2. ✅ **Académie** (`Game.Core/Campaign/Academy.cs`) : chaque joueur crée son duo (archétype libre, nom, points de compétence de départ dans les paliers ouverts), depuis le salon d'une partie avec campagne.
-3. **QG minimal** : panneau de quêtes jouées avec ses propres héros (les scénarios gagnent des places pour les héros des joueurs), récompenses (XP par paliers en données, matériaux) et bilan appliqués au retour ; campagne solo par un serveur dans le jeu.
+3. **QG minimal**, en trois morceaux :
+   - 3a ✅ **Quêtes avec ses héros** : le salon d'une campagne est le QG (panneau de quêtes de `data/quests/`, héros déployés, lancement) ; les scénarios de quête ont des `heroSlots` ; le lancement transporte les fiches des héros déployés. Héberger : la campagne ou un combat libre.
+   - 3b **Récompenses** : XP (paliers de niveau en données ; défaite = une part de l'XP, sans matériaux) et matériaux au pot commun ; les points gagnés se dépensent à l'académie.
+   - 3c **Campagne solo** : un serveur dans le jeu, réservé au joueur.
+   Les chutes, la mort et la récupération au repos viendront dans une étape à part, après le QG.
 4. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
 5. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
 

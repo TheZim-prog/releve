@@ -31,6 +31,12 @@ public static class Texts
         Game.Core.Network.RequestRefusal.NoCampaign => "Cette partie ne tient pas de campagne.",
         Game.Core.Network.RequestRefusal.NotInLobby => "Pas pendant un combat.",
         Game.Core.Network.RequestRefusal.CampaignUnavailable => "La campagne n'a pas pu être sauvegardée (disque plein ?) : rien n'a changé.",
+        Game.Core.Network.RequestRefusal.UnknownQuest => "Quête inconnue.",
+        Game.Core.Network.RequestRefusal.NoQuestChosen => "Choisissez d'abord une quête.",
+        Game.Core.Network.RequestRefusal.NotYourHero => "Ce héros n'est pas à toi.",
+        Game.Core.Network.RequestRefusal.HeroUnavailable => "Ce héros ne peut pas partir.",
+        Game.Core.Network.RequestRefusal.NoHeroDeployed => "Personne ne part : choisissez vos héros.",
+        Game.Core.Network.RequestRefusal.TooManyHeroes => "Trop de héros pour cette quête.",
         _ => $"Refusé ({reason}).",
     };
 

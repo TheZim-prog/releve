@@ -12,7 +12,8 @@ namespace Game.Client;
 /// Outils de développement (arguments après « -- ») : --scenario=&lt;id&gt; choisit le scénario (solo et partie
 /// hébergée) ; --solo (et --ai-heroes=on) lance directement le combat solo ;
 /// --host ou --join=adresse, avec --name=, --port=, --pick=&lt;n° du héros&gt; et --start=&lt;nb de joueurs&gt;, enchaînent
-/// connexion, choix du héros et lancement ; --academy ouvre l'académie au salon ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
+/// connexion, choix du héros et lancement ; --campaign héberge la campagne (sa sauvegarde de test) plutôt qu'un combat
+/// libre ; --academy ouvre l'académie depuis le QG ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
 /// puis quitte.
 /// </para>
 /// </summary>
@@ -31,6 +32,7 @@ public partial class Main : Node
     private MenuScreen? _menu;
     private LobbyScreen? _lobbyScreen;
     private AcademyScreen? _academyScreen;
+    private HqScreen? _hqScreen;
     private NetworkCombat? _networkCombat;
 
     private GameServer? _server;
@@ -103,7 +105,7 @@ public partial class Main : Node
         if (DevArg("solo") is not null || DevArg("ai-heroes") == "on")
             StartSolo();
         else if (DevArg("host") is not null)
-            Host(name, port);
+            Host(name, port, withCampaign: DevArg("campaign") is not null);
         else if (DevArg("join") is { Length: > 0 } joinAddress)
             Join(name, joinAddress, port);
         else
@@ -135,6 +137,7 @@ public partial class Main : Node
         _menu = screen as MenuScreen;
         _lobbyScreen = screen as LobbyScreen;
         _academyScreen = screen as AcademyScreen;
+        _hqScreen = screen as HqScreen;
         AddChild(screen);
     }
 
@@ -147,7 +150,8 @@ public partial class Main : Node
         var menu = new MenuScreen
         {
             PlayerName = name, Address = address, Port = port, GameVersion = version,
-            Scenarios = _content.Scenarios.Values.Select(s => (s.Id, s.Name)).OrderBy(s => s.Name).ToList(),
+            // Les scénarios de quête n'ont pas de héros à eux : ils se jouent depuis le QG d'une campagne.
+            Scenarios = _content.Scenarios.Values.Where(s => s.HeroSlots is null).Select(s => (s.Id, s.Name)).OrderBy(s => s.Name).ToList(),
             ScenarioId = _scenarioId,
         };
         menu.ScenarioChosen += id => _scenarioId = id;
@@ -176,6 +180,11 @@ public partial class Main : Node
         _networkCombat = null;
         if (_playerId is not { } me)
             return;
+        if (_lobby?.Campaign is not null)
+        {
+            ShowHq(me, status, error);
+            return;
+        }
         var scenario = _lobby?.ScenarioId ?? _scenarioId;
         if (!_content.Scenarios.TryGetValue(scenario, out var played))
         {
@@ -186,15 +195,28 @@ public partial class Main : Node
         lobby.HeroPicked += hero => _client?.Send(new PickHero(hero));
         lobby.StartPressed += () => _client?.Send(new StartCombatRequest());
         lobby.LeavePressed += () => ShowMenu();
-        lobby.AcademyPressed += ShowAcademy;
-        lobby.AcademyAvailable = _content.Heroes is not null;
         Show(lobby);
         if (_lobby is not null)
             lobby.Refresh(_lobby);
         lobby.SetStatus(status, error);
     }
 
-    /// <summary>L'académie de la campagne du serveur (depuis le salon).</summary>
+    /// <summary>Le QG d'une partie avec campagne : panneau de quêtes, héros déployés, académie.</summary>
+    private void ShowHq(int me, string status, bool error)
+    {
+        var hq = new HqScreen(_content, me, HostInfo());
+        hq.QuestChosen += quest => _client?.Send(new ChooseQuest(quest));
+        hq.HeroDeployed += hero => _client?.Send(new DeployHero(hero));
+        hq.StartPressed += () => _client?.Send(new StartCombatRequest());
+        hq.AcademyPressed += ShowAcademy;
+        hq.AcademyAvailable = _content.Heroes is not null;
+        hq.LeavePressed += () => ShowMenu();
+        Show(hq);
+        hq.Refresh(_lobby!);
+        hq.SetStatus(status, error);
+    }
+
+    /// <summary>L'académie de la campagne du serveur (depuis le QG).</summary>
     private void ShowAcademy()
     {
         if (_content.Heroes is null || _lobby?.Campaign is null)
@@ -244,11 +266,15 @@ public partial class Main : Node
         return true;
     }
 
-    /// <summary>Le scénario choisi doit exister dans le contenu chargé ; sinon, le premier disponible.</summary>
+    /// <summary>
+    /// Le scénario choisi doit être un combat libre du contenu chargé (pas une quête, qui n'a pas de héros à elle) ;
+    /// sinon, le scénario par défaut, ou le premier combat libre.
+    /// </summary>
     private void KeepAKnownScenario()
     {
-        if (!_content.Scenarios.ContainsKey(_scenarioId))
-            _scenarioId = _content.Scenarios.ContainsKey(DefaultScenario) ? DefaultScenario : _content.Scenarios.Keys.Order().First();
+        bool IsFreeCombat(string id) => _content.Scenarios.TryGetValue(id, out var scenario) && scenario.HeroSlots is null;
+        if (!IsFreeCombat(_scenarioId))
+            _scenarioId = IsFreeCombat(DefaultScenario) ? DefaultScenario : _content.Scenarios.Keys.Order().First(IsFreeCombat);
     }
 
     // --- Réglages (dernier nom, adresse et port) ---

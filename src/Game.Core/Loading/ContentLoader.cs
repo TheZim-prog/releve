@@ -1,3 +1,4 @@
+using Game.Core.Campaign;
 using Game.Core.Combat;
 using Game.Core.Progression;
 using Game.Core.Reputation;
@@ -42,11 +43,23 @@ internal static class ContentLoader
             .ToDictionary(s => s.Id);
 
         var reputation = files.Exists(ReputationFile) ? files.Load(ReputationFile, ReputationRules.FromJson) : null;
+        var quests = new Dictionary<string, QuestDefinition>();
+        foreach (var file in files.List("quests"))
+        {
+            foreach (var quest in files.Load(file, QuestDefinition.ListFromJson))
+            {
+                DataFiles.InContext(file, () =>
+                {
+                    quest.ValidateAgainst(scenarios);
+                    return quests.TryAdd(quest.Id, quest) ? quest : throw new ArgumentException($"Quest '{quest.Id}' is defined twice.");
+                });
+            }
+        }
 
         return new GameContent
         {
             Rules = rules, Skills = skills, Units = units, Heroes = heroes, Scenarios = scenarios, Reputation = reputation,
-            Version = files.Version(),
+            Quests = quests, Version = files.Version(),
         };
     }
 
