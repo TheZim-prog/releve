@@ -82,14 +82,16 @@ public static class Academy
         id.StartsWith(HeroIdPrefix, StringComparison.Ordinal) && int.TryParse(id.AsSpan(HeroIdPrefix.Length), out var n) ? n : 0;
 
     /// <summary>
-    /// Pour l'écran de création : les cases de l'arbre qu'on peut encore ajouter à ce choix (pas déjà prises, un point de
-    /// départ restant, palier ouvert par les cases déjà choisies dans la branche).
+    /// Les cases de l'arbre qu'on peut encore ajouter à ce choix : pas déjà prises, un point restant sur
+    /// <paramref name="points"/> (par défaut, ceux de départ : l'écran de création), palier ouvert par les cases déjà
+    /// choisies dans la branche.
     /// </summary>
-    public static IReadOnlyList<TreeNode> Learnable(HeroCatalog catalog, string archetype, IReadOnlyCollection<string> chosen)
+    public static IReadOnlyList<TreeNode> Learnable(HeroCatalog catalog, string archetype, IReadOnlyCollection<string> chosen,
+        int? points = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(chosen);
-        if (!catalog.Trees.TryGetValue(archetype, out var tree) || chosen.Count >= catalog.Rules.SkillPointsAt(1))
+        if (!catalog.Trees.TryGetValue(archetype, out var tree) || chosen.Count >= (points ?? catalog.Rules.SkillPointsAt(1)))
             return Array.Empty<TreeNode>();
         var nodes = tree.Nodes();
         var picked = nodes.Where(n => chosen.Contains(n.Id)).ToList();

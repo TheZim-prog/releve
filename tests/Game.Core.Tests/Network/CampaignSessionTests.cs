@@ -131,10 +131,32 @@ public class CampaignSessionTests
         Assert.Equal(new RecruitRefused(RecruitRefusal.InvalidSkills), alice.Received[^1]);
         alice.Say(new RecruitHero(Rookie));
 
+        var seen = Assert.Single(alice.Last<LobbyState>().Campaign!.Heroes);
         Assert.Equal(new HeroInfo("hero-1", "Rempart", "hero", 1, "Alice", Mine: true, IsDead: false, Xp: 0, NextLevelXp: 100),
-            Assert.Single(alice.Last<LobbyState>().Campaign!.Heroes));
-        Assert.False(Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes).Mine);
+            seen with { Sheet = null });
+        Assert.Equal(new[] { "a1", "a2", "a3" }, seen.Sheet!.Learned); // sa fiche complète, pour l'académie
+        var others = Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes);
+        Assert.False(others.Mine);
+        Assert.Null(others.Sheet); // pas celle des héros des autres
         Assert.Equal("Rempart", CampaignStore.Load(campaign.File).Heroes.Single().Name);
+    }
+
+    [Fact]
+    public void AtTheAcademy_APlayerEquipsTheirHero_AndOnlyTheirs()
+    {
+        using var campaign = new TempCampaign();
+        var session = campaign.Session();
+        var alice = Joined(session, "Alice");
+        var bob = Joined(session, "Bob");
+        alice.Say(new RecruitHero(Rookie));
+
+        alice.Say(new EquipHero("hero-1", new[] { "a1v", "a3" }, null));
+        bob.Say(new EquipHero("hero-1", new[] { "a1" }, null));
+        alice.Say(new SpendStatPoint("hero-1", StatKind.Hp));
+
+        Assert.Equal(new[] { "a1v", "a3" }, CampaignStore.Load(campaign.File).Heroes.Single().Sheet.Equipped);
+        Assert.Equal(new TrainingRefused(TrainingRefusal.NotYourHero), bob.Received[^1]);
+        Assert.Equal(new TrainingRefused(TrainingRefusal.NoPointToSpend), alice.Received[^1]);
     }
 
     [Fact]

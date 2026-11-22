@@ -109,7 +109,7 @@ public partial class HqScreen : Control
             var button = Ui.Button($"{quest.Name}  —  {Difficulty(quest.Difficulty)}, {quest.Xp} XP{Materials(quest)}",
                 () => QuestChosen?.Invoke(chosen ? null : id), 38);
             if (chosen)
-                button.Modulate = new Color(0.6f, 1f, 0.6f);
+                button.Modulate = Ui.Taken;
             _board.AddChild(button);
         }
         _quest.Text = campaign.Board.FirstOrDefault(q => q.Id == campaign.ChosenQuest) is { } picked
@@ -132,7 +132,7 @@ public partial class HqScreen : Control
             var button = Ui.Button(CampaignTexts.Hero(hero, ArchetypeName(hero.Archetype)),
                 () => HeroDeployed?.Invoke(isDeployed ? null : id), 36);
             if (isDeployed)
-                button.Modulate = new Color(0.6f, 1f, 0.6f);
+                button.Modulate = Ui.Taken;
             _heroes.AddChild(button);
         }
 

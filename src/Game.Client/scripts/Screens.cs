@@ -7,13 +7,30 @@ namespace Game.Client;
 /// <summary>Briques d'interface communes aux écrans (menu, salon).</summary>
 internal static class Ui
 {
-    /// <summary>Un panneau centré sur fond sombre, qui contient une colonne.</summary>
-    public static VBoxContainer CenteredColumn(Control screen, int width)
+    /// <summary>La teinte d'un choix pris (héros choisi, case apprise, compétence équipée).</summary>
+    public static readonly Color Taken = new(0.6f, 1f, 0.6f);
+
+    /// <summary>
+    /// Un panneau centré sur fond sombre, qui contient une colonne ; <paramref name="scrolling"/> : la colonne défile
+    /// quand elle dépasse la fenêtre (un arbre de compétences, un équipement).
+    /// </summary>
+    public static VBoxContainer CenteredColumn(Control screen, int width, bool scrolling = false)
     {
         screen.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         screen.AddChild(new ColorRect { Color = new Color(0.08f, 0.09f, 0.12f), AnchorRight = 1, AnchorBottom = 1 });
-        var center = new CenterContainer { AnchorRight = 1, AnchorBottom = 1 };
-        screen.AddChild(center);
+        CenterContainer center;
+        if (scrolling)
+        {
+            var scroll = new ScrollContainer { AnchorRight = 1, AnchorBottom = 1 };
+            screen.AddChild(scroll);
+            center = new CenterContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            scroll.AddChild(center);
+        }
+        else
+        {
+            center = new CenterContainer { AnchorRight = 1, AnchorBottom = 1 };
+            screen.AddChild(center);
+        }
         var column = new VBoxContainer { CustomMinimumSize = new Vector2(width, 0) };
         column.AddThemeConstantOverride("separation", 10);
         center.AddChild(column);
@@ -239,7 +256,7 @@ public partial class LobbyScreen : Control
             var button = Ui.Button(label, () => HeroPicked?.Invoke(isMine ? null : id), 38);
             button.Disabled = owner is not null && !isMine; // pris par un autre : impossible de le choisir
             if (isMine)
-                button.Modulate = new Color(0.6f, 1f, 0.6f);
+                button.Modulate = Ui.Taken;
             _heroList.AddChild(button);
         }
 

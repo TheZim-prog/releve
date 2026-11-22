@@ -54,6 +54,9 @@ public static class Protocol
 [JsonDerivedType(typeof(RecruitHero), "recruit")]
 [JsonDerivedType(typeof(ChooseQuest), "chooseQuest")]
 [JsonDerivedType(typeof(DeployHero), "deployHero")]
+[JsonDerivedType(typeof(SpendStatPoint), "spendStatPoint")]
+[JsonDerivedType(typeof(LearnSkill), "learnSkill")]
+[JsonDerivedType(typeof(EquipHero), "equipHero")]
 public abstract record ClientMessage;
 
 /// <summary>
@@ -87,6 +90,15 @@ public sealed record ChooseQuest(string? QuestId) : ClientMessage;
 /// <summary>Au QG : partir en quête avec l'un de ses héros vivants, ou rester au QG (<c>null</c>).</summary>
 public sealed record DeployHero(string? HeroId) : ClientMessage;
 
+/// <summary>À l'académie : mettre un point de stats gagné dans cette stat (cf. <see cref="Campaign.Training"/>).</summary>
+public sealed record SpendStatPoint(string HeroId, Campaign.StatKind Stat) : ClientMessage;
+
+/// <summary>À l'académie : apprendre cette case de l'arbre avec un point de compétence gagné.</summary>
+public sealed record LearnSkill(string HeroId, string Skill) : ClientMessage;
+
+/// <summary>À l'académie : équiper ces compétences (ou variantes), dans l'ordre des boutons, et ce passif.</summary>
+public sealed record EquipHero(string HeroId, IReadOnlyList<string> Equipped, string? Passive) : ClientMessage;
+
 // --- Serveur → client ---
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -100,6 +112,7 @@ public sealed record DeployHero(string? HeroId) : ClientMessage;
 [JsonDerivedType(typeof(CombatAborted), "combatAborted")]
 [JsonDerivedType(typeof(RequestRefused), "refused")]
 [JsonDerivedType(typeof(RecruitRefused), "recruitRefused")]
+[JsonDerivedType(typeof(TrainingRefused), "trainingRefused")]
 public abstract record ServerMessage;
 
 /// <summary>Le joueur est accepté sous l'identifiant <paramref name="PlayerId"/>.</summary>
@@ -175,10 +188,11 @@ public sealed record QuestInfo(string Id, string Name, string Description, Campa
 
 /// <summary>
 /// Un héros de la campagne, tel que le QG le montre ; <paramref name="Owner"/> : le nom de son joueur. Son XP, celle
-/// du niveau suivant (<c>null</c> au maximum), et les points gagnés en montant de niveau, à dépenser à l'académie.
+/// du niveau suivant (<c>null</c> au maximum), les points gagnés en montant de niveau, à dépenser à l'académie, et,
+/// pour les siens seulement, sa fiche complète (<paramref name="Sheet"/> : points, cases apprises, équipement).
 /// </summary>
 public sealed record HeroInfo(string Id, string Name, string Archetype, int Level, string Owner, bool Mine, bool IsDead,
-    int Xp = 0, int? NextLevelXp = null, int StatPointsToSpend = 0, int SkillPointsToSpend = 0);
+    int Xp = 0, int? NextLevelXp = null, int StatPointsToSpend = 0, int SkillPointsToSpend = 0, Progression.HeroSheet? Sheet = null);
 
 /// <summary>
 /// Le combat : son lancement, les commandes déjà jouées et le pas de simulation atteint (vide et 0 au début ; à rejouer
@@ -252,3 +266,6 @@ public sealed record RequestRefused(RequestRefusal Reason) : ServerMessage;
 
 /// <summary>Le recrutement demandé à l'académie est impossible, pour cette raison.</summary>
 public sealed record RecruitRefused(Campaign.RecruitRefusal Reason) : ServerMessage;
+
+/// <summary>L'entraînement demandé à l'académie est impossible, pour cette raison.</summary>
+public sealed record TrainingRefused(Campaign.TrainingRefusal Reason) : ServerMessage;

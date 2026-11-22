@@ -40,6 +40,15 @@ public static class Texts
         _ => $"Refusé ({reason}).",
     };
 
+    public static string TrainingRefusal(Game.Core.Campaign.TrainingRefusal reason) => reason switch
+    {
+        Game.Core.Campaign.TrainingRefusal.NotYourHero => "Ce héros n'est pas à toi.",
+        Game.Core.Campaign.TrainingRefusal.HeroDead => "Ce héros est mort.",
+        Game.Core.Campaign.TrainingRefusal.NoPointToSpend => "Plus de point à dépenser.",
+        Game.Core.Campaign.TrainingRefusal.NotAllowed => "Les règles de l'arbre ou de l'équipement ne le permettent pas.",
+        _ => $"Refusé ({reason}).",
+    };
+
     public static string RecruitRefusal(Game.Core.Campaign.RecruitRefusal reason) => reason switch
     {
         Game.Core.Campaign.RecruitRefusal.NotEnrolled => "Tu n'es pas inscrit dans cette campagne.",

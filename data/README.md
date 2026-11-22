@@ -93,7 +93,9 @@ une par héros, dans l'ordre de leur déploiement ; prévoir cinq cases pour un 
 
 **Régler l'XP et les niveaux** (`progression.json`) : `xpToReach` donne l'XP totale de chaque niveau, du 2e au dernier ;
 une quête gagnée donne son XP à chaque héros qui y est parti, et ses matériaux au pot commun ; perdue, seulement
-`defeatXpPercent` % de son XP, et pas de matériaux. Les points des niveaux gagnés attendent d'être dépensés à l'académie.
+`defeatXpPercent` % de son XP, et pas de matériaux. Les points des niveaux gagnés attendent d'être dépensés à l'académie :
+le bouton « Entraîner » d'un héros y met un point de stats dans les PV, la puissance ou l'initiative, apprend une case
+d'un palier ouvert (définitif), et change son équipement (une compétence ou sa variante par emplacement, et son passif).
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

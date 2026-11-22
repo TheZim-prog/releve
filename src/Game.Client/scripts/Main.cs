@@ -13,7 +13,7 @@ namespace Game.Client;
 /// hébergée) ; --solo (et --ai-heroes=on) lance directement le combat solo ;
 /// --host ou --join=adresse, avec --name=, --port=, --pick=&lt;n° du héros&gt; et --start=&lt;nb de joueurs&gt;, enchaînent
 /// connexion, choix du héros et lancement ; --campaign héberge la campagne (sa sauvegarde de test) plutôt qu'un combat
-/// libre ; --academy ouvre l'académie depuis le QG ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
+/// libre ; --academy ouvre l'académie depuis le QG (--train=&lt;héros&gt; : et son entraînement) ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
 /// puis quitte.
 /// </para>
 /// </summary>
@@ -223,9 +223,14 @@ public partial class Main : Node
             return;
         var academy = new AcademyScreen(_content);
         academy.RecruitPressed += recruit => _client?.Send(new RecruitHero(recruit));
+        academy.SpendPressed += (hero, stat) => _client?.Send(new SpendStatPoint(hero, stat));
+        academy.LearnPressed += (hero, skill) => _client?.Send(new LearnSkill(hero, skill));
+        academy.EquipPressed += (hero, equipped, passive) => _client?.Send(new EquipHero(hero, equipped, passive));
         academy.BackPressed += () => ShowLobby();
         Show(academy);
         academy.Refresh(_lobby);
+        if (DevArg("train") is { Length: > 0 } trained)
+            academy.Train(trained);
     }
 
     private void ShowNetworkCombat(CombatState state)

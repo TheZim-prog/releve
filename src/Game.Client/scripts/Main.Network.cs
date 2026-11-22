@@ -183,6 +183,9 @@ public partial class Main
             case CombatAborted:
                 ShowLobby("Le combat a été abandonné (erreur du serveur).", error: true);
                 break;
+            case TrainingRefused refused:
+                _academyScreen?.SetStatus(Texts.TrainingRefusal(refused.Reason), error: true);
+                break;
             case RecruitRefused refused:
                 _academyScreen?.SetStatus(Texts.RecruitRefusal(refused.Reason), error: true);
                 break;

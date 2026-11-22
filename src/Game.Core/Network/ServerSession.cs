@@ -86,6 +86,15 @@ public sealed partial class ServerSession
             case DeployHero deploy:
                 DeployFor(player, deploy.HeroId);
                 break;
+            case SpendStatPoint spend:
+                TrainFor(player, (state, catalog) => Training.SpendStatPoint(state, catalog, player.Uid, spend.HeroId, spend.Stat));
+                break;
+            case LearnSkill learn:
+                TrainFor(player, (state, catalog) => Training.Learn(state, catalog, player.Uid, learn.HeroId, learn.Skill));
+                break;
+            case EquipHero equip:
+                TrainFor(player, (state, catalog) => Training.Equip(state, catalog, player.Uid, equip.HeroId, equip.Equipped, equip.Passive));
+                break;
         }
     }
 

@@ -45,6 +45,31 @@ public sealed partial class ServerSession
         BroadcastLobby();
     }
 
+    /// <summary>L'académie : le joueur entraîne un de ses héros (points, cases, équipement), au salon seulement.</summary>
+    private void TrainFor(Player player, Func<CampaignState, Progression.HeroCatalog, TrainingResult> train)
+    {
+        if (!InCampaignLobby(player))
+            return;
+        if (_content.Heroes is not { } catalog)
+        {
+            player.Peer!.Send(new RequestRefused(RequestRefusal.NoCampaign));
+            return;
+        }
+        // Appliqué à l'état même qui est sauvegardé ; refusé, il ne change rien (et rien n'est réécrit).
+        TrainingResult? result = null;
+        SaveOrTell(player, state =>
+        {
+            result = train(state, catalog);
+            return result.State ?? state;
+        });
+        if (result!.Refusal is { } refusal)
+        {
+            player.Peer!.Send(new TrainingRefused(refusal));
+            return;
+        }
+        BroadcastLobby();
+    }
+
     /// <summary>N'importe quel joueur choisit la quête du groupe (ou aucune).</summary>
     private void ChooseQuestFor(Player player, string? questId)
     {
@@ -200,7 +225,8 @@ public sealed partial class ServerSession
                 Mine: h.Owner == viewer, h.IsDead, h.Xp,
                 progression?.XpForNextLevel(h.Sheet.Level),
                 progression is null ? 0 : QuestRewards.UnspentStatPoints(h.Sheet, progression),
-                progression is null ? 0 : QuestRewards.UnspentSkillPoints(h.Sheet, progression)))
+                progression is null ? 0 : QuestRewards.UnspentSkillPoints(h.Sheet, progression),
+                Sheet: h.Owner == viewer ? h.Sheet : null))
             .ToList();
         var board = _content.Quests.Values
             .OrderBy(q => q.Difficulty).ThenBy(q => q.Name)

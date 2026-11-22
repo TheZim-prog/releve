@@ -31,6 +31,17 @@ public static class CampaignTexts
                + $", réputation {result.Reputation:+0;-0;0}";
     }
 
+    /// <summary>Le nom affiché d'une case de l'arbre : compétence (ou variante), passif, ou compétence à venir.</summary>
+    public static string NodeName(Game.Core.Progression.HeroCatalog catalog, Game.Core.Progression.SkillTree tree, string id)
+    {
+        if (catalog.Skills.TryGetValue(id, out var skill) && skill.Name is { } name)
+            return name;
+        if (tree.Planned.TryGetValue(id, out var planned))
+            return $"{planned} (à venir)";
+        var passive = tree.Branches.SelectMany(b => b.Tiers).SelectMany(t => t.Passives).FirstOrDefault(p => p.Id == id);
+        return passive is null ? id : $"{passive.Name} (passif{(passive.Planned ? ", à venir" : "")})";
+    }
+
     /// <summary>« Pot commun : 9 matériaux » (une sorte pour l'instant).</summary>
     public static string Pot(IReadOnlyDictionary<string, int> materials) =>
         $"Pot commun : {materials.Values.Sum()} matériaux";
