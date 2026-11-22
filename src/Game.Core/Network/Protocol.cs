@@ -57,6 +57,8 @@ public static class Protocol
 [JsonDerivedType(typeof(SpendStatPoint), "spendStatPoint")]
 [JsonDerivedType(typeof(LearnSkill), "learnSkill")]
 [JsonDerivedType(typeof(EquipHero), "equipHero")]
+[JsonDerivedType(typeof(TravelTo), "travelTo")]
+[JsonDerivedType(typeof(ResolveEvent), "resolveEvent")]
 public abstract record ClientMessage;
 
 /// <summary>
@@ -98,6 +100,15 @@ public sealed record LearnSkill(string HeroId, string Skill) : ClientMessage;
 
 /// <summary>À l'académie : équiper ces compétences (ou variantes), dans l'ordre des boutons, et ce passif.</summary>
 public sealed record EquipHero(string HeroId, IReadOnlyList<string> Equipped, string? Passive) : ClientMessage;
+
+/// <summary>En route vers une quête (le joueur qui valide, cf. <see cref="TripInfo.Validator"/>) : aller à ce lieu voisin.</summary>
+public sealed record TravelTo(string Place) : ClientMessage;
+
+/// <summary>
+/// En route (le joueur qui valide) : choisir l'option de l'événement qui attend, par son rang parmi
+/// <see cref="EventInfo.Options"/>, ou passer son chemin (<c>null</c>).
+/// </summary>
+public sealed record ResolveEvent(int? Option) : ClientMessage;
 
 // --- Serveur → client ---
 
@@ -174,6 +185,20 @@ public sealed record CampaignInfo
     public IReadOnlyList<QuestInfo> Board { get; init; } = Array.Empty<QuestInfo>();
     public string? ChosenQuest { get; init; }
     public IReadOnlyDictionary<string, int> Materials { get; init; } = new Dictionary<string, int>();
+
+    /// <summary>Les points d'intérêt de la carte découverts, et ceux déjà visités (épuisés).</summary>
+    public IReadOnlyList<string> KnownPois { get; init; } = Array.Empty<string>();
+
+    public IReadOnlyList<string> ExhaustedPois { get; init; } = Array.Empty<string>();
+
+    /// <summary>Le trajet en cours vers la quête lancée, ou <c>null</c> (au QG, ou en combat).</summary>
+    public TripInfo? Trip { get; init; }
+
+    /// <summary>
+    /// Ce qu'a donné le dernier événement du trajet, ou <c>null</c> (aucun depuis le dernier pas) ; il reste affiché si le
+    /// trajet s'est arrêté là (le dernier héros y est mort).
+    /// </summary>
+    public World.EventOutcome? LastEvent { get; init; }
 }
 
 /// <summary>
@@ -265,6 +290,18 @@ public enum RequestRefusal
 
     /// <summary>Lancement impossible : plus de héros que la quête n'en accueille.</summary>
     TooManyHeroes,
+
+    /// <summary>Aucun trajet en cours.</summary>
+    NotTravelling,
+
+    /// <summary>En route, seul le joueur qui valide décide (cf. <see cref="TripInfo.Validator"/>).</summary>
+    NotTheValidator,
+
+    /// <summary>Ce lieu n'est pas un pas permis (pas voisin, déjà parcouru, cul-de-sac, ou un événement attend).</summary>
+    NotAMove,
+
+    /// <summary>Aucun événement n'attend, ou cette option n'existe pas.</summary>
+    UnknownOption,
 }
 
 public sealed record RequestRefused(RequestRefusal Reason) : ServerMessage;

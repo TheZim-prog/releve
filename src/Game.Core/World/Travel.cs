@@ -7,10 +7,20 @@ namespace Game.Core.World;
 /// <summary>
 /// Un trajet vers une quête (docs/design.md 4) : le lieu où se trouve le groupe, le chemin parcouru, les crochets faits
 /// (la gravité de la mission), le bonus gagné pour la quête, et l'événement du point d'intérêt où il vient d'arriver,
-/// en attente d'un choix.
+/// en attente d'un choix. Gardé dans la sauvegarde (cf. <see cref="CampaignState.Trip"/>) avec les héros partis, le
+/// joueur qui décide et l'état du hasard de ses tests : un trajet interrompu reprend là où il en était.
 /// </summary>
 public sealed record Trip
 {
+    /// <summary>Les héros de campagne partis, dans l'ordre de leurs cases de départ.</summary>
+    public IReadOnlyList<string> Heroes { get; init; } = Array.Empty<string>();
+
+    /// <summary>L'identifiant du joueur qui a choisi la quête : il valide les pas et les choix (docs/design.md 4.2b).</summary>
+    public string? Chooser { get; init; }
+
+    /// <summary>L'état du générateur des tests (cf. <see cref="DeterministicRandom"/>), qui avance à chaque test tenté.</summary>
+    public ulong RandomState { get; init; }
+
     public required string Quest { get; init; }
 
     /// <summary>Le lieu de la mission.</summary>
@@ -28,6 +38,7 @@ public sealed record Trip
     /// <summary>L'événement à résoudre avant de repartir, ou <c>null</c>.</summary>
     public string? PendingEvent { get; init; }
 
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool Arrived => Current == Site;
 }
 

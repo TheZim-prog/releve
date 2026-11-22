@@ -83,7 +83,7 @@ On construit la campagne avant de finir le prologue (dont les missions passent p
 4. ✅ **Chutes et mort des héros** (`Injuries`, `docs/design.md` 1.4) : chaque chute compte (une demie si secourue), mort à la 3e, récupération au fil des quêtes sans lui, mémorial au QG.
 5. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
    - 5a ✅ **Cœur** (`Game.Core/World`, `data/world/`) : carte, événements (scène à choix, test du meilleur héros), trajet (`Travel`), gravité par crochet (`GravityStep` : renforts, civils perdus, compte à rebours), bonus de quête (`QuestModifiers` : jauge, armure, stats).
-   - 5b **Serveur** : la phase de trajet entre le lancement d'une quête et son combat.
+   - 5b ✅ **Serveur** (`ServerSession.Travel.cs`) : la phase de trajet entre le lancement d'une quête et son combat (`TravelTo`, `ResolveEvent`), décidée par le joueur qui a choisi la quête ; tirages à graine ; trajet gardé dans la sauvegarde et repris au redémarrage.
    - 5c **Client** : l'écran de la carte.
 6. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
 

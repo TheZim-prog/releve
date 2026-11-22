@@ -28,6 +28,7 @@ public sealed partial class ServerSession
     private readonly List<Player> _players = new();
     private readonly List<(int Player, CombatCommand Command)> _queue = new();
     private readonly CampaignKeeper? _campaign;
+    private readonly Random _random;
     private int _nextPlayerId = 1;
 
     private CombatLaunch? _launch;
@@ -35,13 +36,18 @@ public sealed partial class ServerSession
     private int? _pausedBy;
 
     /// <param name="campaign">La campagne que tient ce serveur, ou <c>null</c> (des combats sans suite).</param>
-    public ServerSession(GameContent content, string scenarioId, CampaignKeeper? campaign = null)
+    /// <param name="random">
+    /// D'où vient la graine de chaque trajet (celle de ses tests, gardée avec lui) ; par défaut, imprévisible.
+    /// </param>
+    public ServerSession(GameContent content, string scenarioId, CampaignKeeper? campaign = null, Random? random = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         _content = content;
         _scenarioId = scenarioId;
         _campaign = campaign;
+        _random = random ?? new Random();
         _playableHeroes = CombatLaunch.PlayableHeroes(content, scenarioId).Select(u => u.Id).ToHashSet();
+        ResumeTrip();
     }
 
     /// <summary>La simulation qui fait foi, pendant un combat ; <c>null</c> au salon.</summary>
@@ -95,26 +101,32 @@ public sealed partial class ServerSession
             case EquipHero equip:
                 TrainFor(player, (state, catalog) => Training.Equip(state, catalog, player.Uid, equip.HeroId, equip.Equipped, equip.Passive));
                 break;
+            case TravelTo travel:
+                TravelFor(player, travel.Place);
+                break;
+            case ResolveEvent resolve:
+                ResolveFor(player, resolve.Option);
+                break;
         }
     }
 
     /// <summary>
-    /// Connexion perdue. Au salon, le joueur s'en va (son héros est libéré) ; en combat, il garde sa place et le combat
-    /// se met en pause jusqu'à son retour (ou jusqu'à ce qu'un joueur relance), s'il y joue une unité (un joueur resté
-    /// au QG ne bloque pas la quête des autres).
+    /// Connexion perdue. Au salon, le joueur s'en va (son héros est libéré) ; en route ou en combat, il garde sa place.
+    /// En combat, celui-ci se met en pause jusqu'à son retour (ou jusqu'à ce qu'un joueur relance), s'il y joue une unité
+    /// (un joueur resté au QG ne bloque pas la quête des autres).
     /// </summary>
     public void Disconnect(IPeer peer)
     {
         if (PlayerOf(peer) is not { } player)
             return;
-        if (Simulation is null)
+        if (!InProgress)
         {
             _players.Remove(player);
         }
         else
         {
             player.Peer = null;
-            if (!_paused && player.Hero is not null)
+            if (Simulation is not null && !_paused && player.Hero is not null)
                 SetPaused(true, byPlayer: null);
         }
         BroadcastLobby();
@@ -245,6 +257,9 @@ public sealed partial class ServerSession
             _players.Add(player);
         player.Name = name;
         player.Peer = peer;
+        // Un trajet repris au lancement du serveur : le joueur y retrouve son héros parti.
+        if (known is null && HeroOnTheRoad(player.Uid) is { } traveller)
+            player.Deployed = traveller;
         peer.Send(new Welcome(player.Id));
         BroadcastLobby();
 
@@ -285,7 +300,7 @@ public sealed partial class ServerSession
 
     private void Start(Player player)
     {
-        if (Simulation is not null)
+        if (InProgress)
         {
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotInLobby));
             return;

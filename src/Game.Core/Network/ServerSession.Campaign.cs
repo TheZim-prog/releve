@@ -81,6 +81,7 @@ public sealed partial class ServerSession
             return;
         }
         _questId = questId;
+        _questChooser = questId is null ? null : player.Uid;
         BroadcastLobby();
     }
 
@@ -99,53 +100,83 @@ public sealed partial class ServerSession
     }
 
     /// <summary>
-    /// Lance la quête choisie avec les héros déployés, ou explique au joueur qui l'a demandé pourquoi c'est impossible.
-    /// Le combat est construit avant que rien ne change : une fiche de héros que les données ne permettent plus (une
-    /// compétence renommée depuis son recrutement) est refusée sans laisser de trace.
+    /// Lance la quête choisie avec les héros déployés : le trajet sur la carte, s'il y en a une, sinon le combat tout
+    /// de suite ; ou explique au joueur qui l'a demandé pourquoi c'est impossible. Le combat est construit avant que rien
+    /// ne change : une fiche de héros que les données ne permettent plus (une compétence renommée depuis son recrutement)
+    /// est refusée sans laisser de trace, et sans faire le trajet pour rien.
     /// </summary>
     private void StartQuest(Player player)
     {
-        if (QuestLaunch(player) is not { } launch)
+        if (QuestHeroes(player) is not { } heroes)
             return;
-        CombatSetup setup;
+        var quest = ChosenQuest!;
+        var launch = LaunchOf(quest, heroes);
+        if (Build(launch, reason => player.Peer!.Send(new RequestRefused(reason))) is not { } setup)
+            return;
+        if (HasRoute(quest))
+            Depart(player, quest, heroes);
+        else
+            LaunchQuest(quest, heroes, launch, setup);
+    }
+
+    /// <summary>Le combat de ce lancement, ou <c>null</c> si les données ne permettent plus un héros (dit à <paramref name="tell"/>).</summary>
+    private CombatSetup? Build(CombatLaunch launch, Action<RequestRefusal> tell)
+    {
         try
         {
-            setup = launch.BuildSetup(_content);
+            return launch.BuildSetup(_content);
         }
         catch (ArgumentException)
         {
-            player.Peer!.Send(new RequestRefused(RequestRefusal.HeroUnavailable));
-            return;
+            tell(RequestRefusal.HeroUnavailable);
+            return null;
         }
-        var going = _players.Where(p => p.Deployed is not null).ToList();
+    }
+
+    /// <summary>Le combat de la quête commence (au départ du QG, ou à l'arrivée au bout du trajet).</summary>
+    private void LaunchQuest(QuestDefinition quest, IReadOnlyList<CampaignHero> heroes, CombatLaunch launch, CombatSetup setup)
+    {
         foreach (var assignment in launch.Heroes)
-            going.Single(p => p.Id == assignment.Player).Hero = assignment.Unit;
-        _questInCombat = (ChosenQuest!, going.Select(p => (p.Deployed!, p.Hero!.Value)).ToList());
+            _players.Single(p => p.Id == assignment.Player).Hero = assignment.Unit;
+        var scenario = _content.Scenarios[quest.Scenario];
+        _questInCombat = (quest, heroes.Select((h, i) => (h.Id, scenario.DeployedUnitId(i))).ToList());
         Launch(launch, setup);
+        // Un joueur parti en route garde sa place : le combat l'attend.
+        if (!AllCombatantsConnected)
+            SetPaused(true, byPlayer: null);
     }
 
     /// <summary>
-    /// Le lancement de la quête choisie, avec les héros déployés (dans l'ordre d'arrivée des joueurs, sur les cases du
-    /// scénario), ou <c>null</c> (le joueur qui l'a demandé sait pourquoi). Rien n'est encore changé.
+    /// Le combat de la quête avec ces héros, sur les cases du scénario dans cet ordre : chacun est joué par son joueur
+    /// s'il est dans la partie, sinon par l'IA.
     /// </summary>
-    private CombatLaunch? QuestLaunch(Player player)
+    private CombatLaunch LaunchOf(QuestDefinition quest, IReadOnlyList<CampaignHero> heroes)
+    {
+        var scenario = _content.Scenarios[quest.Scenario];
+        var assignments = heroes
+            .Select((h, i) => _players.Find(p => p.Uid == h.Owner) is { } player ? new HeroAssignment(scenario.DeployedUnitId(i), player.Id) : null)
+            .OfType<HeroAssignment>()
+            .ToList();
+        return new CombatLaunch(quest.Scenario, assignments, heroes.Select(h => h.Sheet).ToList());
+    }
+
+    /// <summary>
+    /// Les héros déployés pour la quête choisie (dans l'ordre d'arrivée des joueurs), ou <c>null</c> (le joueur qui a
+    /// demandé le lancement sait pourquoi). Rien n'est encore changé.
+    /// </summary>
+    private IReadOnlyList<CampaignHero>? QuestHeroes(Player player)
     {
         if (ChosenQuest is not { } quest)
             return Refuse(player, RequestRefusal.NoQuestChosen);
         var going = _players.Where(p => p.Deployed is not null).ToList();
         if (going.Count == 0)
             return Refuse(player, RequestRefusal.NoHeroDeployed);
-        var scenario = _content.Scenarios[quest.Scenario];
-        if (going.Count > scenario.HeroSlots!.Count)
+        if (going.Count > _content.Scenarios[quest.Scenario].HeroSlots!.Count)
             return Refuse(player, RequestRefusal.TooManyHeroes);
         // Revérifiés : un héros a pu mourir entre son déploiement et le lancement.
         if (going.Select(p => HeroRefusal(p, p.Deployed!)).FirstOrDefault(r => r is not null) is { } refusal)
             return Refuse(player, refusal);
-
-        var heroes = _campaign!.State.Heroes;
-        return new CombatLaunch(quest.Scenario,
-            going.Select((p, i) => new HeroAssignment(scenario.DeployedUnitId(i), p.Id)).ToList(),
-            going.Select(p => heroes.First(h => h.Id == p.Deployed).Sheet).ToList());
+        return going.Select(p => _campaign!.State.Heroes.First(h => h.Id == p.Deployed)).ToList();
     }
 
     /// <summary>Pourquoi ce joueur ne peut pas déployer ce héros (pas le sien, mort), ou <c>null</c>.</summary>
@@ -158,20 +189,20 @@ public sealed partial class ServerSession
             _ => null,
         };
 
-    private static CombatLaunch? Refuse(Player player, RequestRefusal reason)
+    private static IReadOnlyList<CampaignHero>? Refuse(Player player, RequestRefusal reason)
     {
         player.Peer!.Send(new RequestRefused(reason));
         return null;
     }
 
-    /// <summary>Une demande du QG n'a de sens qu'avec une campagne, hors combat ; sinon, le joueur sait pourquoi.</summary>
+    /// <summary>Une demande du QG n'a de sens qu'avec une campagne, hors trajet et hors combat ; sinon, le joueur sait pourquoi.</summary>
     private bool InCampaignLobby(Player player)
     {
         if (!IsCampaign)
             player.Peer!.Send(new RequestRefused(RequestRefusal.NoCampaign));
-        else if (Simulation is not null)
+        else if (InProgress)
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotInLobby));
-        return IsCampaign && Simulation is null;
+        return IsCampaign && !InProgress;
     }
 
     /// <summary>Applique et sauvegarde un changement ; si la sauvegarde échoue, le joueur le sait et l'erreur remonte.</summary>
@@ -257,6 +288,10 @@ public sealed partial class ServerSession
             Board = board,
             ChosenQuest = _questId,
             Materials = state.Materials,
+            KnownPois = state.KnownPois,
+            ExhaustedPois = state.ExhaustedPois,
+            Trip = TripSummary(),
+            LastEvent = _lastEvent,
         };
     }
 }

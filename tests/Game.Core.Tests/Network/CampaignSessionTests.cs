@@ -5,6 +5,7 @@ using Game.Core.Network;
 using Game.Core.Progression;
 using Game.Core.Reputation;
 using Game.Core.Scenarios;
+using Game.Core.World;
 using Game.Core.Tests.Progression;
 using static Game.Core.Tests.Combat.CombatTestKit;
 using static Game.Core.Tests.Network.ServerSessionTests;
@@ -38,9 +39,10 @@ public class CampaignSessionTests
 
     /// <summary>
     /// Le contenu d'une campagne de test : l'archétype « hero » et son arbre (<see cref="ProgressionTestKit"/>), le combat
-    /// de test à héros fixes, et la quête « q » (scénario « street »).
+    /// de test à héros fixes, et la quête « q » (scénario « street »). Avec une carte (<paramref name="world"/>), la quête
+    /// se joue au lieu « street », avec sa propre gravité, et les règles de la carte sont celles du jeu.
     /// </summary>
-    private static GameContent CampaignContent()
+    internal static GameContent CampaignContent(WorldMap? world = null, IReadOnlyDictionary<string, WorldEvent>? events = null)
     {
         var civilian = Unit(0, 2, 0, 0).Definition with
         {
@@ -66,17 +68,26 @@ public class CampaignSessionTests
             },
             Quests = new Dictionary<string, QuestDefinition>
             {
-                ["q"] = new() { Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 20 },
+                ["q"] = new()
+                {
+                    Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 20,
+                    Site = world is null ? null : "street",
+                    // La sienne, pas celle des règles du jeu (dont les renforts n'existent pas ici) : un voyou par crochet.
+                    Gravity = world is null ? null : new GravityStep { ExtraUnits = new[] { "thug" } },
+                },
             },
             Reputation = ReputationRules,
+            World = world,
+            Events = events ?? new Dictionary<string, WorldEvent>(),
+            WorldRules = world is null ? null : ContentTestKit.Content.WorldRules,
             Version = "v1",
         };
     }
 
-    private static readonly Recruit Rookie = new("Rempart", "hero", new[] { "a1", "a2", "a3" });
+    internal static readonly Recruit Rookie = new("Rempart", "hero", new[] { "a1", "a2", "a3" });
 
     /// <summary>Une campagne dans un fichier temporaire, effacé à la fin.</summary>
-    private sealed class TempCampaign : IDisposable
+    internal sealed class TempCampaign : IDisposable
     {
         public string Folder { get; } = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}");
 
@@ -85,11 +96,11 @@ public class CampaignSessionTests
         public string File => Path.Combine(Folder, "campaign.json");
 
         /// <summary>Un serveur sur cette campagne ; celui d'avant la lâche d'abord (comme un serveur qui redémarre).</summary>
-        public ServerSession Session(GameContent? content = null)
+        public ServerSession Session(GameContent? content = null, Random? random = null)
         {
             _keeper?.Dispose();
             _keeper = CampaignKeeper.Open(File, ReputationRules.Scale);
-            return new(content ?? CampaignContent(), "test", _keeper);
+            return new(content ?? CampaignContent(), "test", _keeper, random);
         }
 
         public void Dispose()
@@ -100,7 +111,7 @@ public class CampaignSessionTests
         }
     }
 
-    private static FakeClient Joined(ServerSession session, string name)
+    internal static FakeClient Joined(ServerSession session, string name)
     {
         var client = new FakeClient(session);
         client.Join(name);
@@ -108,7 +119,7 @@ public class CampaignSessionTests
     }
 
     /// <summary>Le joueur recrute un héros, et le déploie pour la quête « q ».</summary>
-    private static string RecruitAndDeploy(FakeClient client)
+    internal static string RecruitAndDeploy(FakeClient client)
     {
         client.Say(new RecruitHero(Rookie));
         var hero = client.Last<LobbyState>().Campaign!.Heroes.Last(h => h.Mine).Id;
@@ -120,7 +131,7 @@ public class CampaignSessionTests
     private static (int, string, int?) Summary(FakeClient client) =>
         client.Last<LobbyState>().Campaign is { } c ? (c.Reputation, c.Tier, c.LastQuest?.Reputation) : throw new InvalidOperationException("No campaign.");
 
-    private static void PlayToTheEnd(ServerSession session)
+    internal static void PlayToTheEnd(ServerSession session)
     {
         for (var i = 0; i < 4000 && session.Simulation is not null; i++)
             session.Tick();

@@ -36,6 +36,9 @@ public sealed record CampaignState
     /// <summary>Les points d'intérêt déjà visités : épuisés, ils ne donnent plus rien (mais on peut y passer).</summary>
     public IReadOnlyList<string> ExhaustedPois { get; init; } = Array.Empty<string>();
 
+    /// <summary>Le trajet en cours vers une quête, ou <c>null</c> : ce qu'il a déjà coûté est sauvegardé, lui aussi.</summary>
+    public World.Trip? Trip { get; init; }
+
     /// <summary>Une nouvelle campagne : personne encore, la réputation de départ, le prologue.</summary>
     public static CampaignState New(ReputationScale scale)
     {
