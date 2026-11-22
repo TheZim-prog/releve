@@ -82,11 +82,10 @@ public partial class AcademyScreen : Control
     /// </summary>
     public void Refresh(LobbyState lobby, bool recruited = false)
     {
-        var mine = lobby.Campaign?.Heroes?.Where(h => h.Mine).ToList() ?? new List<HeroInfo>();
+        var mine = lobby.Campaign?.Heroes.Where(h => h.Mine).ToList() ?? new List<HeroInfo>();
         _mine.Text = mine.Count == 0
             ? "Tu n'as pas encore de héros."
-            : "Tes héros : " + string.Join(", ", mine.Select(h =>
-                $"{h.Name} ({ArchetypeName(h.Archetype)}, niveau {h.Level}{(h.IsDead ? ", mort" : "")})"));
+            : "Tes héros :\n" + string.Join("\n", mine.Select(h => CampaignTexts.Hero(h, ArchetypeName(h.Archetype))));
         var alive = mine.Count(h => !h.IsDead);
         _form.Visible = alive < _catalog.Rules.HeroesPerPlayer;
         if (recruited)

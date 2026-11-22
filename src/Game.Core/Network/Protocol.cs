@@ -148,19 +148,37 @@ public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Her
 public sealed record LobbyState(string ScenarioId, IReadOnlyList<PlayerInfo> Players, CampaignInfo? Campaign = null) : ServerMessage;
 
 /// <summary>
-/// Ce que le salon montre de la campagne : la réputation du groupe et son palier, le bilan de la dernière mission
-/// (<c>null</c> avant la première depuis le lancement du serveur), et les héros des joueurs (vu par le destinataire :
-/// <see cref="HeroInfo.Mine"/> marque les siens).
+/// Ce que le QG montre de la campagne : la réputation du groupe et son palier, le résultat de la dernière quête
+/// (<c>null</c> avant la première depuis le lancement du serveur), les héros des joueurs (vus par le destinataire :
+/// <see cref="HeroInfo.Mine"/> marque les siens), le panneau de quêtes et celle qui est choisie, et le pot commun.
 /// </summary>
-public sealed record CampaignInfo(int Reputation, string Tier, int? LastMission, IReadOnlyList<HeroInfo>? Heroes = null,
-    IReadOnlyList<QuestInfo>? Board = null, string? ChosenQuest = null);
+public sealed record CampaignInfo
+{
+    public required int Reputation { get; init; }
+    public required string Tier { get; init; }
+    public QuestResult? LastQuest { get; init; }
+    public IReadOnlyList<HeroInfo> Heroes { get; init; } = Array.Empty<HeroInfo>();
+    public IReadOnlyList<QuestInfo> Board { get; init; } = Array.Empty<QuestInfo>();
+    public string? ChosenQuest { get; init; }
+    public IReadOnlyDictionary<string, int> Materials { get; init; } = new Dictionary<string, int>();
+}
+
+/// <summary>
+/// Ce qu'a rapporté une quête : son nom, son issue, son bilan de réputation, l'XP reçue par chacun de ses héros, et les
+/// matériaux versés au pot commun.
+/// </summary>
+public sealed record QuestResult(string Quest, bool Victory, int Reputation, int Xp, IReadOnlyDictionary<string, int> Materials);
 
 /// <summary>Une quête du panneau, telle que le QG la montre ; <paramref name="Slots"/> : combien de héros peuvent y partir.</summary>
 public sealed record QuestInfo(string Id, string Name, string Description, Campaign.QuestDifficulty Difficulty, int Xp,
     IReadOnlyDictionary<string, int> Materials, int Slots);
 
-/// <summary>Un héros de la campagne, tel que le salon le montre ; <paramref name="Owner"/> : le nom de son joueur.</summary>
-public sealed record HeroInfo(string Id, string Name, string Archetype, int Level, string Owner, bool Mine, bool IsDead);
+/// <summary>
+/// Un héros de la campagne, tel que le QG le montre ; <paramref name="Owner"/> : le nom de son joueur. Son XP, celle
+/// du niveau suivant (<c>null</c> au maximum), et les points gagnés en montant de niveau, à dépenser à l'académie.
+/// </summary>
+public sealed record HeroInfo(string Id, string Name, string Archetype, int Level, string Owner, bool Mine, bool IsDead,
+    int Xp = 0, int? NextLevelXp = null, int StatPointsToSpend = 0, int SkillPointsToSpend = 0);
 
 /// <summary>
 /// Le combat : son lancement, les commandes déjà jouées et le pas de simulation atteint (vide et 0 au début ; à rejouer

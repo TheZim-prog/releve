@@ -10,6 +10,12 @@ public sealed partial class ServerSession
 {
     private string? _questId;
 
+    /// <summary>La quête en cours et les héros de campagne qui y sont partis, ou <c>null</c>.</summary>
+    private (QuestDefinition Quest, IReadOnlyList<string> Heroes)? _questInCombat;
+
+    /// <summary>Ce qu'a rapporté la dernière quête depuis le lancement du serveur, ou <c>null</c>.</summary>
+    private QuestResult? _lastQuest;
+
     /// <summary>Le salon est le QG d'une campagne (sinon, il joue le scénario du serveur).</summary>
     private bool IsCampaign => _campaign is not null;
 
@@ -89,6 +95,7 @@ public sealed partial class ServerSession
         var going = _players.Where(p => p.Deployed is not null).ToList();
         foreach (var assignment in launch.Heroes)
             going.Single(p => p.Id == assignment.Player).Hero = assignment.Unit;
+        _questInCombat = (ChosenQuest!, going.Select(p => p.Deployed!).ToList());
         Launch(launch, setup);
     }
 
@@ -156,31 +163,59 @@ public sealed partial class ServerSession
         }
     }
 
-    /// <summary>Le bilan de réputation du combat terminé s'ajoute à celle du groupe (s'il y a une campagne et des règles).</summary>
+    /// <summary>
+    /// La quête terminée laisse à la campagne, en une sauvegarde : son bilan de réputation (s'il y a des règles), l'XP et
+    /// les niveaux de ses héros, et ses matériaux au pot si elle est gagnée.
+    /// </summary>
     private void RecordInCampaign(CombatSimulation simulation)
     {
-        if (_campaign is null || _content.Reputation is not { } rules)
+        if (_campaign is null || _questInCombat is not { } inCombat || simulation.Outcome is not { } victory)
             return;
-        var report = ReputationReport.Of(simulation, rules);
-        _lastMission = report.Total;
-        _campaign.Update(state => state.WithMissionReport(report, rules.Scale));
+        var (quest, heroIds) = inCombat;
+        var report = _content.Reputation is { } rules ? ReputationReport.Of(simulation, rules) : null;
+        var progression = _content.Heroes?.Rules;
+        _campaign.Update(state =>
+        {
+            if (report is not null)
+                state = state.WithMissionReport(report, _content.Reputation!.Scale);
+            return progression is null ? state : QuestRewards.Grant(state, quest, heroIds, victory, progression);
+        });
+        // Seulement une fois sauvegardé : le QG ne doit pas annoncer des récompenses qui n'ont pas été versées.
+        _lastQuest = new QuestResult(quest.Name, victory, report?.Total ?? 0,
+            progression is null ? 0 : QuestRewards.XpFor(quest, victory, progression),
+            victory ? quest.Materials : new Dictionary<string, int>());
     }
 
-    /// <summary>Ce que le joueur <paramref name="viewer"/> voit de la campagne : réputation, héros (les siens marqués), panneau.</summary>
+    /// <summary>
+    /// Ce que le joueur <paramref name="viewer"/> voit de la campagne : réputation, dernière quête, héros (les siens
+    /// marqués, avec leur XP et leurs points à dépenser), panneau, pot commun.
+    /// </summary>
     private CampaignInfo? CampaignSummary(string viewer)
     {
         if (_campaign?.State is not { } state)
             return null;
-        var tier = _content.Reputation?.Scale.TierOf(state.Reputation).Name ?? "";
+        var progression = _content.Heroes?.Rules;
         var heroes = state.Heroes
             .Select(h => new HeroInfo(h.Id, h.Name, h.Sheet.Archetype, h.Sheet.Level, state.PlayerOf(h.Owner)?.Name ?? "?",
-                Mine: h.Owner == viewer, h.IsDead))
+                Mine: h.Owner == viewer, h.IsDead, h.Xp,
+                progression?.XpForNextLevel(h.Sheet.Level),
+                progression is null ? 0 : QuestRewards.UnspentStatPoints(h.Sheet, progression),
+                progression is null ? 0 : QuestRewards.UnspentSkillPoints(h.Sheet, progression)))
             .ToList();
         var board = _content.Quests.Values
             .OrderBy(q => q.Difficulty).ThenBy(q => q.Name)
             .Select(q => new QuestInfo(q.Id, q.Name, q.Description, q.Difficulty, q.Xp, q.Materials,
                 _content.Scenarios[q.Scenario].HeroSlots!.Count))
             .ToList();
-        return new CampaignInfo(state.Reputation, tier, _lastMission, heroes, board, _questId);
+        return new CampaignInfo
+        {
+            Reputation = state.Reputation,
+            Tier = _content.Reputation?.Scale.TierOf(state.Reputation).Name ?? "",
+            LastQuest = _lastQuest,
+            Heroes = heroes,
+            Board = board,
+            ChosenQuest = _questId,
+            Materials = state.Materials,
+        };
     }
 }

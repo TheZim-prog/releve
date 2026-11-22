@@ -29,7 +29,6 @@ public sealed partial class ServerSession
     private readonly List<(int Player, CombatCommand Command)> _queue = new();
     private readonly CampaignKeeper? _campaign;
     private int _nextPlayerId = 1;
-    private int? _lastMission;
 
     private CombatLaunch? _launch;
     private bool _paused;
@@ -164,6 +163,7 @@ public sealed partial class ServerSession
         _paused = false;
         _pausedBy = null;
         _players.RemoveAll(p => p.Peer is null);
+        _questInCombat = null;
         if (IsCampaign)
         {
             foreach (var player in _players)

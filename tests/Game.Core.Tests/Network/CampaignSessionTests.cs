@@ -102,14 +102,14 @@ public class CampaignSessionTests
     private static string RecruitAndDeploy(FakeClient client)
     {
         client.Say(new RecruitHero(Rookie));
-        var hero = client.Last<LobbyState>().Campaign!.Heroes!.Last(h => h.Mine).Id;
+        var hero = client.Last<LobbyState>().Campaign!.Heroes.Last(h => h.Mine).Id;
         client.Say(new ChooseQuest("q"));
         client.Say(new DeployHero(hero));
         return hero;
     }
 
     private static (int, string, int?) Summary(FakeClient client) =>
-        client.Last<LobbyState>().Campaign is { } c ? (c.Reputation, c.Tier, c.LastMission) : throw new InvalidOperationException("No campaign.");
+        client.Last<LobbyState>().Campaign is { } c ? (c.Reputation, c.Tier, c.LastQuest?.Reputation) : throw new InvalidOperationException("No campaign.");
 
     private static void PlayToTheEnd(ServerSession session)
     {
@@ -131,9 +131,9 @@ public class CampaignSessionTests
         Assert.Equal(new RecruitRefused(RecruitRefusal.InvalidSkills), alice.Received[^1]);
         alice.Say(new RecruitHero(Rookie));
 
-        Assert.Equal(new HeroInfo("hero-1", "Rempart", "hero", 1, "Alice", Mine: true, IsDead: false),
-            Assert.Single(alice.Last<LobbyState>().Campaign!.Heroes!));
-        Assert.False(Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes!).Mine);
+        Assert.Equal(new HeroInfo("hero-1", "Rempart", "hero", 1, "Alice", Mine: true, IsDead: false, Xp: 0, NextLevelXp: 100),
+            Assert.Single(alice.Last<LobbyState>().Campaign!.Heroes));
+        Assert.False(Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes).Mine);
         Assert.Equal("Rempart", CampaignStore.Load(campaign.File).Heroes.Single().Name);
     }
 
@@ -162,8 +162,8 @@ public class CampaignSessionTests
 
         Assert.Equal(new QuestInfo("q", "Quête", "", QuestDifficulty.Easy, 20, new Dictionary<string, int>(), 3) with
         {
-            Materials = alice.Last<LobbyState>().Campaign!.Board!.Single().Materials,
-        }, alice.Last<LobbyState>().Campaign!.Board!.Single());
+            Materials = alice.Last<LobbyState>().Campaign!.Board.Single().Materials,
+        }, alice.Last<LobbyState>().Campaign!.Board.Single());
         bob.Say(new ChooseQuest("nope"));
         Assert.Equal(new RequestRefused(RequestRefusal.UnknownQuest), bob.Received[^1]);
         bob.Say(new ChooseQuest("q"));
@@ -287,6 +287,15 @@ public class CampaignSessionTests
         var saved = CampaignStore.Load(campaign.File);
         Assert.Equal(2, saved.Reputation);
         Assert.Equal(new CampaignPlayer(UidOf("Alice"), "Alice", 0), Assert.Single(saved.Players));
+        // Le héros a reçu l'XP de la quête (20, ou 10 si elle est perdue), et le pot ses matériaux si elle est gagnée.
+        var over = alice.Last<CombatOver>();
+        var hero = Assert.Single(saved.Heroes);
+        Assert.Equal(over.Victory ? 20 : 10, hero.Xp);
+        Assert.Equal(new QuestResult("Quête", over.Victory, 2, hero.Xp, new Dictionary<string, int>()) with
+        {
+            Materials = alice.Last<LobbyState>().Campaign!.LastQuest!.Materials,
+        }, alice.Last<LobbyState>().Campaign!.LastQuest);
+        Assert.Equal(hero.Xp, alice.Last<LobbyState>().Campaign!.Heroes.Single().Xp);
         // De retour au QG, le héros reste déployé pour la quête suivante.
         Assert.NotNull(alice.Last<LobbyState>().Players.Single().Deployed);
         Assert.Null(alice.Last<LobbyState>().Players.Single().Hero);

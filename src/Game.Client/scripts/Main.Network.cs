@@ -194,7 +194,7 @@ public partial class Main
         }
     }
 
-    private static int MyHeroCount(LobbyState? lobby) => lobby?.Campaign?.Heroes?.Count(h => h.Mine) ?? 0;
+    private static int MyHeroCount(LobbyState? lobby) => lobby?.Campaign?.Heroes.Count(h => h.Mine) ?? 0;
 
     /// <summary>Outils de développement : choisir son héros et lancer tout seuls (--pick, --start), ouvrir l'académie (--academy).</summary>
     private void DevLobbyActions(LobbyState lobby)

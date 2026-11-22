@@ -24,6 +24,8 @@ internal static class ProgressionTestKit
         ActiveSlots = new[] { new ActiveSlotsStep { FromLevel = 1, Count = 3 }, new ActiveSlotsStep { FromLevel = 10, Count = 4 } },
         BranchesPerTree = 3,
         HeroesPerPlayer = 2,
+        XpToReach = Enumerable.Range(1, 19).Select(level => level * 100).ToList(),
+        DefeatXpPercent = 50,
         Tiers = new[]
         {
             new TierRules { PointsInBranch = 0, Actives = 2, Passives = 0, Variants = true, RequiresHeavy = false },

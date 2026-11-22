@@ -91,6 +91,10 @@ une par héros, dans l'ordre de leur déploiement ; prévoir cinq cases pour un 
 `difficulty` (`veryEasy`, `easy`, `hard`, `veryHard` : le libellé affiché), `xp` (reçue par chaque héros participant) et
 `materials` (versés au pot commun, ex. `{ "materials": 3 }`). Ces scénarios ne sont pas proposés en combat libre.
 
+**Régler l'XP et les niveaux** (`progression.json`) : `xpToReach` donne l'XP totale de chaque niveau, du 2e au dernier ;
+une quête gagnée donne son XP à chaque héros qui y est parti, et ses matériaux au pot commun ; perdue, seulement
+`defeatXpPercent` % de son XP, et pas de matériaux. Les points des niveaux gagnés attendent d'être dépensés à l'académie.
+
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au
 moment dit ; une unité dont la case est prise arrive sur la case libre la plus proche. Tant qu'une vague doit encore

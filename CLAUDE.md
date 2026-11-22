@@ -77,8 +77,9 @@ On construit la campagne avant de finir le prologue (dont les missions passent p
 2. ✅ **Académie** (`Game.Core/Campaign/Academy.cs`) : chaque joueur crée son duo (archétype libre, nom, points de compétence de départ dans les paliers ouverts), depuis le salon d'une partie avec campagne.
 3. **QG minimal**, en trois morceaux :
    - 3a ✅ **Quêtes avec ses héros** : le salon d'une campagne est le QG (panneau de quêtes de `data/quests/`, héros déployés, lancement) ; les scénarios de quête ont des `heroSlots` ; le lancement transporte les fiches des héros déployés. Héberger : la campagne ou un combat libre.
-   - 3b **Récompenses** : XP (paliers de niveau en données ; défaite = une part de l'XP, sans matériaux) et matériaux au pot commun ; les points gagnés se dépensent à l'académie.
-   - 3c **Campagne solo** : un serveur dans le jeu, réservé au joueur.
+   - 3b ✅ **Récompenses** (`QuestRewards`) : XP à chaque héros parti (table de niveaux et part en cas de défaite dans `progression.json`), matériaux au pot commun si victoire, niveaux gagnés ; le QG montre XP, points à dépenser, pot et dernière quête.
+   - 3c **Entraînement à l'académie** : dépenser les points gagnés (stats, compétences) et changer l'équipement.
+   - 3d **Campagne solo** : un serveur dans le jeu, réservé au joueur.
    Les chutes, la mort et la récupération au repos viendront dans une étape à part, après le QG.
 4. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
 5. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.

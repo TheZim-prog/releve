@@ -5,6 +5,13 @@
   // Héros vivants par joueur : son duo (docs/design.md 2.1). Il en recrute un nouveau à l'académie quand l'un meurt.
   "heroesPerPlayer": 2,
 
+  // XP totale qu'il faut pour atteindre chaque niveau, du 2e au 20e (docs/design.md 4.9) : au départ 100 XP par niveau,
+  // à régler pour tenir environ un niveau par session. Une quête donne son XP à chaque héros qui y est parti.
+  "xpToReach": [ 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900 ],
+
+  // Quête perdue : ses héros reçoivent cette part de son XP (en %), et le pot commun rien.
+  "defeatXpPercent": 50,
+
   // Points de stats : un par niveau gagné (19 au niveau 20).
   "statPointsPerLevel": 1,
 

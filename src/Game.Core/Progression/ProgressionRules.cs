@@ -29,6 +29,21 @@ public sealed record ProgressionRules
     /// <summary>Héros vivants qu'un joueur peut avoir à la fois (son duo, cf. docs/design.md 2.1).</summary>
     public required int HeroesPerPlayer { get; init; }
 
+    /// <summary>
+    /// XP totale qu'il faut pour atteindre chaque niveau, à partir du 2e (la première valeur : le niveau 2), en ordre
+    /// croissant ; une valeur par niveau jusqu'au maximum.
+    /// </summary>
+    public required IReadOnlyList<int> XpToReach { get; init; }
+
+    /// <summary>Part de l'XP d'une quête que reçoivent ses héros quand elle est perdue, en % (pas de matériaux).</summary>
+    public required int DefeatXpPercent { get; init; }
+
+    /// <summary>Le niveau que donne cette XP totale (au plus le niveau maximum).</summary>
+    public int LevelFor(int xp) => 1 + XpToReach.Count(needed => xp >= needed);
+
+    /// <summary>L'XP totale du niveau suivant, ou <c>null</c> au niveau maximum.</summary>
+    public int? XpForNextLevel(int level) => level < MaxLevel ? XpToReach[level - 1] : null;
+
     public static ProgressionRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<ProgressionRules>(json);
@@ -51,6 +66,15 @@ public sealed record ProgressionRules
             throw new ArgumentException("Progression rules need positive levels, branches and skill point pace.");
         if (HeroesPerPlayer < 1)
             throw new ArgumentException("A player needs room for at least one hero.");
+        if (XpToReach is null || XpToReach.Count != MaxLevel - 1)
+            throw new ArgumentException($"xpToReach needs one value per level from 2 to {MaxLevel}.");
+        for (var i = 0; i < XpToReach.Count; i++)
+        {
+            if (XpToReach[i] <= (i == 0 ? 0 : XpToReach[i - 1]))
+                throw new ArgumentException("xpToReach must be positive and increasing.");
+        }
+        if (DefeatXpPercent is < 0 or > 100)
+            throw new ArgumentException("defeatXpPercent must be between 0 and 100.");
         if (ActiveSlots is null || ActiveSlots.Count == 0 || ActiveSlots.Any(s => s is null) || ActiveSlots[0].FromLevel != 1)
             throw new ArgumentException("Active slots must be given from level 1.");
         for (var i = 0; i < ActiveSlots.Count; i++)

@@ -86,8 +86,8 @@ public partial class HqScreen : Control
     {
         if (lobby.Campaign is not { } campaign)
             return;
-        _campaign.Text = $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0})"
-                         + (campaign.LastMission is { } last ? $", dernière mission {last:+0;-0;0}" : "");
+        _campaign.Text = $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0}). {CampaignTexts.Pot(campaign.Materials)}"
+                         + (campaign.LastQuest is { } last ? $"\n{CampaignTexts.LastQuest(last)}" : "");
         RefreshBoard(campaign);
         RefreshHeroes(lobby, campaign);
 
@@ -102,7 +102,7 @@ public partial class HqScreen : Control
     {
         foreach (var child in _board.GetChildren())
             child.QueueFree();
-        foreach (var quest in campaign.Board ?? Array.Empty<QuestInfo>())
+        foreach (var quest in campaign.Board)
         {
             var chosen = quest.Id == campaign.ChosenQuest;
             var id = quest.Id;
@@ -112,7 +112,7 @@ public partial class HqScreen : Control
                 button.Modulate = new Color(0.6f, 1f, 0.6f);
             _board.AddChild(button);
         }
-        _quest.Text = campaign.Board?.FirstOrDefault(q => q.Id == campaign.ChosenQuest) is { } picked
+        _quest.Text = campaign.Board.FirstOrDefault(q => q.Id == campaign.ChosenQuest) is { } picked
             ? $"{picked.Description} (jusqu'à {picked.Slots} héros)"
             : "Aucune quête choisie : n'importe qui peut en choisir une.";
     }
@@ -122,21 +122,21 @@ public partial class HqScreen : Control
         foreach (var child in _heroes.GetChildren())
             child.QueueFree();
         var deployed = lobby.Players.FirstOrDefault(p => p.Id == _me)?.Deployed;
-        var mine = campaign.Heroes?.Where(h => h.Mine && !h.IsDead).ToList() ?? new List<HeroInfo>();
+        var mine = campaign.Heroes.Where(h => h.Mine && !h.IsDead).ToList();
         if (mine.Count == 0)
             _heroes.AddChild(Ui.Text("Tu n'as pas encore de héros : crée-les à l'académie.", 15));
         foreach (var hero in mine)
         {
             var id = hero.Id;
             var isDeployed = id == deployed;
-            var button = Ui.Button($"{hero.Name} ({ArchetypeName(hero.Archetype)}, niveau {hero.Level})",
+            var button = Ui.Button(CampaignTexts.Hero(hero, ArchetypeName(hero.Archetype)),
                 () => HeroDeployed?.Invoke(isDeployed ? null : id), 36);
             if (isDeployed)
                 button.Modulate = new Color(0.6f, 1f, 0.6f);
             _heroes.AddChild(button);
         }
 
-        var names = campaign.Heroes?.ToDictionary(h => h.Id, h => h.Name) ?? new Dictionary<string, string>();
+        var names = campaign.Heroes.ToDictionary(h => h.Id, h => h.Name);
         _group.Text = "Le groupe : " + string.Join(", ", lobby.Players.Select(p =>
             p.Name + (p.Id == _me ? " (toi)" : "")
             + (p.Deployed is { } heroId ? $" avec {names.GetValueOrDefault(heroId, heroId)}" : " — reste au QG")
