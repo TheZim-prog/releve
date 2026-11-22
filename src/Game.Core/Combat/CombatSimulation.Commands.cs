@@ -326,12 +326,14 @@ public sealed partial class CombatSimulation
     /// <summary>
     /// Relève un allié à terre : debout avec une part de ses PV max (au moins 1), jauge vide (sans reste de
     /// remplissage d'avant sa chute). Ses attaques d'opportunité se rechargeront quand il rejouera. Sa chute est
-    /// terminée : la marque « sauvé » (qui vaut pour une chute) est effacée.
+    /// terminée, et secourue (si une exfiltration ne l'avait pas déjà comptée) : la marque « sauvé » est effacée.
     /// </summary>
     private void Revive(Unit unit, Unit target)
     {
         target.Status = UnitStatus.Active;
         target.Hp = Math.Max(1, (int)((long)target.MaxHp * Rules.ReviveHpPercent / 100));
+        if (!target.WasRescued)
+            target.RescuedFalls++;
         target.WasRescued = false;
         target.FillRemainder = 0;
         target.FillRemainderScale = 1;

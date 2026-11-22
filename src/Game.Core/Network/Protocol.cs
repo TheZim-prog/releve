@@ -177,10 +177,13 @@ public sealed record CampaignInfo
 }
 
 /// <summary>
-/// Ce qu'a rapporté une quête : son nom, son issue, son bilan de réputation, l'XP reçue par chacun de ses héros, et les
-/// matériaux versés au pot commun.
+/// Ce qu'a rapporté une quête : son nom, son issue, son bilan de réputation, l'XP reçue par chacun de ses héros, les
+/// matériaux versés au pot commun, et les héros qui y sont morts (trop de chutes).
 /// </summary>
-public sealed record QuestResult(string Quest, bool Victory, int Reputation, int Xp, IReadOnlyDictionary<string, int> Materials);
+public sealed record QuestResult(string Quest, bool Victory, int Reputation, int Xp, IReadOnlyDictionary<string, int> Materials)
+{
+    public IReadOnlyList<string> Deaths { get; init; } = Array.Empty<string>();
+}
 
 /// <summary>Une quête du panneau, telle que le QG la montre ; <paramref name="Slots"/> : combien de héros peuvent y partir.</summary>
 public sealed record QuestInfo(string Id, string Name, string Description, Campaign.QuestDifficulty Difficulty, int Xp,
@@ -189,10 +192,12 @@ public sealed record QuestInfo(string Id, string Name, string Description, Campa
 /// <summary>
 /// Un héros de la campagne, tel que le QG le montre ; <paramref name="Owner"/> : le nom de son joueur. Son XP, celle
 /// du niveau suivant (<c>null</c> au maximum), les points gagnés en montant de niveau, à dépenser à l'académie, et,
-/// pour les siens seulement, sa fiche complète (<paramref name="Sheet"/> : points, cases apprises, équipement).
+/// pour les siens seulement, sa fiche complète (<paramref name="Sheet"/> : points, cases apprises, équipement). Ses chutes
+/// non récupérées et celles qui le tueraient, en demi-chutes (cf. <see cref="Campaign.Injuries"/>).
 /// </summary>
 public sealed record HeroInfo(string Id, string Name, string Archetype, int Level, string Owner, bool Mine, bool IsDead,
-    int Xp = 0, int? NextLevelXp = null, int StatPointsToSpend = 0, int SkillPointsToSpend = 0, Progression.HeroSheet? Sheet = null);
+    int Xp = 0, int? NextLevelXp = null, int StatPointsToSpend = 0, int SkillPointsToSpend = 0, Progression.HeroSheet? Sheet = null,
+    int HalfFalls = 0, int HalfFallsToDeath = 0);
 
 /// <summary>
 /// Le combat : son lancement, les commandes déjà jouées et le pas de simulation atteint (vide et 0 au début ; à rejouer

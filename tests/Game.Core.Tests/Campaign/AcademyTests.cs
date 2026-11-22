@@ -23,7 +23,7 @@ public class AcademyTests
         var state = Academy.Enlist(Enrolled, Catalog, "uid-a", Recruit("a1", "a2", "weakPoint"));
 
         var hero = Assert.Single(state.Heroes);
-        Assert.Equal(("hero-1", "Rempart", "uid-a", 0, 0, false), (hero.Id, hero.Name, hero.Owner, hero.Xp, hero.Falls, hero.IsDead));
+        Assert.Equal(("hero-1", "Rempart", "uid-a", 0, 0, false), (hero.Id, hero.Name, hero.Owner, hero.Xp, hero.HalfFalls, hero.IsDead));
         Assert.Equal(1, hero.Sheet.Level);
         Assert.Equal(new[] { "a1", "a2" }, hero.Sheet.Equipped);
         Assert.Equal("weakPoint", hero.Sheet.Passive);

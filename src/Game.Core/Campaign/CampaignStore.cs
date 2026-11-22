@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Game.Core.Campaign;
 
@@ -15,8 +16,21 @@ public static class CampaignStore
     public static CampaignState Load(string path)
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
-        var state = JsonSerializer.Deserialize<CampaignState>(File.ReadAllText(path), Options)
-                    ?? throw new InvalidDataException($"Campaign save '{path}' is empty.");
+        CampaignState? state;
+        try
+        {
+            var json = JsonNode.Parse(File.ReadAllText(path),
+                           documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true })
+                       ?? throw new InvalidDataException($"Campaign save '{path}' is empty.");
+            state = Migrated(json).Deserialize<CampaignState>(Options);
+        }
+        catch (Exception e) when (e is InvalidOperationException or FormatException)
+        {
+            // Une valeur du mauvais type lue pendant la conversion d'un ancien format : une sauvegarde abîmée.
+            throw new InvalidDataException($"Campaign save '{path}' is damaged: {e.Message}", e);
+        }
+        if (state is null)
+            throw new InvalidDataException($"Campaign save '{path}' is empty.");
         if (state.Format != CampaignState.CurrentFormat)
             throw new InvalidDataException($"Campaign save '{path}' has format {state.Format}; this game reads format {CampaignState.CurrentFormat}.");
         if (state.Players is null || state.Heroes is null || state.Materials is null
@@ -25,6 +39,24 @@ public static class CampaignStore
                                      || h.Sheet.Learned is null || h.Sheet.Equipped is null))
             throw new InvalidDataException($"Campaign save '{path}' is incomplete or damaged (players, heroes, materials).");
         return state;
+    }
+
+    /// <summary>
+    /// Une sauvegarde d'un format plus ancien, mise au format courant. Format 1 → 2 : les chutes d'un héros (« falls »)
+    /// deviennent des demi-chutes (« halfFalls »).
+    /// </summary>
+    private static JsonNode Migrated(JsonNode json)
+    {
+        if (json is not JsonObject save || save["format"]?.GetValue<int>() != 1)
+            return json;
+        foreach (var hero in save["heroes"]?.AsArray().OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+        {
+            var falls = hero["falls"]?.GetValue<int>() ?? 0;
+            hero.Remove("falls");
+            hero["halfFalls"] = Injuries.HalvesPerFall * falls;
+        }
+        save["format"] = 2;
+        return save;
     }
 
     public static void Save(CampaignState state, string path)

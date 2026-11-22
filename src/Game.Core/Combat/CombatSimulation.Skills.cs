@@ -161,8 +161,12 @@ public sealed partial class CombatSimulation
         if (!skill.CarriesStandingAlly)
         {
             _events.Add(new UnitRescued(CurrentTick, ally.Id, rescuer.Id));
-            if (!ally.IsCivilian) // la marque compte pour la règle de campagne des chutes des héros
+            // La marque compte pour la règle de campagne des chutes des héros : cette chute est secourue (une fois).
+            if (!ally.IsCivilian && ally.Status == UnitStatus.Downed && !ally.WasRescued)
+            {
                 ally.WasRescued = true;
+                ally.RescuedFalls++;
+            }
         }
         Displace(ally, drop);
         if (rescuer.Position != end)

@@ -283,6 +283,7 @@ public sealed partial class CombatSimulation
             return;
         }
 
+        target.Falls++; // une chute de plus, pour la règle de campagne (docs/design.md 1.4)
         // Une unité par case : à terre en traversant un allié, elle tombe sur la dernière case libre.
         // Sans case de repli connue (des dégâts de zone sur une unité en pleine course), la première case libre voisine.
         if (IsOccupiedByOther(target, target.Position))

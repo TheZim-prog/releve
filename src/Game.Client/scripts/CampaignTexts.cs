@@ -16,7 +16,18 @@ public static class CampaignTexts
         if (hero.SkillPointsToSpend > 0)
             spend.Add(Points(hero.SkillPointsToSpend, "de compétence"));
         var points = spend.Count > 0 ? $", à dépenser : {string.Join(", ", spend)}" : "";
-        return $"{hero.Name} ({archetypeName}, niveau {hero.Level}, {xp}{points}{(hero.IsDead ? ", mort" : "")})";
+        var falls = hero.HalfFalls > 0 && !hero.IsDead ? $", {Falls(hero.HalfFalls)} / {Falls(hero.HalfFallsToDeath)} chutes" : "";
+        return $"{hero.Name} ({archetypeName}, niveau {hero.Level}, {xp}{points}{falls}{(hero.IsDead ? ", mort" : "")})";
+    }
+
+    /// <summary>Des demi-chutes en chutes : « 1,5 ».</summary>
+    private static string Falls(int halves) => halves % 2 == 0 ? $"{halves / 2}" : $"{halves / 2},5";
+
+    /// <summary>« Mémorial : Rempart, Éclair » : les héros morts, ou rien.</summary>
+    public static string Memorial(IEnumerable<HeroInfo> heroes)
+    {
+        var dead = heroes.Where(h => h.IsDead).Select(h => $"{h.Name} ({h.Owner})").ToList();
+        return dead.Count == 0 ? "" : $"Mémorial : {string.Join(", ", dead)}";
     }
 
     private static string Points(int count, string kind) => $"{count} {(count > 1 ? "points" : "point")} {kind}";
@@ -28,7 +39,8 @@ public static class CampaignTexts
         var materials = result.Materials.Values.Sum();
         return $"Dernière quête : {result.Quest}, {(result.Victory ? "victoire" : "défaite")} : +{result.Xp} XP par héros"
                + (materials > 0 ? $", {materials} matériaux" : "")
-               + $", réputation {result.Reputation:+0;-0;0}";
+               + $", réputation {result.Reputation:+0;-0;0}"
+               + (result.Deaths.Count > 0 ? $". Mort(s) au combat : {string.Join(", ", result.Deaths)}" : "");
     }
 
     /// <summary>Le nom affiché d'une case de l'arbre : compétence (ou variante), passif, ou compétence à venir.</summary>

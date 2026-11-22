@@ -197,6 +197,15 @@ public sealed class Unit
     /// <summary>Mise à l'abri à terre par un coéquipier (Sauvetage éclair) : compte pour la règle de campagne des chutes.</summary>
     public bool WasRescued { get; internal set; }
 
+    /// <summary>Fois où ce héros est tombé à terre dans ce combat (règle de campagne des chutes, docs/design.md 1.4).</summary>
+    public int Falls { get; internal set; }
+
+    /// <summary>
+    /// Celles de ses chutes qu'un coéquipier a secourues avant la fin du combat (relevé, ou exfiltré par le Sauvetage
+    /// éclair) : chacune une fois, même s'il a été exfiltré puis relevé.
+    /// </summary>
+    public int RescuedFalls { get; internal set; }
+
     /// <summary>
     /// Combattant debout : ni à terre, ni civil, ni gadget posé par un autre, ni structure. C'est ce qui compte pour l'issue
     /// du combat.

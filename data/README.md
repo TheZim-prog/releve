@@ -99,6 +99,10 @@ une quête gagnée donne son XP à chaque héros qui y est parti, et ses matéri
 le bouton « Entraîner » d'un héros y met un point de stats dans les PV, la puissance ou l'initiative, apprend une case
 d'un palier ouvert (définitif), et change son équipement (une compétence ou sa variante par emplacement, et son passif).
 
+**Régler les chutes** (`progression.json`) : chaque fois qu'un héros tombe à terre en quête, une chute (une demie si un
+coéquipier le secourt avant la fin : relevé, ou exfiltré). À `fallsBeforeDeath` chutes, il meurt pour de bon (il reste
+au mémorial du QG). Il en récupère une chaque fois que le groupe termine `questsToRecoverFall` quêtes sans lui.
+
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au
 moment dit ; une unité dont la case est prise arrive sur la case libre la plus proche. Tant qu'une vague doit encore

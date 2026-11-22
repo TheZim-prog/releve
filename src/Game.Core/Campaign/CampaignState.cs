@@ -11,7 +11,7 @@ namespace Game.Core.Campaign;
 public sealed record CampaignState
 {
     /// <summary>Version du format de sauvegarde ; une sauvegarde d'un autre format est refusée.</summary>
-    public const int CurrentFormat = 1;
+    public const int CurrentFormat = 2;
 
     public int Format { get; init; } = CurrentFormat;
 
@@ -71,7 +71,8 @@ public sealed record CampaignPlayer(string Uid, string Name, int Hour);
 
 /// <summary>
 /// Un héros de joueur : sa fiche (archétype, niveau, points, compétences, cf. 2.6 et 2.7), son expérience, ses chutes
-/// (cf. 1.4 : trop de chutes, et il meurt vraiment) et s'il est mort.
+/// en demi-chutes (cf. 1.4 : une chute secourue par un coéquipier compte pour moitié ; trop de chutes, et il meurt
+/// vraiment), les quêtes que le groupe a terminées sans lui depuis sa dernière récupération (le repos), et s'il est mort.
 /// </summary>
 public sealed record CampaignHero
 {
@@ -86,7 +87,11 @@ public sealed record CampaignHero
 
     public int Xp { get; init; }
 
-    public int Falls { get; init; }
+    /// <summary>Ses chutes non récupérées, en demi-chutes (une chute = 2, une chute secourue = 1).</summary>
+    public int HalfFalls { get; init; }
+
+    /// <summary>Quêtes terminées par le groupe sans lui depuis sa dernière récupération de chute.</summary>
+    public int QuestsRested { get; init; }
 
     public bool IsDead { get; init; }
 }

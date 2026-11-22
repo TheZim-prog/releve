@@ -11,7 +11,7 @@ public sealed partial class ServerSession
     private string? _questId;
 
     /// <summary>La quête en cours et les héros de campagne qui y sont partis, ou <c>null</c>.</summary>
-    private (QuestDefinition Quest, IReadOnlyList<string> Heroes)? _questInCombat;
+    private (QuestDefinition Quest, IReadOnlyList<(string Hero, UnitId Unit)> Deployed)? _questInCombat;
 
     /// <summary>Ce qu'a rapporté la dernière quête depuis le lancement du serveur, ou <c>null</c>.</summary>
     private QuestResult? _lastQuest;
@@ -120,7 +120,7 @@ public sealed partial class ServerSession
         var going = _players.Where(p => p.Deployed is not null).ToList();
         foreach (var assignment in launch.Heroes)
             going.Single(p => p.Id == assignment.Player).Hero = assignment.Unit;
-        _questInCombat = (ChosenQuest!, going.Select(p => p.Deployed!).ToList());
+        _questInCombat = (ChosenQuest!, going.Select(p => (p.Deployed!, p.Hero!.Value)).ToList());
         Launch(launch, setup);
     }
 
@@ -190,25 +190,38 @@ public sealed partial class ServerSession
 
     /// <summary>
     /// La quête terminée laisse à la campagne, en une sauvegarde : son bilan de réputation (s'il y a des règles), l'XP et
-    /// les niveaux de ses héros, et ses matériaux au pot si elle est gagnée.
+    /// les niveaux de ses héros, ses matériaux au pot si elle est gagnée, puis les chutes de ses héros (et leur mort) et
+    /// le repos des autres. Un héros mort n'est plus déployé.
     /// </summary>
     private void RecordInCampaign(CombatSimulation simulation)
     {
         if (_campaign is null || _questInCombat is not { } inCombat || simulation.Outcome is not { } victory)
             return;
-        var (quest, heroIds) = inCombat;
+        var (quest, deployed) = inCombat;
+        var heroIds = deployed.Select(d => d.Hero).ToList();
+        var halfFalls = deployed.ToDictionary(d => d.Hero,
+            d => simulation.FindUnit(d.Unit) is { } unit ? Injuries.HalfFallsOf(unit.Falls, unit.RescuedFalls) : 0);
         var report = _content.Reputation is { } rules ? ReputationReport.Of(simulation, rules) : null;
         var progression = _content.Heroes?.Rules;
+        var alive = _campaign.State.Heroes.Where(h => !h.IsDead).Select(h => h.Id).ToHashSet();
         _campaign.Update(state =>
         {
             if (report is not null)
                 state = state.WithMissionReport(report, _content.Reputation!.Scale);
-            return progression is null ? state : QuestRewards.Grant(state, quest, heroIds, victory, progression);
+            return progression is null
+                ? state
+                : Injuries.Apply(QuestRewards.Grant(state, quest, heroIds, victory, progression), halfFalls, progression);
         });
         // Seulement une fois sauvegardé : le QG ne doit pas annoncer des récompenses qui n'ont pas été versées.
+        var deaths = _campaign.State.Heroes.Where(h => h.IsDead && alive.Contains(h.Id)).ToList();
         _lastQuest = new QuestResult(quest.Name, victory, report?.Total ?? 0,
             progression is null ? 0 : QuestRewards.XpFor(quest, victory, progression),
-            victory ? quest.Materials : new Dictionary<string, int>());
+            victory ? quest.Materials : new Dictionary<string, int>())
+        {
+            Deaths = deaths.Select(h => h.Name).ToList(),
+        };
+        foreach (var player in _players.Where(p => deaths.Any(h => h.Id == p.Deployed)))
+            player.Deployed = null;
     }
 
     /// <summary>
@@ -226,7 +239,9 @@ public sealed partial class ServerSession
                 progression?.XpForNextLevel(h.Sheet.Level),
                 progression is null ? 0 : QuestRewards.UnspentStatPoints(h.Sheet, progression),
                 progression is null ? 0 : QuestRewards.UnspentSkillPoints(h.Sheet, progression),
-                Sheet: h.Owner == viewer ? h.Sheet : null))
+                Sheet: h.Owner == viewer ? h.Sheet : null,
+                HalfFalls: h.HalfFalls,
+                HalfFallsToDeath: progression is null ? 0 : Injuries.HalfFallsToDeath(progression)))
             .ToList();
         var board = _content.Quests.Values
             .OrderBy(q => q.Difficulty).ThenBy(q => q.Name)

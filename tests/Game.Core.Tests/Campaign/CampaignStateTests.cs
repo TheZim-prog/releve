@@ -55,7 +55,7 @@ public class CampaignStateTests
     {
         var hero = new CampaignHero
         {
-            Id = "hero-1", Name = "Rempart", Owner = "uid-a", Xp = 40, Falls = 1,
+            Id = "hero-1", Name = "Rempart", Owner = "uid-a", Xp = 40, HalfFalls = 1,
             Sheet = new HeroSheet { Id = "hero-1", Archetype = "colossus", Level = 3, Learned = new[] { "dome" }, Equipped = new[] { "dome" } },
         };
         var state = CampaignState.New(Scale).WithPlayer("uid-a", "Alice") with
@@ -97,6 +97,30 @@ public class CampaignStateTests
     }
 
     [Fact]
+    public void ASaveOfTheFirstFormat_IsConverted_ItsFallsBecomingHalfFalls()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(path, """
+                { "format": 1, "players": [ { "uid": "uid-a", "name": "Alice", "hour": 0 } ],
+                  "heroes": [ { "id": "hero-1", "name": "Rempart", "owner": "uid-a", "xp": 10, "falls": 1, "isDead": false,
+                                "sheet": { "id": "hero-1", "archetype": "colossus", "level": 1, "learned": [], "equipped": [] } } ],
+                  "materials": {}, "reputation": 0, "chapter": 0 }
+                """);
+
+            var loaded = CampaignStore.Load(path);
+
+            Assert.Equal(CampaignState.CurrentFormat, loaded.Format);
+            Assert.Equal(2, loaded.Heroes.Single().HalfFalls);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ADamagedSave_IsRefused()
     {
         var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");
@@ -105,6 +129,11 @@ public class CampaignStateTests
             File.WriteAllText(path, """{ "format": 1, "players": null }""");
             Assert.Throws<InvalidDataException>(() => CampaignStore.Load(path));
             File.WriteAllText(path, """{ "format": 1, "heroes": [ { "id": "hero-1", "name": "X", "owner": "uid-a", "sheet": null } ] }""");
+            Assert.Throws<InvalidDataException>(() => CampaignStore.Load(path));
+            // Une valeur du mauvais type, lue en convertissant l'ancien format.
+            File.WriteAllText(path, """{ "format": 1, "heroes": [ { "id": "hero-1", "falls": "beaucoup" } ] }""");
+            Assert.Throws<InvalidDataException>(() => CampaignStore.Load(path));
+            File.WriteAllText(path, """{ "format": "un" }""");
             Assert.Throws<InvalidDataException>(() => CampaignStore.Load(path));
         }
         finally

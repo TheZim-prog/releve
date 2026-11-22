@@ -80,7 +80,7 @@ On construit la campagne avant de finir le prologue (dont les missions passent p
    - 3b ✅ **Récompenses** (`QuestRewards`) : XP à chaque héros parti (table de niveaux et part en cas de défaite dans `progression.json`), matériaux au pot commun si victoire, niveaux gagnés ; le QG montre XP, points à dépenser, pot et dernière quête.
    - 3c ✅ **Entraînement à l'académie** (`Training`) : dépenser les points gagnés (stats, cases de l'arbre) et changer l'équipement (variantes, passif), vérifié par les règles de progression.
    - 3d ✅ **Campagne solo** : « Campagne en solo » au menu, un serveur dans le jeu qui n'écoute que ce PC, sur la même sauvegarde que la campagne hébergée.
-4. **Chutes et mort des héros** (`docs/design.md` 1.4) : compteur de chutes, mort, récupération au repos, sauvetage par un coéquipier.
+4. ✅ **Chutes et mort des héros** (`Injuries`, `docs/design.md` 1.4) : chaque chute compte (une demie si secourue), mort à la 3e, récupération au fil des quêtes sans lui, mémorial au QG.
 5. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
 6. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
 

@@ -277,6 +277,8 @@ public sealed partial class CombatSimulation
             Add(unit.Hp);
             Add(unit.TempHp);
             Add(unit.TauntActionsLeft);
+            Add(unit.Falls);
+            Add(unit.RescuedFalls);
             Add(unit.TauntedBy?.Value ?? 0);
             Add(unit.PendingGauge);
             Add((int)unit.Status);

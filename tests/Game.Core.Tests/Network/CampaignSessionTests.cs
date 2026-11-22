@@ -50,7 +50,8 @@ public class CampaignSessionTests
         // Le catalogue des héros et le contenu partagent les mêmes unités.
         var units = new Dictionary<string, UnitDefinition>(Content.Units)
         {
-            ["civilian"] = civilian, ["hero"] = ProgressionTestKit.Units["hero"],
+            // Un héros tombe à terre à 0 PV (il n'est pas retiré comme un ennemi) : c'est une chute.
+            ["civilian"] = civilian, ["hero"] = ProgressionTestKit.Units["hero"] with { OnDefeat = DefeatOutcome.Downed },
         };
         var catalog = new HeroCatalog(ProgressionTestKit.Rules, units, ProgressionTestKit.Skills, new[] { ProgressionTestKit.Tree },
             Array.Empty<HeroSheet>());
@@ -140,7 +141,8 @@ public class CampaignSessionTests
         alice.Say(new RecruitHero(Rookie));
 
         var seen = Assert.Single(alice.Last<LobbyState>().Campaign!.Heroes);
-        Assert.Equal(new HeroInfo("hero-1", "Rempart", "hero", 1, "Alice", Mine: true, IsDead: false, Xp: 0, NextLevelXp: 100),
+        Assert.Equal(new HeroInfo("hero-1", "Rempart", "hero", 1, "Alice", Mine: true, IsDead: false, Xp: 0, NextLevelXp: 100,
+                HalfFallsToDeath: 6),
             seen with { Sheet = null });
         Assert.Equal(new[] { "a1", "a2", "a3" }, seen.Sheet!.Learned); // sa fiche complète, pour l'académie
         var others = Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes);
@@ -299,6 +301,30 @@ public class CampaignSessionTests
     }
 
     [Fact]
+    public void AHeroWhoFallsOnceTooOften_DiesAtTheEndOfTheQuest()
+    {
+        using var campaign = new TempCampaign();
+        var hero = RecruitAndDeploy(Joined(campaign.Session(), "Alice"));
+        // Deux chutes déjà : la prochaine le tue.
+        var saved = CampaignStore.Load(campaign.File);
+        CampaignStore.Save(saved with { Heroes = saved.Heroes.Select(h => h with { HalfFalls = 4 }).ToList() }, campaign.File);
+        var session = campaign.Session();
+        var alice = Joined(session, "Alice");
+        alice.Say(new ChooseQuest("q"));
+        alice.Say(new DeployHero(hero));
+
+        // Alice ne donne aucun ordre : son héros finit à terre (défaite).
+        alice.Say(new StartCombatRequest());
+        PlayToTheEnd(session);
+
+        Assert.False(alice.Last<CombatOver>().Victory);
+        var dead = Assert.Single(CampaignStore.Load(campaign.File).Heroes);
+        Assert.True(dead.IsDead);
+        Assert.Equal(new[] { "Rempart" }, alice.Last<LobbyState>().Campaign!.LastQuest!.Deaths);
+        Assert.Null(alice.Last<LobbyState>().Players.Single().Deployed); // un mort ne part plus en quête
+    }
+
+    [Fact]
     public void WithACampaign_PlayersAreEnrolled_AndEachQuestsReportIsSaved()
     {
         using var campaign = new TempCampaign();
@@ -321,10 +347,8 @@ public class CampaignSessionTests
         var over = alice.Last<CombatOver>();
         var hero = Assert.Single(saved.Heroes);
         Assert.Equal(over.Victory ? 20 : 10, hero.Xp);
-        Assert.Equal(new QuestResult("Quête", over.Victory, 2, hero.Xp, new Dictionary<string, int>()) with
-        {
-            Materials = alice.Last<LobbyState>().Campaign!.LastQuest!.Materials,
-        }, alice.Last<LobbyState>().Campaign!.LastQuest);
+        var last = alice.Last<LobbyState>().Campaign!.LastQuest!;
+        Assert.Equal(("Quête", over.Victory, 2, hero.Xp), (last.Quest, last.Victory, last.Reputation, last.Xp));
         Assert.Equal(hero.Xp, alice.Last<LobbyState>().Campaign!.Heroes.Single().Xp);
         // De retour au QG, le héros reste déployé pour la quête suivante.
         Assert.NotNull(alice.Last<LobbyState>().Players.Single().Deployed);

@@ -12,6 +12,12 @@
   // Quête perdue : ses héros reçoivent cette part de son XP (en %), et le pot commun rien.
   "defeatXpPercent": 50,
 
+  // Chutes (docs/design.md 1.4) : chaque fois qu'un héros tombe à terre en quête, une chute (une demie si un coéquipier
+  // le secourt avant la fin : relevé, ou exfiltré). À ce nombre de chutes, il meurt pour de bon. Il en récupère une
+  // chaque fois que le groupe termine ce nombre de quêtes sans lui (le repos au QG ; viendront les jours et l'infirmerie).
+  "fallsBeforeDeath": 3,
+  "questsToRecoverFall": 2,
+
   // Points de stats : un par niveau gagné (19 au niveau 20).
   "statPointsPerLevel": 1,
 

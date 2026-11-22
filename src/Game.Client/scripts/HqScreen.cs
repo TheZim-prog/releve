@@ -87,7 +87,8 @@ public partial class HqScreen : Control
         if (lobby.Campaign is not { } campaign)
             return;
         _campaign.Text = $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0}). {CampaignTexts.Pot(campaign.Materials)}"
-                         + (campaign.LastQuest is { } last ? $"\n{CampaignTexts.LastQuest(last)}" : "");
+                         + (campaign.LastQuest is { } last ? $"\n{CampaignTexts.LastQuest(last)}" : "")
+                         + (CampaignTexts.Memorial(campaign.Heroes) is { Length: > 0 } memorial ? $"\n{memorial}" : "");
         RefreshBoard(campaign);
         RefreshHeroes(lobby, campaign);
 
