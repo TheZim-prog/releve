@@ -178,7 +178,17 @@ public partial class Main
             case LobbyState lobby:
                 var recruited = MyHeroCount(lobby) > MyHeroCount(_lobby);
                 _lobby = lobby;
-                if (_academyScreen is not null)
+                // Un trajet commence (quelqu'un a lancé la quête) ou s'arrête sans combat : le QG laisse place à la
+                // carte, ou l'inverse (l'académie reste ouverte : en revenir mène à la carte). Un refus reçu juste avant
+                // (le combat n'a pas pu se lancer à l'arrivée) dit pourquoi.
+                var travelling = lobby.Campaign?.Trip is not null && _content.World is not null;
+                var refusal = _tripRefusal;
+                _tripRefusal = null;
+                if (_networkCombat is null && (_hqScreen is not null || _mapScreen is not null) && travelling != (_mapScreen is not null))
+                    ShowLobby(travelling ? "" : refusal ?? "Le trajet s'est arrêté : retour au QG.", error: refusal is not null);
+                else if (_mapScreen is not null)
+                    _mapScreen.Refresh(lobby);
+                else if (_academyScreen is not null)
                     _academyScreen.Refresh(lobby, recruited);
                 else if (_hqScreen is not null && _networkCombat is null)
                     _hqScreen.Refresh(lobby);
@@ -218,17 +228,49 @@ public partial class Main
                 _lobbyScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
                 _academyScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
                 _hqScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
+                _mapScreen?.SetStatus(Texts.RequestRefusal(refused.Reason), error: true);
+                if (_mapScreen is not null)
+                    _tripRefusal = Texts.RequestRefusal(refused.Reason);
                 break;
         }
     }
 
     private static int MyHeroCount(LobbyState? lobby) => lobby?.Campaign?.Heroes.Count(h => h.Mine) ?? 0;
 
-    /// <summary>Outils de développement : choisir son héros et lancer tout seuls (--pick, --start), ouvrir l'académie (--academy).</summary>
+    /// <summary>
+    /// Outils de développement : choisir son héros et lancer tout seuls (--pick, --start), ouvrir l'académie (--academy),
+    /// lancer une quête avec son premier héros (--quest) et, en route, choisir une option (--option, « pass » pour passer
+    /// son chemin) puis aller à un lieu (--travel).
+    /// </summary>
     private void DevLobbyActions(LobbyState lobby)
     {
         if (_networkCombat is not null || _playerId is not { } me)
             return;
+        if (_devQuest is { } quest && lobby.Campaign is { } campaign)
+        {
+            _devQuest = null; // un trajet repris est en cours : la quête demandée n'est pas lancée
+            if (campaign.Trip is null)
+            {
+                _client?.Send(new ChooseQuest(quest));
+                _client?.Send(new DeployHero(campaign.Heroes.FirstOrDefault(h => h.Mine && !h.IsDead)?.Id));
+                _client?.Send(new StartCombatRequest());
+            }
+        }
+        if (_devOption is { } option && lobby.Campaign?.Trip?.Event is not null)
+        {
+            _devOption = null;
+            if (int.TryParse(option, out var rank))
+                _client?.Send(new ResolveEvent(rank));
+            else if (option == "pass")
+                _client?.Send(new ResolveEvent(null));
+            else
+                GD.PushWarning($"--option={option}: expected an option's rank or 'pass'.");
+        }
+        if (_devTravel is { } place && lobby.Campaign?.Trip?.Moves.Contains(place) == true)
+        {
+            _devTravel = null;
+            _client?.Send(new TravelTo(place));
+        }
         if (_devAcademy && lobby.Campaign is not null && _hqScreen is not null)
         {
             _devAcademy = false;

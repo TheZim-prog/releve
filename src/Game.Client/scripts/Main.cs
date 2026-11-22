@@ -33,6 +33,10 @@ public partial class Main : Node
     private LobbyScreen? _lobbyScreen;
     private AcademyScreen? _academyScreen;
     private HqScreen? _hqScreen;
+    private MapScreen? _mapScreen;
+
+    /// <summary>Le dernier refus reçu sur la carte, à montrer au QG si le trajet s'arrête juste après (arrivée impossible).</summary>
+    private string? _tripRefusal;
     private NetworkCombat? _networkCombat;
 
     private GameServer? _server;
@@ -53,6 +57,9 @@ public partial class Main : Node
     private int? _devPick;
     private int? _devStartWith;
     private bool _devAcademy;
+    private string? _devQuest;
+    private string? _devTravel;
+    private string? _devOption;
 
     // Campagne en solo : le serveur de ce jeu n'accepte que ce PC.
     private bool _solo;
@@ -93,6 +100,9 @@ public partial class Main : Node
         if (int.TryParse(DevArg("start"), out var start))
             _devStartWith = start;
         _devAcademy = DevArg("academy") is not null;
+        _devQuest = DevArg("quest");
+        _devTravel = DevArg("travel");
+        _devOption = DevArg("option");
         if (DevArg("scenario") is { } scenario)
         {
             if (_content.Scenarios.ContainsKey(scenario))
@@ -143,6 +153,7 @@ public partial class Main : Node
         _lobbyScreen = screen as LobbyScreen;
         _academyScreen = screen as AcademyScreen;
         _hqScreen = screen as HqScreen;
+        _mapScreen = screen as MapScreen;
         AddChild(screen);
     }
 
@@ -207,9 +218,17 @@ public partial class Main : Node
         lobby.SetStatus(status, error);
     }
 
-    /// <summary>Le QG d'une partie avec campagne : panneau de quêtes, héros déployés, académie.</summary>
+    /// <summary>
+    /// Le QG d'une partie avec campagne : panneau de quêtes, héros déployés, académie ; ou, pendant le trajet d'une
+    /// quête, la carte.
+    /// </summary>
     private void ShowHq(int me, string status, bool error)
     {
+        if (_lobby?.Campaign?.Trip is not null && _content.World is not null)
+        {
+            ShowMap(me, status, error);
+            return;
+        }
         var hq = new HqScreen(_content, me, HostInfo());
         hq.QuestChosen += quest => _client?.Send(new ChooseQuest(quest));
         hq.HeroDeployed += hero => _client?.Send(new DeployHero(hero));
@@ -220,6 +239,18 @@ public partial class Main : Node
         Show(hq);
         hq.Refresh(_lobby!);
         hq.SetStatus(status, error);
+    }
+
+    /// <summary>Le trajet vers la quête lancée : la carte, et les choix du joueur qui valide.</summary>
+    private void ShowMap(int me, string status, bool error)
+    {
+        var map = new MapScreen(_content, me);
+        map.TravelPressed += place => _client?.Send(new TravelTo(place));
+        map.OptionPressed += option => _client?.Send(new ResolveEvent(option));
+        map.LeavePressed += () => ShowMenu();
+        Show(map);
+        map.Refresh(_lobby!);
+        map.SetStatus(status, error);
     }
 
     /// <summary>L'académie de la campagne du serveur (depuis le QG).</summary>

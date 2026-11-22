@@ -140,6 +140,7 @@ public sealed partial class ServerSession
             _players.Single(p => p.Id == assignment.Player).Hero = assignment.Unit;
         var scenario = _content.Scenarios[quest.Scenario];
         _questInCombat = (quest, heroes.Select((h, i) => (h.Id, scenario.DeployedUnitId(i))).ToList());
+        _lastEvent = null; // ce que la route a donné n'appartient plus qu'à la quête d'avant
         Launch(launch, setup);
         // Un joueur parti en route garde sa place : le combat l'attend.
         if (!AllCombatantsConnected)

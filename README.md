@@ -84,5 +84,6 @@ Après `--` :
 - `--host` ou `--join=<adresse>`, avec `--name=`, `--port=`, `--pick=<n° du héros>`, `--start=<nb de joueurs>` :
   connexion, choix du héros et lancement automatiques (pour tester à plusieurs instances).
 - `--scenario=<identifiant>` : le scénario du solo et de la partie hébergée (ex. `trial`, le scénario d'essai).
+- Campagne (`--solo-campaign` ou `--host --campaign`) : `--academy` ouvre l'académie ; `--quest=<identifiant>` lance cette quête avec ton premier héros, `--option=<rang>` (ou `pass`) répond à l'événement en attente, et `--travel=<lieu>` fait aller le groupe à ce lieu (ex. `--quest=market --travel=bridge`, puis `--option=0 --travel=market`).
 - `--screenshot=fichier.png` : capture puis quitte, après `--at=<secondes>` (4 par défaut).
 - En combat : `--select=<id>`, `--skill=<n>`, `--hover=x,y`, `--intentions=on`.

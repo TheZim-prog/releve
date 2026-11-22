@@ -21,7 +21,7 @@ public static class CampaignTexts
     }
 
     /// <summary>Des demi-chutes en chutes : « 1,5 ».</summary>
-    private static string Falls(int halves) => halves % 2 == 0 ? $"{halves / 2}" : $"{halves / 2},5";
+    internal static string Falls(int halves) => halves % 2 == 0 ? $"{halves / 2}" : $"{halves / 2},5";
 
     /// <summary>« Mémorial : Rempart, Éclair » : les héros morts, ou rien.</summary>
     public static string Memorial(IEnumerable<HeroInfo> heroes)
