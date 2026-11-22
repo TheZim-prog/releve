@@ -121,7 +121,8 @@ public class CampaignStateTests
         {
             CampaignStore.Save(CampaignState.New(Scale) with { Reputation = 80 }, path);
 
-            Assert.Equal(50, CampaignKeeper.Open(path, Scale with { Max = 50 }).State.Reputation);
+            using var keeper = CampaignKeeper.Open(path, Scale with { Max = 50 });
+            Assert.Equal(50, keeper.State.Reputation);
         }
         finally
         {
@@ -135,12 +136,37 @@ public class CampaignStateTests
         var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}", "campaign.json");
         try
         {
-            var keeper = CampaignKeeper.Open(path, Scale);
-            Assert.True(File.Exists(path));
+            using (var keeper = CampaignKeeper.Open(path, Scale))
+            {
+                Assert.True(File.Exists(path));
+                keeper.Update(s => s.WithPlayer("uid-a", "Alice"));
+            }
 
-            keeper.Update(s => s.WithPlayer("uid-a", "Alice"));
+            using var reopened = CampaignKeeper.Open(path, Scale);
+            Assert.Equal("Alice", reopened.State.Players.Single().Name);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+        }
+    }
 
-            Assert.Equal("Alice", CampaignKeeper.Open(path, Scale).State.Players.Single().Name);
+    [Fact]
+    public void ACampaign_IsHeldByOneGameAtATime()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}", "campaign.json");
+        try
+        {
+            using (CampaignKeeper.Open(path, Scale))
+            {
+                // Une autre fenêtre du jeu, ou un serveur : la sauvegarde est déjà tenue.
+                Assert.Throws<CampaignInUseException>(() => CampaignKeeper.Open(path, Scale));
+            }
+
+            // Lâchée, elle se rouvre ; et le verrou ne traîne pas sur le disque.
+            Assert.False(File.Exists(path + ".lock"));
+            CampaignKeeper.Open(path, Scale).Dispose();
+            Assert.False(File.Exists(path + ".lock"));
         }
         finally
         {

@@ -108,6 +108,20 @@ public class TcpTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task ALocalOnlyServer_OnAFreePort_WelcomesThisPc()
+    {
+        // Le serveur du solo : ce PC seulement, sur un port choisi par le système.
+        using var server = new GameServer(Content, "test", port: 0, localOnly: true);
+        server.Start();
+
+        var alice = await Join(server, "Alice");
+
+        Assert.Equal(System.Net.IPAddress.Loopback, server.Address); // pas les autres interfaces : aucune autre machine
+        Assert.NotEqual(0, server.Port);
+        Assert.Equal(1, (await alice.WaitFor<Welcome>()).PlayerId);
+    }
+
+    [Fact]
     public async Task AClientWithOtherContent_IsRefused()
     {
         using var server = StartServer(Content);

@@ -77,6 +77,9 @@ public partial class MenuScreen : Control
 
     public event Action? SoloPressed;
 
+    /// <summary>La campagne en solo, sous ce nom.</summary>
+    public event Action<string>? SoloCampaignPressed;
+
     /// <summary>Héberger : nom, port, et vrai pour la campagne (sinon, un combat libre du scénario choisi).</summary>
     public event Action<string, int, bool>? HostPressed;
     public event Action<string, string, int>? JoinPressed;
@@ -97,11 +100,17 @@ public partial class MenuScreen : Control
     {
         var column = Ui.CenteredColumn(this, 420);
         column.AddChild(Ui.Text("Relève", 40, HorizontalAlignment.Center));
-        column.AddChild(Ui.Text("Prototype du combat", 16, HorizontalAlignment.Center));
-        column.AddChild(Ui.Text("Scénario (solo et partie hébergée)", 14));
+        column.AddChild(Ui.Text("Prototype", 16, HorizontalAlignment.Center));
+        _buttons.Add(Ui.Button("Campagne en solo (ta campagne, sur ce PC)", () =>
+        {
+            if (ValidName() is { } name)
+                SoloCampaignPressed?.Invoke(name);
+        }));
+        column.AddChild(_buttons[^1]);
+        column.AddChild(Ui.Text("Combat libre (scénario, en solo ou hébergé)", 14));
         _scenarioPicker = ScenarioPicker();
         column.AddChild(_scenarioPicker);
-        _buttons.Add(Ui.Button("Solo (tu commandes toute l'équipe)", () => SoloPressed?.Invoke()));
+        _buttons.Add(Ui.Button("Combat libre en solo (tu commandes toute l'équipe)", () => SoloPressed?.Invoke()));
         column.AddChild(_buttons[^1]);
 
         column.AddChild(new HSeparator());
@@ -168,14 +177,20 @@ public partial class MenuScreen : Control
             button.Disabled = busy;
     }
 
-    private int? Validate()
+    /// <summary>Le nom saisi, s'il est valide ; sinon <c>null</c>, et le joueur sait pourquoi.</summary>
+    private string? ValidName()
     {
         var name = _name.Text.Trim();
-        if (name.Length == 0 || name.Length > Protocol.MaxNameLength)
-        {
-            SetStatus($"Choisis un nom (1 à {Protocol.MaxNameLength} caractères).", error: true);
+        if (name.Length is > 0 and <= Protocol.MaxNameLength)
+            return name;
+        SetStatus($"Choisis un nom (1 à {Protocol.MaxNameLength} caractères).", error: true);
+        return null;
+    }
+
+    private int? Validate()
+    {
+        if (ValidName() is not { } name)
             return null;
-        }
         if (!int.TryParse(_port.Text.Trim(), out var port) || port is <= 0 or > 65535)
         {
             SetStatus("Port invalide.", error: true);

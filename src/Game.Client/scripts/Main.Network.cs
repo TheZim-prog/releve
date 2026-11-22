@@ -8,44 +8,67 @@ namespace Game.Client;
 // Connexion : héberger, rejoindre, se reconnecter, et répartir les messages du serveur entre le salon et le combat.
 public partial class Main
 {
-    /// <summary>Héberge la campagne de ce PC (<paramref name="withCampaign"/>), ou un combat libre du scénario choisi.</summary>
-    private void Host(string name, int port, bool withCampaign)
+    /// <summary>
+    /// Héberge la campagne de ce PC (<paramref name="withCampaign"/>), ou un combat libre du scénario choisi.
+    /// <paramref name="solo"/> : la campagne en solo, sur un serveur que ce PC seul peut joindre (avec le port 0 : choisi
+    /// par le système), dans ce processus comme pour toute partie hébergée.
+    /// </summary>
+    private void Host(string name, int port, bool withCampaign, bool solo = false)
     {
         Disconnect();
         if (!ReloadContent())
             return;
+        _solo = solo;
         Game.Core.Campaign.CampaignKeeper? campaign = null;
         if (withCampaign)
         {
-            try
-            {
-                campaign = HostedCampaign();
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
-            {
-                ShowMenu($"Sauvegarde de campagne illisible ({ProjectSettings.GlobalizePath(CampaignPath)}) : {e.Message}", error: true);
-                return;
-            }
+            campaign = OpenHostedCampaign();
             if (campaign is null)
-            {
-                ShowMenu("Ce contenu ne permet pas de campagne (reputation.json manque dans data/).", error: true);
                 return;
-            }
         }
         try
         {
-            _server = new GameServer(_content, _scenarioId, port, line => GD.Print($"[server] {line}"), campaign);
+            _server = new GameServer(_content, _scenarioId, port, line => GD.Print($"[server] {line}"), campaign, localOnly: solo);
             _server.Start();
         }
         catch (SocketException e)
         {
+            if (_server is null)
+                campaign?.Dispose(); // le serveur n'a pas pu la prendre : elle est lâchée ici
             _server?.Dispose();
             _server = null;
-            ShowMenu($"Impossible d'héberger sur le port {port} : {e.Message}", error: true);
+            ShowMenu(solo ? $"Impossible de lancer la campagne en solo : {e.Message}" : $"Impossible d'héberger sur le port {port} : {e.Message}",
+                error: true);
             return;
         }
-        Connect(name, "127.0.0.1", port, rejoining: false);
+        Connect(name, "127.0.0.1", _server.Port, rejoining: false);
     }
+
+    /// <summary>La campagne de ce PC, ou <c>null</c> (retour au menu avec la raison).</summary>
+    private Game.Core.Campaign.CampaignKeeper? OpenHostedCampaign()
+    {
+        try
+        {
+            if (HostedCampaign() is { } campaign)
+                return campaign;
+            ShowMenu("Ce contenu ne permet pas de campagne (reputation.json manque dans data/).", error: true);
+        }
+        catch (Game.Core.Campaign.CampaignInUseException)
+        {
+            ShowMenu("Cette campagne est déjà ouverte dans une autre fenêtre du jeu (ou un serveur sur ce PC).", error: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            ShowMenu($"Sauvegarde de campagne illisible ({ProjectSettings.GlobalizePath(CampaignPath)}) : {e.Message}", error: true);
+        }
+        return null;
+    }
+
+    /// <summary>La campagne en solo, sous ce nom (lancement de test : --name=, sinon le nom des réglages, ou « Joueur »).</summary>
+    private void StartSoloCampaign(string name) => Host(name, port: 0, withCampaign: true, solo: true);
+
+    private void StartSoloCampaign() =>
+        StartSoloCampaign(DevArg("name") ?? (LoadSettings().Name is { Length: > 0 } saved ? saved : "Joueur"));
 
     private void Join(string name, string address, int port) => Connect(name, address, port, rejoining: false);
 
@@ -53,11 +76,12 @@ public partial class Main
     {
         var attempt = ++_connectionAttempt;
         _target = (name, address, port);
-        SaveSettings(name, _server is null ? address : LoadSettings().Address, port);
+        // Le port du solo est choisi par le système : il ne remplace pas celui des réglages.
+        SaveSettings(name, _server is null ? address : LoadSettings().Address, _solo ? LoadSettings().Port : port);
         _client?.Dispose();
         _client = null;
         _menu?.SetBusy(true);
-        _menu?.SetStatus($"Connexion à {address}:{port}…");
+        _menu?.SetStatus(_solo ? "Ouverture de la campagne…" : $"Connexion à {address}:{port}…");
         try
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -112,6 +136,7 @@ public partial class Main
         _backToLobbyIn = -1;
         _rejoinIn = -1;
         _rejoining = false;
+        _solo = false;
     }
 
     private void PollServer()
@@ -224,6 +249,8 @@ public partial class Main
     /// <summary>Pour l'hôte : le port et les adresses où ses amis peuvent le joindre (Tailscale en premier).</summary>
     private string HostInfo()
     {
+        if (_solo)
+            return "Campagne en solo, sur ce PC (la même que tu héberges pour tes amis).";
         if (_server is null)
             return $"Connecté à {_target.Address}:{_target.Port}";
         var addresses = NetworkInterface.GetAllNetworkInterfaces()

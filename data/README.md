@@ -82,8 +82,10 @@ hébergée depuis le jeu tient celle de l'hôte (`campaign.json` dans les donné
 inscrit à son arrivée, et le bilan de réputation de chaque combat terminé s'ajoute à celle du groupe, affichée au salon.
 Le salon d'une partie avec campagne est le **QG** : le panneau de quêtes, le héros que chacun déploie (ou il reste au
 QG), et l'académie, où chacun crée ses héros : jusqu'à `heroesPerPlayer` héros vivants (`progression.json`, le duo),
-chacun avec son archétype, son nom et ses points de compétence de départ dans son arbre. Au menu du jeu, « Héberger la
-campagne » ouvre ce QG ; « Héberger un combat libre » joue le scénario choisi, sans toucher à la campagne.
+chacun avec son archétype, son nom et ses points de compétence de départ dans son arbre. Au menu du jeu, « Campagne en
+solo » ouvre ce QG pour soi seul (un serveur dans le jeu, que ce PC seul peut joindre), et « Héberger la campagne »
+l'ouvre aux amis : c'est la même campagne, celle de ce PC. « Héberger un combat libre » joue le scénario choisi, sans
+toucher à la campagne.
 
 **Écrire une quête** : un scénario avec des cases pour les héros des joueurs (`"heroSlots": [ { "x": 1, "y": 4 }, … ]`,
 une par héros, dans l'ordre de leur déploiement ; prévoir cinq cases pour un groupe complet), rangé dans

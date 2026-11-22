@@ -79,10 +79,10 @@ On construit la campagne avant de finir le prologue (dont les missions passent p
    - 3a ✅ **Quêtes avec ses héros** : le salon d'une campagne est le QG (panneau de quêtes de `data/quests/`, héros déployés, lancement) ; les scénarios de quête ont des `heroSlots` ; le lancement transporte les fiches des héros déployés. Héberger : la campagne ou un combat libre.
    - 3b ✅ **Récompenses** (`QuestRewards`) : XP à chaque héros parti (table de niveaux et part en cas de défaite dans `progression.json`), matériaux au pot commun si victoire, niveaux gagnés ; le QG montre XP, points à dépenser, pot et dernière quête.
    - 3c ✅ **Entraînement à l'académie** (`Training`) : dépenser les points gagnés (stats, cases de l'arbre) et changer l'équipement (variantes, passif), vérifié par les règles de progression.
-   - 3d **Campagne solo** : un serveur dans le jeu, réservé au joueur.
-   Les chutes, la mort et la récupération au repos viendront dans une étape à part, après le QG.
-4. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
-5. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
+   - 3d ✅ **Campagne solo** : « Campagne en solo » au menu, un serveur dans le jeu qui n'écoute que ce PC, sur la même sauvegarde que la campagne hébergée.
+4. **Chutes et mort des héros** (`docs/design.md` 1.4) : compteur de chutes, mort, récupération au repos, sauvetage par un coéquipier.
+5. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
+6. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
 
 Ensuite : la mission 2 du prologue (`docs/design.md` 6.2) et la fin du prologue.
 

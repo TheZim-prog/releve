@@ -16,6 +16,7 @@ public sealed class GameServer : IDisposable
     private const int MaxCatchUpTicks = 5;
 
     private readonly ServerSession _session;
+    private readonly Campaign.CampaignKeeper? _campaign;
     private readonly TcpListener _listener;
     private readonly TimeSpan _tickPeriod;
     private readonly BlockingCollection<Action> _work = new();
@@ -24,18 +25,30 @@ public sealed class GameServer : IDisposable
     private readonly Action<string> _log;
     private Thread? _loop;
 
-    /// <param name="campaign">La campagne que tient ce serveur, ou <c>null</c> (des combats sans suite).</param>
-    public GameServer(GameContent content, string scenarioId, int port, Action<string>? log = null, Campaign.CampaignKeeper? campaign = null)
+    /// <param name="campaign">
+    /// La campagne que tient ce serveur, ou <c>null</c> (des combats sans suite). Le serveur la lâche en s'arrêtant.
+    /// </param>
+    /// <param name="localOnly">
+    /// N'accepter que ce PC (le solo : le serveur tourne dans le jeu, personne d'autre ne peut le joindre).
+    /// </param>
+    public GameServer(GameContent content, string scenarioId, int port, Action<string>? log = null, Campaign.CampaignKeeper? campaign = null,
+        bool localOnly = false)
     {
         ArgumentNullException.ThrowIfNull(content);
         _session = new ServerSession(content, scenarioId, campaign);
+        _campaign = campaign;
         _tickPeriod = TimeSpan.FromSeconds(1.0 / content.Rules.TicksPerSecond);
-        _listener = TcpListener.Create(port); // IPv4 et IPv6 (Tailscale donne une adresse IPv4)
+        _listener = localOnly
+            ? new TcpListener(System.Net.IPAddress.Loopback, port)
+            : TcpListener.Create(port); // IPv4 et IPv6 (Tailscale donne une adresse IPv4)
         _log = log ?? (_ => { });
     }
 
     /// <summary>Port d'écoute effectif (utile avec le port 0 : un port libre choisi par le système).</summary>
     public int Port { get; private set; }
+
+    /// <summary>L'adresse d'écoute (celle de ce PC seul pour un serveur <c>localOnly</c>).</summary>
+    public System.Net.IPAddress Address => ((System.Net.IPEndPoint)_listener.LocalEndpoint).Address;
 
     public void Start()
     {
@@ -58,6 +71,7 @@ public sealed class GameServer : IDisposable
         _loop?.Join(TimeSpan.FromSeconds(2));
         foreach (var connection in _connections.Keys)
             connection.Close();
+        _campaign?.Dispose();
     }
 
     private async Task AcceptLoop()

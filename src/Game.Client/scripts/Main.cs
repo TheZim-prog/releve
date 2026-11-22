@@ -10,7 +10,7 @@ namespace Game.Client;
 /// chaque image et répartis entre le salon et le combat.
 /// <para>
 /// Outils de développement (arguments après « -- ») : --scenario=&lt;id&gt; choisit le scénario (solo et partie
-/// hébergée) ; --solo (et --ai-heroes=on) lance directement le combat solo ;
+/// hébergée) ; --solo (et --ai-heroes=on) lance directement le combat solo ; --solo-campaign, la campagne en solo ;
 /// --host ou --join=adresse, avec --name=, --port=, --pick=&lt;n° du héros&gt; et --start=&lt;nb de joueurs&gt;, enchaînent
 /// connexion, choix du héros et lancement ; --campaign héberge la campagne (sa sauvegarde de test) plutôt qu'un combat
 /// libre ; --academy ouvre l'académie depuis le QG (--train=&lt;héros&gt; : et son entraînement) ; --screenshot=fichier.png capture l'écran après --at=&lt;s&gt; (4 par défaut)
@@ -53,6 +53,9 @@ public partial class Main : Node
     private int? _devPick;
     private int? _devStartWith;
     private bool _devAcademy;
+
+    // Campagne en solo : le serveur de ce jeu n'accepte que ce PC.
+    private bool _solo;
 
     /// <summary>Valeur d'un argument de développement « --nom=valeur » (ou « --nom » seul : chaîne vide), sinon <c>null</c>.</summary>
     public static string? DevArg(string name)
@@ -102,7 +105,9 @@ public partial class Main : Node
         var (name, address, port) = LoadSettings();
         name = DevArg("name") ?? name;
         port = int.TryParse(DevArg("port"), out var p) ? p : port;
-        if (DevArg("solo") is not null || DevArg("ai-heroes") == "on")
+        if (DevArg("solo-campaign") is not null)
+            StartSoloCampaign();
+        else if (DevArg("solo") is not null || DevArg("ai-heroes") == "on")
             StartSolo();
         else if (DevArg("host") is not null)
             Host(name, port, withCampaign: DevArg("campaign") is not null);
@@ -156,7 +161,8 @@ public partial class Main : Node
         };
         menu.ScenarioChosen += id => _scenarioId = id;
         menu.SoloPressed += StartSolo;
-        menu.HostPressed += Host;
+        menu.SoloCampaignPressed += StartSoloCampaign;
+        menu.HostPressed += (name, port, withCampaign) => Host(name, port, withCampaign);
         menu.JoinPressed += Join;
         Show(menu);
         menu.SetStatus(status, error);

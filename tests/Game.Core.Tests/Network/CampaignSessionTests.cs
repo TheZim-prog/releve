@@ -79,13 +79,21 @@ public class CampaignSessionTests
     {
         public string Folder { get; } = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}");
 
+        private CampaignKeeper? _keeper;
+
         public string File => Path.Combine(Folder, "campaign.json");
 
-        public ServerSession Session(GameContent? content = null) =>
-            new(content ?? CampaignContent(), "test", CampaignKeeper.Open(File, ReputationRules.Scale));
+        /// <summary>Un serveur sur cette campagne ; celui d'avant la lâche d'abord (comme un serveur qui redémarre).</summary>
+        public ServerSession Session(GameContent? content = null)
+        {
+            _keeper?.Dispose();
+            _keeper = CampaignKeeper.Open(File, ReputationRules.Scale);
+            return new(content ?? CampaignContent(), "test", _keeper);
+        }
 
         public void Dispose()
         {
+            _keeper?.Dispose();
             if (Directory.Exists(Folder))
                 Directory.Delete(Folder, recursive: true);
         }
