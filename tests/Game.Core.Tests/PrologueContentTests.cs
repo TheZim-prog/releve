@@ -88,5 +88,7 @@ public class PrologueContentTests(PrologueMissionOnePlay play) : IClassFixture<P
         Assert.Equal(civilians, Log.OfType<HitBlocked>().Select(e => e.Unit).Where(civilians.Contains).ToHashSet());
         Assert.DoesNotContain(Log, e => e is UnitDamaged d && civilians.Contains(d.Unit));
         Assert.Contains(Log, e => e is UnitEscaped x && x.Unit == play.Tagged("kingpin"));
+        // Au bilan de réputation : trois civils sauvés.
+        Assert.Equal(civilians.Count, Game.Core.Reputation.ReputationReport.Of(play.Sim, Content.Reputation!).CiviliansSaved);
     }
 }

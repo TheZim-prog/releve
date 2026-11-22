@@ -73,7 +73,7 @@ public sealed partial class CombatSimulation
                     dealt = AbsorbByCover(attacker, target, cover, dealt);
             }
             var wereOpponents = AreOpponents(target, attacker); // avant le coup : une unité dominée qui tombe retrouve son camp
-            var lost = hpLost = Damage(target, dealt, fallbackCell, ignoresProtections);
+            var lost = hpLost = Damage(attacker, target, dealt, fallbackCell, ignoresProtections);
 
             // Point faible : un coup qui a vraiment entamé les PV d'un ennemi le rend vulnérable (pas un coup
             // entièrement encaissé par ses PV temporaires).
@@ -205,6 +205,7 @@ public sealed partial class CombatSimulation
         _events.Add(new HitCovered(CurrentTick, target.Id, cover, absorbed, hp));
         if (hp == 0)
         {
+            NoteSceneryDestroyed(attacker, cover);
             _grid.SetTerrain(cover, Terrain.Floor);
             ForgetRaisedObstacle(cover);
             _events.Add(new CoverDestroyed(CurrentTick, cover));
@@ -213,10 +214,11 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
-    /// Inflige des dégâts : les PV temporaires de la cible encaissent d'abord (sauf coup <paramref name="ignoresProtections"/>, qui
-    /// ignore les protections), le reste entame ses PV. Renvoie les PV réellement perdus.
+    /// Inflige des dégâts de <paramref name="source"/> : les PV temporaires de la cible encaissent d'abord (sauf coup
+    /// <paramref name="ignoresProtections"/>, qui ignore les protections), le reste entame ses PV. Un civil touché est
+    /// relevé pour le bilan de réputation. Renvoie les PV réellement perdus.
     /// </summary>
-    private int Damage(Unit target, int amount, Cell? fallbackCell, bool ignoresProtections = false)
+    private int Damage(Unit source, Unit target, int amount, Cell? fallbackCell, bool ignoresProtections = false)
     {
         if (!ignoresProtections && amount > 0)
         {
@@ -226,7 +228,10 @@ public sealed partial class CombatSimulation
         }
         var before = target.Hp;
         LoseHp(target, amount, fallbackCell);
-        return before - target.Hp;
+        var lost = before - target.Hp;
+        if (lost > 0 && target.IsCivilian)
+            NoteCivilianHarmed(source, target);
+        return lost;
     }
 
     /// <summary>

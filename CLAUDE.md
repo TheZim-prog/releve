@@ -68,8 +68,10 @@ Déjà fait :
 6. **Scripts de mission** (principe 7), décrits par le scénario : déclencheurs (temps, unité tombée, unité prête, déclencheur terminé), messages qui peuvent figer le combat, actions imposées aux héros, actions ordonnées aux unités du jeu (allié scénarisé, coup réservé au script, décor qui s'effondre), départ d'une unité, verrou du tutoriel (personne n'agit hors du script). Démonstrations dans `data/scenarios/scripts/`, mode d'emploi dans `data/README.md`.
 7. **Mission 1 du prologue** (`docs/design.md` 6.2) : le tutoriel scénarisé puis le champ libre (`data/scenarios/prologue/mission-1.json`), jouée jusqu'au bout par les tests avec des héros IA.
 
+8. **Dégâts collatéraux et bilan de réputation** (`docs/design.md` 3.4) : le combat relève le décor cassé par les héros et les civils touchés ; le bilan de la mission (valeurs dans `data/reputation.json`) s'affiche à la fin. La réputation du groupe, qui cumule les bilans, viendra avec la campagne.
+
 Prochaines étapes possibles (à choisir avec moi) :
-- **La mission 2 du prologue** (`docs/design.md` 6.2) : elle demande les dégâts collatéraux et la **réputation** (3.4), pas encore codés.
+- **La mission 2 du prologue** (`docs/design.md` 6.2) : civils menacés par une attaque chargée, dôme, décor détruit par l'énergétique, puis le piège.
 - Ensuite : la carte du monde et la campagne (`docs/design.md` sections 4 et 5).
 
 ## Façon de travailler

@@ -235,6 +235,9 @@ public sealed partial class CombatSimulation
         Add(_messagesShown);
         Add(FrozenMessage?.Number ?? 0);
         Add(IsLocked ? 1 : 0);
+        Add(SceneryDestroyedByHeroes);
+        Add(_civiliansHurtByHeroes.Count);
+        Add(_civiliansLostToHeroes.Count);
         Add(_scriptQueue.Count);
         foreach (var state in _triggerStates)
             Add((int)state);

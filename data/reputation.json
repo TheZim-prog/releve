@@ -1,0 +1,21 @@
+// Réputation (docs/design.md 3.4 et 4.4) : ce que vaut chaque fait d'une mission dans son bilan. Malus négatifs, bonus
+// positifs. Valeurs d'essai, à régler en jouant. La réputation du groupe, qui cumule les missions, viendra avec la
+// campagne.
+{
+  // Dégâts collatéraux : un obstacle bas du décor (voiture, muret) détruit par les héros, par un coup ou un Lancer de
+  // décor. Les obstacles dressés pour un temps (glace) ne comptent pas, ni ce que cassent les ennemis.
+  "sceneryDestroyed": -2,
+
+  // Civils touchés par les héros (une zone qui touche tout le monde) : blessé mais vivant, ou perdu.
+  "civilianHurtByHeroes": -3,
+  "civilianLostToHeroes": -10,
+
+  // Civil perdu par la faute des ennemis (ou du décor qu'ils font tomber) : on n'a pas su le protéger.
+  "civilianLostToEnemies": -5,
+
+  // Civil sauvé : évacué, ou hors de danger à la victoire, sans avoir été blessé par les héros.
+  "civilianSaved": 2,
+
+  // Objectif secondaire réussi (un secondaire raté ne coûte rien).
+  "secondaryObjectiveCompleted": 5
+}

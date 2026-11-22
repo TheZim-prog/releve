@@ -1,5 +1,6 @@
 using Game.Core.Combat;
 using Game.Core.Progression;
+using Game.Core.Reputation;
 using Game.Core.Scenarios;
 
 namespace Game.Core.Loading;
@@ -13,6 +14,7 @@ namespace Game.Core.Loading;
 internal static class ContentLoader
 {
     private const string ProgressionFile = "progression.json";
+    private const string ReputationFile = "reputation.json";
 
     public static GameContent Load(string dataDirectory)
     {
@@ -39,9 +41,12 @@ internal static class ContentLoader
             .Select(s => DataFiles.InContext(s.File, () => { s.Scenario.ToSetup(rules, units, heroes); return s.Scenario; }))
             .ToDictionary(s => s.Id);
 
+        var reputation = files.Exists(ReputationFile) ? files.Load(ReputationFile, ReputationRules.FromJson) : null;
+
         return new GameContent
         {
-            Rules = rules, Skills = skills, Units = units, Heroes = heroes, Scenarios = scenarios, Version = files.Version(),
+            Rules = rules, Skills = skills, Units = units, Heroes = heroes, Scenarios = scenarios, Reputation = reputation,
+            Version = files.Version(),
         };
     }
 

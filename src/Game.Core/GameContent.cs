@@ -1,6 +1,7 @@
 using Game.Core.Combat;
 using Game.Core.Loading;
 using Game.Core.Progression;
+using Game.Core.Reputation;
 using Game.Core.Scenarios;
 
 namespace Game.Core;
@@ -24,6 +25,9 @@ public sealed class GameContent
     public HeroCatalog? Heroes { get; init; }
 
     public required IReadOnlyDictionary<string, ScenarioDefinition> Scenarios { get; init; }
+
+    /// <summary>Ce que vaut chaque fait d'une mission pour la réputation (bilan de fin), ou <c>null</c> si ce contenu n'en a pas.</summary>
+    public ReputationRules? Reputation { get; init; }
 
     /// <summary>Empreinte du contenu chargé : deux contenus de même version donnent les mêmes combats.</summary>
     public required string Version { get; init; }

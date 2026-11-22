@@ -10,6 +10,7 @@ Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`
 | Dossier ou fichier | Contenu |
 |---|---|
 | `combat-rules.json` | Réglages du combat : jauge, poids des actions, états, couverture, valeur d'un point de stat. |
+| `reputation.json` | Bilan de réputation d'une mission : ce que coûte chaque dégât collatéral, ce que rapportent les civils sauvés et les objectifs secondaires. |
 | `progression.json` | Niveaux, points de stats et de compétences, emplacements, forme des arbres. |
 | `skills/` | La bibliothèque de compétences : chacune est décrite **une seule fois**, dans le fichier de son archétype et de sa branche. |
 | `units/` | Les types d'unités : archétypes de héros (stats de base), ennemis, gadgets, civils. |
@@ -68,6 +69,11 @@ peuvent les frapper. Pour protéger un **lieu**, on protège une structure : un 
 (comportement `inert`, initiative et mobilité à 0, ni attaque d'opportunité ni compétence sauf celles réservées au
 script, retirée à 0 PV). Elle ne
 bouge pas, ne subit pas d'états, ne se répare pas ; personne ne traverse sa case, mais on voit par-dessus.
+
+**Régler la réputation** : `reputation.json` dit ce que vaut chaque fait dans le bilan de fin de mission (affiché au
+journal) : décor détruit par les héros, civils blessés ou perdus par leur faute, civils perdus face aux ennemis (malus,
+négatifs) ; civils sauvés et objectifs secondaires réussis (bonus, positifs). Le jeu refuse un malus positif ou un bonus
+négatif.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

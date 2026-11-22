@@ -68,6 +68,8 @@ public sealed partial class CombatSimulation
     private void TakeScenery(Unit caster, Cell from, Cell? to)
     {
         var hp = _coverHp.GetValueOrDefault(from, -1);
+        if (to is null) // lancé : il est détruit
+            NoteSceneryDestroyed(caster, from);
         var raised = _raisedObstacles.FindIndex(o => o.Cell == from);
         var endTick = raised >= 0 ? _raisedObstacles[raised].EndTick : (int?)null;
         ForgetRaisedObstacle(from);

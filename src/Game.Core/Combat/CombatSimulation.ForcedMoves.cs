@@ -212,7 +212,7 @@ public sealed partial class CombatSimulation
         int damageFactor, Cell? fallbackCell)
     {
         var wereOpponents = AreOpponents(hit, caster);
-        var lost = Damage(hit, Scaled(_random.NextInt(minDamage, maxDamage), damageFactor, hit), fallbackCell,
+        var lost = Damage(caster, hit, Scaled(_random.NextInt(minDamage, maxDamage), damageFactor, hit), fallbackCell,
             ignoresProtections: skill.IgnoresProtections);
         GaugePassivesOnHit(caster, hit, lost, wereOpponents);
         ChainReaction(caster, hit, wereOpponents);

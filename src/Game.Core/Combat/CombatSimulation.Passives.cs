@@ -136,7 +136,7 @@ public sealed partial class CombatSimulation
     {
         var victims = _units.Where(u => u.Status == UnitStatus.Active && AreOpponents(u, source) && IsInMeleeReach(center, u.Position)).ToList();
         foreach (var victim in victims)
-            Damage(victim, Scaled(_random.NextInt(minDamage, maxDamage), source.DamageFactor, victim), fallbackCell: null);
+            Damage(source, victim, Scaled(_random.NextInt(minDamage, maxDamage), source.DamageFactor, victim), fallbackCell: null);
         return victims;
     }
 }

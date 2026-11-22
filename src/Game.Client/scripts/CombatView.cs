@@ -2,6 +2,7 @@ using Game.Core;
 using Game.Core.Combat;
 using Game.Core.Grids;
 using Game.Core.Network;
+using Game.Core.Reputation;
 using Godot;
 
 namespace Game.Client;
@@ -201,7 +202,13 @@ public partial class CombatView : Node3D
             Handle(e);
         foreach (var notice in _session.TakeNotices())
             _hud.Log(notice);
+        var wasOver = _won is not null;
         _won = _session.Outcome;
+        if (!wasOver && _won is not null && _session.Content.Reputation is { } reputation)
+        {
+            foreach (var line in ReputationTexts.Lines(ReputationReport.Of(_sim, reputation)))
+                _hud.Log(line);
+        }
         _orders = _session.PlannedOrders().Where(o => _sim.FindUnit(o.Unit) is { } unit && IsControllable(unit)).ToList();
         if (_won is { } won)
             _hud.SetBanner(won ? "Victoire !" : "Défaite…", won ? new Color(0.5f, 1f, 0.5f) : new Color(1f, 0.4f, 0.4f));
