@@ -73,7 +73,12 @@ bouge pas, ne subit pas d'états, ne se répare pas ; personne ne traverse sa ca
 **Régler la réputation** : `reputation.json` dit ce que vaut chaque fait dans le bilan de fin de mission (affiché au
 journal) : décor détruit par les héros, civils blessés ou perdus par leur faute, civils perdus face aux ennemis (malus,
 négatifs) ; civils sauvés et objectifs secondaires réussis (bonus, positifs). Le jeu refuse un malus positif ou un bonus
-négatif.
+négatif. Sa partie `scale` règle la réputation du groupe, qui cumule les bilans : ses bornes, sa valeur de départ et
+ses paliers nommés (chacun commence à sa valeur `from`, le premier au minimum).
+
+**Tenir une campagne** : le serveur dédié la tient avec `--campaign <fichier>` (créé s'il n'existe pas) ; une partie
+hébergée depuis le jeu tient celle de l'hôte (`campaign.json` dans les données du jeu sur son PC). Chaque joueur y est
+inscrit à son arrivée, et le bilan de réputation de chaque combat terminé s'ajoute à celle du groupe, affichée au salon.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

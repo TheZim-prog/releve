@@ -1,4 +1,6 @@
+using Game.Core.Campaign;
 using Game.Core.Combat;
+using Game.Core.Reputation;
 
 namespace Game.Core.Network;
 
@@ -10,7 +12,9 @@ public interface IPeer
 
 /// <summary>
 /// La partie côté serveur, indépendante du transport : salon, combat, pause, reconnexion. Le serveur fait foi : il
-/// fixe l'ordre des commandes et joue les ticks ; les clients rejouent ses <see cref="TickPlayed"/>.
+/// fixe l'ordre des commandes et joue les ticks ; les clients rejouent ses <see cref="TickPlayed"/>. Un joueur est
+/// reconnu à son identifiant (<see cref="JoinRequest.PlayerUid"/>). Avec une campagne, chaque joueur y est inscrit, et le
+/// bilan de réputation de chaque combat terminé s'ajoute à celle du groupe (sauvegardée aussitôt).
 /// <para>
 /// Pas thread-safe : le transport appelle <see cref="Receive"/>, <see cref="Disconnect"/> et <see cref="Tick"/>
 /// depuis un seul fil (<see cref="Tick"/> au rythme de <see cref="CombatRules.TicksPerSecond"/>).
@@ -23,17 +27,21 @@ public sealed class ServerSession
     private readonly HashSet<UnitId> _playableHeroes;
     private readonly List<Player> _players = new();
     private readonly List<(int Player, CombatCommand Command)> _queue = new();
+    private readonly CampaignKeeper? _campaign;
     private int _nextPlayerId = 1;
+    private int? _lastMission;
 
     private CombatLaunch? _launch;
     private bool _paused;
     private int? _pausedBy;
 
-    public ServerSession(GameContent content, string scenarioId)
+    /// <param name="campaign">La campagne que tient ce serveur, ou <c>null</c> (des combats sans suite).</param>
+    public ServerSession(GameContent content, string scenarioId, CampaignKeeper? campaign = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         _content = content;
         _scenarioId = scenarioId;
+        _campaign = campaign;
         _playableHeroes = CombatLaunch.PlayableHeroes(content, scenarioId).Select(u => u.Id).ToHashSet();
     }
 
@@ -116,7 +124,28 @@ public sealed class ServerSession
         Broadcast(new TickPlayed(simulation.Step, commands.Select(c => c.Command).ToList(), simulation.Checksum()));
 
         if (simulation.Outcome is { } victory)
-            EndCombat(new CombatOver(victory));
+        {
+            // Une sauvegarde de campagne qui échoue (disque plein…) ne doit pas bloquer le combat fini : il se termine,
+            // et l'erreur remonte au serveur, qui la journalise.
+            try
+            {
+                RecordInCampaign(simulation);
+            }
+            finally
+            {
+                EndCombat(new CombatOver(victory));
+            }
+        }
+    }
+
+    /// <summary>Le bilan de réputation du combat terminé s'ajoute à celle du groupe (s'il y a une campagne et des règles).</summary>
+    private void RecordInCampaign(CombatSimulation simulation)
+    {
+        if (_campaign is null || _content.Reputation is not { } rules)
+            return;
+        var report = ReputationReport.Of(simulation, rules);
+        _lastMission = report.Total;
+        _campaign.Update(state => state.WithMissionReport(report, rules.Scale));
     }
 
     /// <summary>Fin du combat : tout le monde revient au salon, les absents en sont retirés.</summary>
@@ -157,9 +186,19 @@ public sealed class ServerSession
             peer.Send(new JoinRefused(JoinRefusal.InvalidName));
             return;
         }
+        if (!PlayerIdentity.IsValid(join.PlayerUid))
+        {
+            peer.Send(new JoinRefused(JoinRefusal.InvalidIdentity));
+            return;
+        }
 
-        var known = _players.Find(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        var known = _players.Find(p => p.Uid == join.PlayerUid);
         if (known is { Peer: not null })
+        {
+            peer.Send(new JoinRefused(JoinRefusal.AlreadyConnected));
+            return;
+        }
+        if (_players.Any(p => p != known && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
             peer.Send(new JoinRefused(JoinRefusal.NameTaken));
             return;
@@ -170,9 +209,21 @@ public sealed class ServerSession
             return;
         }
 
-        var player = known ?? new Player(_nextPlayerId++, name);
+        // La campagne d'abord : si sa sauvegarde échoue, rien n'a changé ici, et le joueur le sait (l'erreur remonte au
+        // serveur, qui la journalise).
+        try
+        {
+            _campaign?.Update(state => state.WithPlayer(join.PlayerUid, name));
+        }
+        catch
+        {
+            peer.Send(new JoinRefused(JoinRefusal.CampaignUnavailable));
+            throw;
+        }
+        var player = known ?? new Player(_nextPlayerId++, join.PlayerUid);
         if (known is null)
             _players.Add(player);
+        player.Name = name;
         player.Peer = peer;
         peer.Send(new Welcome(player.Id));
         BroadcastLobby();
@@ -315,7 +366,16 @@ public sealed class ServerSession
     private Player? PlayerOf(IPeer peer) => _players.Find(p => p.Peer == peer);
 
     private void BroadcastLobby() =>
-        Broadcast(new LobbyState(_scenarioId, _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero)).ToList()));
+        Broadcast(new LobbyState(_scenarioId, _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero)).ToList(),
+            CampaignSummary()));
+
+    private CampaignInfo? CampaignSummary()
+    {
+        if (_campaign?.State is not { } state)
+            return null;
+        var tier = _content.Reputation?.Scale.TierOf(state.Reputation).Name ?? "";
+        return new CampaignInfo(state.Reputation, tier, _lastMission);
+    }
 
     private void Broadcast(ServerMessage message)
     {
@@ -323,10 +383,11 @@ public sealed class ServerSession
             player.Peer?.Send(message);
     }
 
-    private sealed class Player(int id, string name)
+    private sealed class Player(int id, string uid)
     {
         public int Id { get; } = id;
-        public string Name { get; } = name;
+        public string Uid { get; } = uid;
+        public string Name { get; set; } = "";
         public IPeer? Peer { get; set; }
         public UnitId? Hero { get; set; }
     }

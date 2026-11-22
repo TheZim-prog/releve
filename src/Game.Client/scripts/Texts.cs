@@ -15,6 +15,9 @@ public static class Texts
         Game.Core.Network.JoinRefusal.InvalidName => $"Nom invalide (1 à {Protocol.MaxNameLength} caractères).",
         Game.Core.Network.JoinRefusal.NameTaken => "Ce nom est déjà pris par un joueur connecté.",
         Game.Core.Network.JoinRefusal.CombatInProgress => "Un combat est en cours sans toi : attends la fin pour rejoindre.",
+        Game.Core.Network.JoinRefusal.InvalidIdentity => "Identifiant de joueur invalide : supprime identity.cfg dans les données du jeu.",
+        Game.Core.Network.JoinRefusal.AlreadyConnected => "Tu es déjà connecté à cette partie (depuis un autre jeu ?).",
+        Game.Core.Network.JoinRefusal.CampaignUnavailable => "La campagne de l'hôte n'a pas pu être sauvegardée (disque plein ?) : voir son journal.",
         _ => reason.ToString(),
     };
 

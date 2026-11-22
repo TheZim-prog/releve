@@ -70,9 +70,16 @@ Déjà fait :
 
 8. **Dégâts collatéraux et bilan de réputation** (`docs/design.md` 3.4) : le combat relève le décor cassé par les héros et les civils touchés ; le bilan de la mission (valeurs dans `data/reputation.json`) s'affiche à la fin. La réputation du groupe, qui cumule les bilans, viendra avec la campagne.
 
-Prochaines étapes possibles (à choisir avec moi) :
-- **La mission 2 du prologue** (`docs/design.md` 6.2) : civils menacés par une attaque chargée, dôme, décor détruit par l'énergétique, puis le piège.
-- Ensuite : la carte du monde et la campagne (`docs/design.md` sections 4 et 5).
+## Objectif suivant : la base et le monde (`docs/design.md` sections 4 et 5)
+
+On construit la campagne avant de finir le prologue (dont les missions passent par le QG et l'académie). Étapes :
+1. ✅ **État de campagne** (`Game.Core/Campaign`) : joueurs reconnus par un identifiant unique, leurs héros, pot commun, réputation bornée lue en paliers, date de chaque joueur, chapitre ; tenu et sauvegardé par le serveur (`--campaign`, ou la partie hébergée), bilan de chaque combat ajouté, réputation affichée au salon.
+2. **QG minimal** : panneau de quêtes (scénarios existants), récompenses (XP, matériaux) et bilan appliqués au retour ; campagne solo par un serveur dans le jeu.
+3. **Académie** : créer une recrue (progression de la section 2).
+4. **Carte du monde** : chemins, points d'intérêt, crochets qui aggravent la mission.
+5. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur.
+
+Ensuite : la mission 2 du prologue (`docs/design.md` 6.2) et la fin du prologue.
 
 ## Façon de travailler
 

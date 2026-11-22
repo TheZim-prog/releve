@@ -174,6 +174,7 @@ public partial class LobbyScreen : Control
     private readonly string _hostInfo;
     private VBoxContainer _heroList = null!;
     private Label _players = null!;
+    private Label _campaign = null!;
     private Label _status = null!;
     private Button _start = null!;
 
@@ -199,6 +200,8 @@ public partial class LobbyScreen : Control
         column.AddChild(Ui.Text("Salon", 32, HorizontalAlignment.Center));
         if (_hostInfo.Length > 0)
             column.AddChild(Ui.Text(_hostInfo, 14, HorizontalAlignment.Center));
+        _campaign = Ui.Text("", 16, HorizontalAlignment.Center);
+        column.AddChild(_campaign);
         column.AddChild(Ui.Text("Choisis ton héros (les autres seront joués par l'IA) :", 16));
         _heroList = new VBoxContainer();
         _heroList.AddThemeConstantOverride("separation", 6);
@@ -237,6 +240,10 @@ public partial class LobbyScreen : Control
 
         _players.Text = "Joueurs : " + string.Join(", ", lobby.Players.Select(p =>
             p.Name + (p.Id == _me ? " (toi)" : "") + (p.Hero is null ? " — pas encore de héros" : "") + (p.Connected ? "" : " — déconnecté")));
+        _campaign.Text = lobby.Campaign is { } campaign
+            ? $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0})"
+              + (campaign.LastMission is { } last ? $", dernière mission {last:+0;-0;0}" : "")
+            : "";
         var missing = lobby.Players.Count(p => p.Hero is null);
         _start.Disabled = missing > 0;
         _start.Text = missing > 0 ? $"Lancer le combat (en attente de {missing} choix)" : "Lancer le combat";

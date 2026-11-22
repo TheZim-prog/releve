@@ -15,6 +15,7 @@ public class ReputationReportTests
     {
         SceneryDestroyed = -2, CivilianHurtByHeroes = -3, CivilianLostToHeroes = -10, CivilianLostToEnemies = -5,
         CivilianSaved = 2, SecondaryObjectiveCompleted = 5,
+        Scale = new ReputationScale { Min = -10, Max = 10, Start = 0, Tiers = new[] { new ReputationTier("low", "Bas", -10) } },
     };
 
     /// <summary>Zone 3x3 à distance, qui touche tout le monde.</summary>

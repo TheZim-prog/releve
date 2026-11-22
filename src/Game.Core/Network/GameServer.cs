@@ -24,10 +24,11 @@ public sealed class GameServer : IDisposable
     private readonly Action<string> _log;
     private Thread? _loop;
 
-    public GameServer(GameContent content, string scenarioId, int port, Action<string>? log = null)
+    /// <param name="campaign">La campagne que tient ce serveur, ou <c>null</c> (des combats sans suite).</param>
+    public GameServer(GameContent content, string scenarioId, int port, Action<string>? log = null, Campaign.CampaignKeeper? campaign = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        _session = new ServerSession(content, scenarioId);
+        _session = new ServerSession(content, scenarioId, campaign);
         _tickPeriod = TimeSpan.FromSeconds(1.0 / content.Rules.TicksPerSecond);
         _listener = TcpListener.Create(port); // IPv4 et IPv6 (Tailscale donne une adresse IPv4)
         _log = log ?? (_ => { });
@@ -130,7 +131,8 @@ public sealed class GameServer : IDisposable
             return;
         }
         if (message is JoinRequest join)
-            Log($"{peer.Connection.RemoteAddress} joins as '{join.Name}' (code {join.CodeVersion}, content {join.ContentVersion}).");
+            // L'identifiant suffit à prendre la place d'un joueur : le journal n'en montre que le début.
+            Log($"{peer.Connection.RemoteAddress} joins as '{join.Name}' (player {join.PlayerUid?[..Math.Min(6, join.PlayerUid.Length)]}…, code {join.CodeVersion}, content {join.ContentVersion}).");
         _session.Receive(peer, message);
     }
 

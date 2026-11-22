@@ -19,7 +19,7 @@ public static class Protocol
     /// messages changent de forme, pour qu'un ancien jeu comprenne encore qu'il est refusé. Tout le reste (messages,
     /// simulation) est couvert par <see cref="CodeVersion"/>, sans rien à tenir à jour à la main.
     /// </summary>
-    public const int Version = 2;
+    public const int Version = 3;
 
     /// <summary>
     /// Empreinte du code de Game.Core, calculée à la compilation (voir <c>Game.Core.csproj</c>) : deux jeux de même
@@ -54,11 +54,14 @@ public static class Protocol
 public abstract record ClientMessage;
 
 /// <summary>
-/// Rejoindre la partie. Un nom déjà connu dont le joueur est déconnecté en plein combat le reprend (reconnexion).
-/// Le serveur n'accepte que son propre protocole, son propre code (<see cref="Protocol.CodeVersion"/>) et son propre
-/// contenu (<see cref="GameContent.Version"/>).
+/// Rejoindre la partie. <paramref name="PlayerUid"/> : l'identifiant du joueur, créé par son jeu et gardé sur son PC
+/// (cf. <see cref="Campaign.PlayerIdentity"/>) ; il le reconnaît d'une session à l'autre (la campagne lui rend ses
+/// héros) et le reprend en plein combat s'il était déconnecté (reconnexion). Le nom n'est qu'affiché. Le serveur
+/// n'accepte que son propre protocole, son propre code (<see cref="Protocol.CodeVersion"/>) et son propre contenu
+/// (<see cref="GameContent.Version"/>).
 /// </summary>
-public sealed record JoinRequest(string Name, int ProtocolVersion, string CodeVersion, string ContentVersion) : ClientMessage;
+public sealed record JoinRequest(string Name, string PlayerUid, int ProtocolVersion, string CodeVersion, string ContentVersion)
+    : ClientMessage;
 
 /// <summary>Au salon : choisir un héros, ou le laisser (<c>null</c>).</summary>
 public sealed record PickHero(UnitId? Unit) : ClientMessage;
@@ -101,11 +104,20 @@ public enum JoinRefusal
 
     InvalidName,
 
-    /// <summary>Un joueur connecté porte déjà ce nom.</summary>
+    /// <summary>Un autre joueur de la partie (connecté, ou absent du combat en cours) porte déjà ce nom.</summary>
     NameTaken,
 
-    /// <summary>Un combat est en cours et ce nom n'y joue pas.</summary>
+    /// <summary>Un combat est en cours et ce joueur n'y joue pas.</summary>
     CombatInProgress,
+
+    /// <summary>L'identifiant du joueur est absent ou malformé.</summary>
+    InvalidIdentity,
+
+    /// <summary>Ce joueur est déjà connecté (une ancienne connexion que le serveur n'a pas encore vue partir).</summary>
+    AlreadyConnected,
+
+    /// <summary>La campagne du serveur n'a pas pu être sauvegardée (disque plein, fichier protégé) : voir son journal.</summary>
+    CampaignUnavailable,
 }
 
 public sealed record JoinRefused(JoinRefusal Reason) : ServerMessage;
@@ -113,8 +125,17 @@ public sealed record JoinRefused(JoinRefusal Reason) : ServerMessage;
 /// <summary>Un joueur, son héros éventuel, et s'il est connecté (en combat, un déconnecté garde sa place).</summary>
 public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Hero);
 
-/// <summary>Les joueurs, envoyé à chaque changement (arrivée, départ, choix de héros), au salon comme en combat.</summary>
-public sealed record LobbyState(string ScenarioId, IReadOnlyList<PlayerInfo> Players) : ServerMessage;
+/// <summary>
+/// Les joueurs, envoyé à chaque changement (arrivée, départ, choix de héros, fin de combat), au salon comme en combat ;
+/// <paramref name="Campaign"/> : la campagne du serveur, ou <c>null</c> s'il n'en tient pas.
+/// </summary>
+public sealed record LobbyState(string ScenarioId, IReadOnlyList<PlayerInfo> Players, CampaignInfo? Campaign = null) : ServerMessage;
+
+/// <summary>
+/// Ce que le salon montre de la campagne : la réputation du groupe et son palier, et le bilan de la dernière mission
+/// (<c>null</c> avant la première depuis le lancement du serveur).
+/// </summary>
+public sealed record CampaignInfo(int Reputation, string Tier, int? LastMission);
 
 /// <summary>
 /// Le combat : son lancement, les commandes déjà jouées et le pas de simulation atteint (vide et 0 au début ; à rejouer

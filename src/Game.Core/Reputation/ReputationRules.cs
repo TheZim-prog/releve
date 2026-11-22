@@ -27,6 +27,9 @@ public sealed record ReputationRules
     /// <summary>Par objectif secondaire réussi (bonus ; un secondaire raté ne coûte rien).</summary>
     public required int SecondaryObjectiveCompleted { get; init; }
 
+    /// <summary>L'échelle de la réputation du groupe, qui cumule les bilans.</summary>
+    public required ReputationScale Scale { get; init; }
+
     public static ReputationRules FromJson(string json)
     {
         var rules = DataJson.Deserialize<ReputationRules>(json);
@@ -40,5 +43,8 @@ public sealed record ReputationRules
             throw new ArgumentException("Reputation penalties (scenery destroyed, civilians hurt or lost) cannot be positive.");
         if (CivilianSaved < 0 || SecondaryObjectiveCompleted < 0)
             throw new ArgumentException("Reputation bonuses (civilians saved, secondary objectives) cannot be negative.");
+        if (Scale is null)
+            throw new ArgumentException("Reputation rules need a scale.");
+        Scale.Validate();
     }
 }

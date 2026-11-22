@@ -13,9 +13,19 @@ public partial class Main
         Disconnect();
         if (!ReloadContent())
             return;
+        Game.Core.Campaign.CampaignKeeper? campaign;
         try
         {
-            _server = new GameServer(_content, _scenarioId, port, line => GD.Print($"[server] {line}"));
+            campaign = HostedCampaign();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            ShowMenu($"Sauvegarde de campagne illisible ({ProjectSettings.GlobalizePath(CampaignPath)}) : {e.Message}", error: true);
+            return;
+        }
+        try
+        {
+            _server = new GameServer(_content, _scenarioId, port, line => GD.Print($"[server] {line}"), campaign);
             _server.Start();
         }
         catch (SocketException e)
@@ -50,7 +60,7 @@ public partial class Main
                 return;
             }
             _client = client;
-            _client.Send(new JoinRequest(name, Protocol.Version, Protocol.CodeVersion, _content.Version));
+            _client.Send(new JoinRequest(name, PlayerUid(), Protocol.Version, Protocol.CodeVersion, _content.Version));
         }
         catch (Exception e) when (e is SocketException or OperationCanceledException)
         {
@@ -66,7 +76,7 @@ public partial class Main
     }
 
     /// <summary>
-    /// Reconnexion sous le même nom (désynchronisation, connexion perdue en combat) : le serveur renvoie tout le
+    /// Reconnexion sous le même identifiant (désynchronisation, connexion perdue en combat) : le serveur renvoie tout le
     /// combat, rejoué ici. La vue du combat reste affichée, figée, en attendant.
     /// </summary>
     private void Rejoin(string message)
@@ -122,7 +132,7 @@ public partial class Main
             case Welcome welcome:
                 _playerId = welcome.PlayerId;
                 break;
-            case JoinRefused { Reason: JoinRefusal.NameTaken } when _rejoining && ++_rejoinAttempts < MaxRejoinAttempts:
+            case JoinRefused { Reason: JoinRefusal.AlreadyConnected } when _rejoining && ++_rejoinAttempts < MaxRejoinAttempts:
                 // Reconnexion : le serveur n'a pas encore vu partir l'ancienne connexion ; on réessaie un peu plus tard.
                 _client?.Dispose();
                 _client = null;

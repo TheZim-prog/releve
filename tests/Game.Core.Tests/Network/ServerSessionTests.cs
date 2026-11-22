@@ -59,9 +59,13 @@ public class ServerSessionTests
 
         public T Last<T>() where T : ServerMessage => Received.OfType<T>().Last();
 
-        public void Join(string name, string content = "v1", int protocol = Protocol.Version, string? code = null) =>
-            Say(new JoinRequest(name, protocol, code ?? Protocol.CodeVersion, content));
+        /// <summary>Rejoint ; sans <paramref name="uid"/>, un identifiant tiré du nom (même nom, même joueur).</summary>
+        public void Join(string name, string content = "v1", int protocol = Protocol.Version, string? code = null, string? uid = null) =>
+            Say(new JoinRequest(name, uid ?? UidOf(name), protocol, code ?? Protocol.CodeVersion, content));
     }
+
+    /// <summary>L'identifiant de joueur que les tests tirent d'un nom (la casse compte : « alice » n'est pas « Alice »).</summary>
+    internal static string UidOf(string name) => "uid-" + new string(name.Where(char.IsAsciiLetterOrDigit).ToArray());
 
     private static (ServerSession Session, FakeClient Alice, FakeClient Bob) TwoPlayersInCombat(string scenario = "test")
     {
@@ -93,10 +97,11 @@ public class ServerSessionTests
         var alice = new FakeClient(session);
         alice.Join("Alice");
 
-        void Refused(JoinRefusal reason, string name, string content = "v1", int protocol = Protocol.Version, string? code = null)
+        void Refused(JoinRefusal reason, string name, string content = "v1", int protocol = Protocol.Version, string? code = null,
+            string? uid = null)
         {
             var client = new FakeClient(session);
-            client.Join(name, content, protocol, code);
+            client.Join(name, content, protocol, code, uid);
             Assert.Equal(new JoinRefused(reason), Assert.Single(client.Received));
         }
 
@@ -105,7 +110,10 @@ public class ServerSessionTests
         Refused(JoinRefusal.ContentMismatch, "Bob", content: "v2");
         Refused(JoinRefusal.InvalidName, "  ");
         Refused(JoinRefusal.InvalidName, new string('x', Protocol.MaxNameLength + 1));
-        Refused(JoinRefusal.NameTaken, "alice");
+        Refused(JoinRefusal.InvalidIdentity, "Bob", uid: "");
+        Refused(JoinRefusal.InvalidIdentity, "Bob", uid: "not/valid");
+        Refused(JoinRefusal.NameTaken, "alice"); // un autre joueur (autre identifiant) sous le même nom
+        Refused(JoinRefusal.AlreadyConnected, "Alicia", uid: UidOf("Alice")); // Alice elle-même, depuis un autre jeu
         Assert.Equal(new Welcome(1), alice.Received[0]);
     }
 
@@ -282,6 +290,117 @@ public class ServerSessionTests
         Assert.Equal(new[] { HeroA, HeroB }, bob.Last<LobbyState>().Players.Select(p => p.Hero!.Value));
         bob.Say(new StartCombatRequest());
         Assert.NotNull(session.Simulation);
+    }
+
+    private static readonly Game.Core.Reputation.ReputationRules ReputationRules = new()
+    {
+        SceneryDestroyed = -2, CivilianHurtByHeroes = -3, CivilianLostToHeroes = -10, CivilianLostToEnemies = -5,
+        CivilianSaved = 2, SecondaryObjectiveCompleted = 5, Scale = Campaign.CampaignStateTests.Scale,
+    };
+
+    /// <summary>Le contenu de test avec des règles de réputation, et un civil qui s'enfuit dans le combat (sauvé : +2).</summary>
+    private static GameContent WithReputation()
+    {
+        var civilian = Unit(0, 2, 0, 0).Definition with
+        {
+            Id = "civilian", IsCivilian = true, Behavior = Behaviors.Flee, Skills = Array.Empty<SkillDefinition>(), BasicAttack = null,
+            OpportunityAttacksPerCycle = 0,
+        };
+        return new GameContent
+        {
+            Rules = Content.Rules,
+            Units = new Dictionary<string, UnitDefinition>(Content.Units) { ["civilian"] = civilian },
+            Scenarios = new Dictionary<string, ScenarioDefinition>
+            {
+                ["test"] = ScenarioDefinition.FromJson(ScenarioJson.Replace(
+                    """{ "unit": "thug", """, """{ "unit": "civilian", "team": 2, "x": 3, "y": 0 }, { "unit": "thug", """)),
+            },
+            Reputation = ReputationRules,
+            Version = "v1",
+        };
+    }
+
+    [Fact]
+    public void WithACampaign_PlayersAreEnrolled_AndEachCombatsReportIsSaved()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");
+        try
+        {
+            var session = new ServerSession(WithReputation(), "test", Game.Core.Campaign.CampaignKeeper.Open(path, ReputationRules.Scale));
+            var alice = new FakeClient(session);
+            alice.Join("Alice");
+            Assert.Equal(new CampaignInfo(0, "Neutres", null), alice.Last<LobbyState>().Campaign);
+
+            alice.Say(new PickHero(HeroA));
+            alice.Say(new StartCombatRequest());
+            for (var i = 0; i < 2000 && session.Simulation is not null; i++)
+                session.Tick();
+
+            Assert.Equal(new CampaignInfo(2, "Neutres", 2), alice.Last<LobbyState>().Campaign);
+            var saved = Game.Core.Campaign.CampaignStore.Load(path);
+            Assert.Equal(2, saved.Reputation);
+            Assert.Equal(new Game.Core.Campaign.CampaignPlayer(UidOf("Alice"), "Alice", 0), Assert.Single(saved.Players));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void AFailingCampaignSave_RefusesTheNewcomer_AndStillEndsTheCombat()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}");
+        var path = Path.Combine(folder, "campaign.json");
+        try
+        {
+            var session = new ServerSession(WithReputation(), "test", Game.Core.Campaign.CampaignKeeper.Open(path, ReputationRules.Scale));
+            var alice = new FakeClient(session);
+            alice.Join("Alice");
+            alice.Say(new PickHero(HeroA));
+            // La sauvegarde devient impossible : un dossier prend la place du fichier.
+            File.Delete(path);
+            Directory.CreateDirectory(path);
+
+            var bob = new FakeClient(session);
+            Assert.ThrowsAny<Exception>(() => bob.Join("Bob"));
+            Assert.Equal(new JoinRefused(JoinRefusal.CampaignUnavailable), Assert.Single(bob.Received));
+
+            // Le bilan du combat ne peut pas être sauvegardé : l'erreur remonte, mais le combat se termine.
+            alice.Say(new StartCombatRequest());
+            var failures = 0;
+            for (var i = 0; i < 2000 && session.Simulation is not null; i++)
+            {
+                try
+                {
+                    session.Tick();
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    failures++;
+                }
+            }
+            Assert.Equal(1, failures);
+            Assert.Null(session.Simulation);
+            Assert.Equal(new CombatOver(true), alice.Last<CombatOver>());
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void APlayer_IsRecognisedByTheirId_EvenUnderANewName()
+    {
+        var (session, alice, bob) = TwoPlayersInCombat();
+        session.Disconnect(bob);
+
+        var back = new FakeClient(session);
+        back.Join("Robert", uid: UidOf("Bob"));
+
+        Assert.Equal(new Welcome(2), back.Received[0]);
+        Assert.Equal("Robert", alice.Last<LobbyState>().Players.Single(p => p.Id == 2).Name);
     }
 
     [Fact]

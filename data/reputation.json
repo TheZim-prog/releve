@@ -17,5 +17,18 @@
   "civilianSaved": 2,
 
   // Objectif secondaire réussi (un secondaire raté ne coûte rien).
-  "secondaryObjectiveCompleted": 5
+  "secondaryObjectiveCompleted": 5,
+
+  // La réputation du groupe cumule les bilans, dans ces bornes. Elle se lit en paliers, du plus bas au plus haut :
+  // chacun commence à sa valeur « from » (le premier au minimum). Les paliers orienteront les missions proposées.
+  "scale": {
+    "min": -100, "max": 100, "start": 0,
+    "tiers": [
+      { "id": "hated", "name": "Haïs", "from": -100 },
+      { "id": "contested", "name": "Contestés", "from": -50 },
+      { "id": "neutral", "name": "Neutres", "from": -15 },
+      { "id": "liked", "name": "Appréciés", "from": 15 },
+      { "id": "adored", "name": "Adorés", "from": 50 }
+    ]
+  }
 }
