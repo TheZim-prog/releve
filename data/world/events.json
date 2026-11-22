@@ -1,0 +1,63 @@
+// Les événements des points d'intérêt (docs/design.md 4). Chaque option a ses effets ; avec un "test", ses effets
+// "success" s'il est réussi, "failure" sinon. Passer son chemin est toujours possible et ne coûte rien.
+//
+// Un test : le meilleur héros déployé dans "stat" (hp : PV max ; power : puissance en % ; initiative ; mobility) le
+// tente. Chance (en %) = baseChance + percentPerUnit × (sa stat − threshold) + archetypeBonus de son archétype, dans les
+// bornes de rules.json ; le joueur n'en voit que le libellé.
+//
+// Effets : "materials" (au pot, ou en moins), "reputation", "halfFalls" (au héros qui a tenté le test ; sans test, à
+// chaque héros déployé), "quest" : un bonus (ou malus) pour la quête en cours, au début du combat, pour chaque héros
+// déployé : "startGaugePercent", "startTempHp" (une armure qui tient tout le combat), "hp", "power", "initiative" (des
+// points de stats en plus, ou en moins). "requiresArchetype" : l'option n'est proposée qu'avec l'un de ces archétypes.
+// Événements d'essai, valeurs à régler en jouant.
+[
+  {
+    "id": "falling-car", "title": "Une voiture au bord du pont",
+    "text": "Une voiture a défoncé le parapet et bascule au-dessus du vide, une famille à l'intérieur.",
+    "options": [
+      {
+        "label": "Retenir la voiture",
+        "test": { "stat": "hp", "threshold": 100, "baseChance": 50, "percentPerUnit": 1, "archetypeBonus": { "colossus": 30 } },
+        "success": { "reputation": 5 },
+        "failure": { "reputation": 1, "halfFalls": 1 }
+      }
+    ]
+  },
+  {
+    "id": "informant", "title": "Un indic dans la ruelle",
+    "text": "Un petit dealer propose de vendre ce qu'il sait sur la bande que vous allez affronter.",
+    "options": [
+      { "label": "Payer ses renseignements (2 matériaux)", "success": { "materials": { "materials": -2 }, "quest": { "startGaugePercent": 50 } } },
+      {
+        "label": "Le faire parler de force",
+        "test": { "stat": "initiative", "threshold": 90, "baseChance": 50, "percentPerUnit": 1, "archetypeBonus": { "telepath": 30 } },
+        "success": { "quest": { "startGaugePercent": 50 } },
+        "failure": { "reputation": -3 }
+      }
+    ]
+  },
+  {
+    "id": "worried-crowd", "title": "Une foule inquiète",
+    "text": "Sur la place, des habitants vous reconnaissent et s'attroupent : ils ont peur de ce qui se prépare.",
+    "options": [
+      { "label": "Prendre le temps de les rassurer", "success": { "reputation": 3 } },
+      { "label": "Leur demander de vous encourager", "success": { "quest": { "power": 1 } } }
+    ]
+  },
+  {
+    "id": "abandoned-workshop", "title": "Un atelier abandonné",
+    "text": "Un atelier mécanique à moitié effondré. Des pièces utiles traînent encore sous les gravats.",
+    "options": [
+      {
+        "label": "Fouiller les gravats",
+        "test": { "stat": "mobility", "threshold": 4, "baseChance": 55, "percentPerUnit": 10 },
+        "success": { "materials": { "materials": 4 } },
+        "failure": { "halfFalls": 1 }
+      },
+      {
+        "label": "Monter des plaques de blindage", "requiresArchetype": [ "tech" ],
+        "success": { "quest": { "startTempHp": 10 } }
+      }
+    ]
+  }
+]

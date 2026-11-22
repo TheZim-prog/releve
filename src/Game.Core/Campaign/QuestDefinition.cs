@@ -39,6 +39,12 @@ public sealed record QuestDefinition
     /// <summary>Matériaux versés au pot commun, par identifiant (une seule sorte pour commencer : « materials »).</summary>
     public IReadOnlyDictionary<string, int> Materials { get; init; } = new Dictionary<string, int>();
 
+    /// <summary>Le lieu de la carte du monde où elle se joue (un lieu de mission), ou <c>null</c> sans carte.</summary>
+    public string? Site { get; init; }
+
+    /// <summary>Ce qu'ajoute chaque niveau de gravité à cette quête, à la place de la règle de son objectif, ou <c>null</c>.</summary>
+    public World.GravityStep? Gravity { get; init; }
+
     public static IReadOnlyList<QuestDefinition> ListFromJson(string json) =>
         DataJson.ValidateList(DataJson.Deserialize<List<QuestDefinition?>>(json), q => q.Validate(), q => q.Id, "quest");
 

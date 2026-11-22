@@ -45,6 +45,20 @@ public static class Injuries
         return state with { Heroes = heroes.ToList() };
     }
 
+    /// <summary>Des héros blessés en route (un événement) : leurs demi-chutes s'ajoutent, et peuvent les tuer.</summary>
+    public static CampaignState Hurt(CampaignState state, IReadOnlyCollection<string> heroIds, int halves, ProgressionRules rules)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(heroIds);
+        ArgumentNullException.ThrowIfNull(rules);
+        if (halves <= 0)
+            return state;
+        return state with
+        {
+            Heroes = state.Heroes.Select(h => heroIds.Contains(h.Id) && !h.IsDead ? Fallen(h, halves, rules) with { QuestsRested = h.QuestsRested } : h).ToList(),
+        };
+    }
+
     private static CampaignHero Fallen(CampaignHero hero, int halves, ProgressionRules rules)
     {
         var total = hero.HalfFalls + halves;

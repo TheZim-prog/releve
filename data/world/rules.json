@@ -1,0 +1,27 @@
+// Règles de la carte du monde (docs/design.md 4). Valeurs d'essai, à régler en jouant.
+{
+  // Une chance de test (en %) reste dans ces bornes : rien n'est jamais sûr, rien n'est jamais perdu d'avance.
+  "minChance": 5,
+  "maxChance": 95,
+
+  // Le libellé qu'en voit le joueur (docs/design.md 4.2b : des plages fixes, cohérentes partout), du plus facile au
+  // plus difficile : chacun commence à sa chance "from" (le dernier couvre tout le reste).
+  "difficulty": [
+    { "difficulty": "veryEasy", "from": 80 },
+    { "difficulty": "easy", "from": 60 },
+    { "difficulty": "hard", "from": 35 },
+    { "difficulty": "veryHard", "from": 0 }
+  ],
+
+  // Ce qu'ajoute chaque niveau de gravité (chaque crochet en route), selon l'objectif principal de la mission ; une
+  // quête peut le remplacer par sa propre "gravity". "extraUnits" : des ennemis arrivés en plus ; "civiliansLost" : des
+  // civils déjà perdus (jamais sous le minimum d'un sauvetage, ni un civil repéré ou à protéger) ; "countdownLessMs" :
+  // un compte à rebours plus avancé, jamais sous "countdownFloorPercent" % de sa durée (25 par défaut).
+  "gravity": {
+    "eliminate": { "extraUnits": [ "brawler" ] },
+    "rescue": { "civiliansLost": 1, "extraUnits": [ "brawler" ] },
+    "countdown": { "countdownLessMs": 10000, "countdownFloorPercent": 25 },
+    "protect": { "extraUnits": [ "brawler" ] },
+    "pursuit": { "extraUnits": [ "brawler" ] }
+  }
+}

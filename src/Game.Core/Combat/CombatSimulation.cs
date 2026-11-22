@@ -278,6 +278,7 @@ public sealed partial class CombatSimulation
             Add(unit.TempHp);
             Add(unit.TauntActionsLeft);
             Add(unit.Falls);
+            Add(unit.Armor);
             Add(unit.RescuedFalls);
             Add(unit.TauntedBy?.Value ?? 0);
             Add(unit.PendingGauge);
@@ -393,6 +394,8 @@ public sealed partial class CombatSimulation
             throw new ArgumentException($"Unit {setup.Id} shares cell {setup.Position} with another unit.");
         if (setup.InitialGauge < 0 || setup.InitialGauge > Rules.GaugeCapacity)
             throw new ArgumentException($"Unit {setup.Id} has an initial gauge outside [0, {Rules.GaugeCapacity}].");
+        if (setup.StartTempHp < 0)
+            throw new ArgumentException($"Unit {setup.Id} starts with negative temporary HP.");
         if (setup.Points is { } points)
         {
             points.Validate();

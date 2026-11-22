@@ -44,6 +44,9 @@ public sealed record UnitSetup(UnitId Id, int Team, Cell Position, UnitDefinitio
 
     /// <summary>Repère de l'unité pour le script de mission (unique dans le combat), ou <c>null</c>.</summary>
     public string? Tag { get; init; }
+
+    /// <summary>Armure au début du combat : des PV temporaires qui tiennent tout le combat (gagnés en route), ou 0.</summary>
+    public int StartTempHp { get; init; }
 }
 
 /// <summary>
@@ -88,6 +91,7 @@ public sealed class Unit
         Skills = definition.Skills;
         OnDefeat = definition.OnDefeat;
         Gauge = setup.InitialGauge;
+        Armor = setup.StartTempHp;
         BasicAttack = definition.BasicAttack is null ? null : FindSkill(definition.BasicAttack);
         OpportunityAttacksPerCycle = definition.OpportunityAttacksPerCycle
             + (definition.Passive == PassiveKind.Vigilance ? rules.VigilanceExtraOpportunityAttacks : 0);
@@ -156,6 +160,12 @@ public sealed class Unit
 
     /// <summary>Tick où les PV temporaires restants disparaissent.</summary>
     public int TempHpEndTick { get; internal set; }
+
+    /// <summary>
+    /// Armure gagnée en route (<see cref="UnitSetup.StartTempHp"/>) : elle encaisse les dégâts après les PV temporaires, et
+    /// tient tout le combat (un bouclier temporaire ne la remplace pas).
+    /// </summary>
+    public int Armor { get; internal set; }
     public IReadOnlyList<SkillDefinition> Skills { get; }
     public DefeatOutcome OnDefeat { get; }
     public UnitStatus Status { get; internal set; } = UnitStatus.Active;

@@ -30,6 +30,12 @@ public sealed record CampaignState
     /// <summary>Le chapitre de l'histoire en cours : 0 pour le prologue (cf. 6).</summary>
     public int Chapter { get; init; }
 
+    /// <summary>Les points d'intérêt de la carte découverts en route : ils restent connus (cf. 4).</summary>
+    public IReadOnlyList<string> KnownPois { get; init; } = Array.Empty<string>();
+
+    /// <summary>Les points d'intérêt déjà visités : épuisés, ils ne donnent plus rien (mais on peut y passer).</summary>
+    public IReadOnlyList<string> ExhaustedPois { get; init; } = Array.Empty<string>();
+
     /// <summary>Une nouvelle campagne : personne encore, la réputation de départ, le prologue.</summary>
     public static CampaignState New(ReputationScale scale)
     {

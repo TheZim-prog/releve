@@ -10,14 +10,29 @@ public sealed record HeroAssignment(UnitId Unit, int Player);
 /// Tout ce qu'il faut pour que le serveur et chaque client construisent exactement le même combat (avec le même
 /// contenu) : le scénario, les fiches des héros de campagne déployés (<paramref name="Deployed"/>, placés après les
 /// unités du scénario : un client n'a pas la campagne), et qui joue quel héros. Les héros que personne ne joue sont
-/// confiés à l'IA de base.
+/// confiés à l'IA de base. Une quête arrive aussi avec sa gravité (<see cref="Gravity"/>, <see cref="GravityLevel"/>
+/// niveaux : les crochets faits en route) et le bonus gagné en route pour ses héros (<see cref="Modifiers"/>).
 /// </summary>
 public sealed record CombatLaunch(string ScenarioId, IReadOnlyList<HeroAssignment> Heroes, IReadOnlyList<HeroSheet>? Deployed = null)
 {
+    public World.GravityStep? Gravity { get; init; }
+
+    public int GravityLevel { get; init; }
+
+    public World.QuestModifiers? Modifiers { get; init; }
+
     public CombatSetup BuildSetup(GameContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
         var setup = content.SetupFor(ScenarioId, Deployed);
+        if (Modifiers is { } modifiers && Deployed is { Count: > 0 })
+        {
+            var scenario = content.Scenarios[ScenarioId];
+            var heroes = Enumerable.Range(0, Deployed.Count).Select(scenario.DeployedUnitId).ToHashSet();
+            setup = setup with { Units = setup.Units.Select(u => heroes.Contains(u.Id) ? modifiers.ApplyTo(u, content.Rules) : u).ToList() };
+        }
+        if (Gravity is { } gravity)
+            setup = gravity.Apply(setup, GravityLevel, content.Units);
         var played = Heroes.Select(h => h.Unit).ToHashSet();
         var units = setup.Units
             .Select(u => IsPlayableHero(u) && !played.Contains(u.Id)

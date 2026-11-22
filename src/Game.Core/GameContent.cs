@@ -32,6 +32,15 @@ public sealed class GameContent
     /// <summary>Les quêtes du panneau du QG (data/quests), par identifiant.</summary>
     public IReadOnlyDictionary<string, Campaign.QuestDefinition> Quests { get; init; } = new Dictionary<string, Campaign.QuestDefinition>();
 
+    /// <summary>La carte du monde (data/world/map.json), ou <c>null</c> : les quêtes se lancent alors sans trajet.</summary>
+    public World.WorldMap? World { get; init; }
+
+    /// <summary>Les événements des points d'intérêt (data/world/events.json), par identifiant.</summary>
+    public IReadOnlyDictionary<string, World.WorldEvent> Events { get; init; } = new Dictionary<string, World.WorldEvent>();
+
+    /// <summary>Les règles de la carte (tests, gravité ; data/world/rules.json), présentes avec la carte.</summary>
+    public World.WorldRules? WorldRules { get; init; }
+
     /// <summary>Empreinte du contenu chargé : deux contenus de même version donnent les mêmes combats.</summary>
     public required string Version { get; init; }
 

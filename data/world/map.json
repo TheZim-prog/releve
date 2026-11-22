@@ -1,0 +1,25 @@
+// La carte du monde (docs/design.md 4) : le QG, les lieux de mission (où se jouent les quêtes du panneau) et les points
+// d'intérêt, reliés par des chemins. Aller tout droit ne coûte rien ; passer par un point d'intérêt est un crochet (+1
+// gravité pour la mission), qui déclenche son événement (data/world/events.json) tant qu'il n'est pas épuisé.
+// "mysterious" : il cache sa nature (« ? ») jusqu'à la visite. x et y : sa place à l'écran, de 0 à 100.
+// Une seule carte pour la campagne : les chapitres y ajouteront des lieux. Carte d'essai, à enrichir.
+{
+  "nodes": [
+    { "id": "hq", "name": "QG", "x": 50, "y": 85, "kind": "hq" },
+
+    { "id": "old-town", "name": "Vieille ville", "x": 15, "y": 30, "kind": "site" },
+    { "id": "market", "name": "Marché couvert", "x": 50, "y": 15, "kind": "site" },
+    { "id": "docks", "name": "Docks", "x": 85, "y": 30, "kind": "site" },
+
+    { "id": "alley", "name": "Ruelle sombre", "x": 25, "y": 60, "kind": "poi", "event": "informant" },
+    { "id": "bridge", "name": "Pont suspendu", "x": 45, "y": 50, "kind": "poi", "event": "falling-car" },
+    { "id": "square", "name": "Place de la mairie", "x": 65, "y": 45, "kind": "poi", "event": "worried-crowd" },
+    { "id": "workshop", "name": "Atelier abandonné", "x": 75, "y": 15, "kind": "poi", "event": "abandoned-workshop", "mysterious": true }
+  ],
+  "paths": [
+    [ "hq", "old-town" ], [ "hq", "alley" ], [ "alley", "old-town" ],
+    [ "hq", "market" ], [ "hq", "bridge" ], [ "bridge", "market" ], [ "bridge", "old-town" ],
+    [ "hq", "docks" ], [ "hq", "square" ], [ "square", "docks" ], [ "square", "market" ],
+    [ "market", "workshop" ], [ "workshop", "docks" ]
+  ]
+}

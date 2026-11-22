@@ -306,6 +306,7 @@ public sealed partial class CombatSimulation
         unit.Status = status;
         unit.HasFallen = true;
         unit.TempHp = 0;
+        unit.Armor = 0;
         EndTauntsOf(unit);
         foreach (var effect in unit.StatusEndTicks.Keys.ToList())
             EndStatus(unit, effect);

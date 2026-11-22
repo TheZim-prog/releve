@@ -17,6 +17,7 @@ Les identifiants et les noms de fichiers sont en anglais ; les noms affichés (`
 | `trees/` | Un arbre de compétences par archétype : branches, paliers, variantes, passifs. |
 | `heroes/` | Des héros prêts à jouer : ceux du prologue (`prologue.json`) et des héros d'essai (`trial.json`). Niveau, points de stats, cases achetées, équipement. |
 | `maps/` | Des cartes partagées entre scénarios (`"mapId": "street"` dans un scénario, au lieu d'écrire `"map"`). |
+| `world/` | La carte du monde : ses lieux et chemins, les événements des points d'intérêt, les règles des tests et de la gravité. |
 | `quests/` | Les quêtes du panneau du QG : leur scénario, leur difficulté affichée, leurs récompenses. |
 | `scenarios/` | Les combats : la carte, les unités et les héros placés dessus, et les objectifs. Le scénario se choisit dans le menu du jeu. |
 
@@ -98,6 +99,15 @@ une quête gagnée donne son XP à chaque héros qui y est parti, et ses matéri
 `defeatXpPercent` % de son XP, et pas de matériaux. Les points des niveaux gagnés attendent d'être dépensés à l'académie :
 le bouton « Entraîner » d'un héros y met un point de stats dans les PV, la puissance ou l'initiative, apprend une case
 d'un palier ouvert (définitif), et change son équipement (une compétence ou sa variante par emplacement, et son passif).
+
+**La carte du monde** (`world/`) : `map.json` place le QG, les lieux de mission (chaque quête a son `"site"`) et les
+points d'intérêt, reliés par des chemins. Aller tout droit ne coûte rien ; passer par un point d'intérêt est un crochet
+(+1 gravité pour la mission) qui déclenche son événement (`events.json`) tant qu'il n'est pas épuisé ; un point visité
+reste connu mais ne donne plus rien. Un événement propose des options, avec ou sans test (le meilleur héros déployé
+le tente ; sa chance devient un libellé, très facile → très difficile) ; leurs effets : matériaux, réputation,
+chutes, et un bonus ou malus pour la quête (jauge de départ, armure, points de stats). `rules.json` règle les chances,
+les libellés, et ce qu'ajoute un niveau de gravité selon l'objectif principal (renforts, civils déjà perdus, compte à
+rebours plus court) ; une quête peut le remplacer par sa propre `"gravity"`. Le détail est en tête de chaque fichier.
 
 **Régler les chutes** (`progression.json`) : chaque fois qu'un héros tombe à terre en quête, une chute (une demie si un
 coéquipier le secourt avant la fin : relevé, ou exfiltré). À `fallsBeforeDeath` chutes, il meurt pour de bon (il reste

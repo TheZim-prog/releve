@@ -5,19 +5,19 @@
   {
     "id": "thugs", "name": "Racket dans la rue",
     "description": "Trois voyous rackettent les commerçants. De quoi se faire la main.",
-    "scenario": "quest-thugs", "difficulty": "easy",
+    "scenario": "quest-thugs", "difficulty": "easy", "site": "old-town",
     "xp": 20, "materials": { "materials": 3 }
   },
   {
     "id": "market", "name": "Panique au marché",
     "description": "Une bande sème la panique au marché : faites sortir les civils.",
-    "scenario": "quest-market", "difficulty": "easy",
+    "scenario": "quest-market", "difficulty": "easy", "site": "market",
     "xp": 25, "materials": { "materials": 3 }
   },
   {
     "id": "depot", "name": "La bande du dépôt",
     "description": "Une bande bien armée, avec une brute, tient un dépôt. Mieux vaut y aller nombreux.",
-    "scenario": "quest-depot", "difficulty": "hard",
+    "scenario": "quest-depot", "difficulty": "hard", "site": "docks",
     "xp": 40, "materials": { "materials": 6 }
   }
 ]

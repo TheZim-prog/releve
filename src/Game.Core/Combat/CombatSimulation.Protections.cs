@@ -30,11 +30,21 @@ public sealed partial class CombatSimulation
     private int AbsorbByTempHp(Unit target, int damage)
     {
         var absorbed = Math.Min(target.TempHp, damage);
-        if (absorbed <= 0)
-            return damage;
-        target.TempHp -= absorbed;
-        _events.Add(new DamageAbsorbed(CurrentTick, target.Id, absorbed, target.TempHp));
-        return damage - absorbed;
+        if (absorbed > 0)
+        {
+            target.TempHp -= absorbed;
+            _events.Add(new DamageAbsorbed(CurrentTick, target.Id, absorbed, target.TempHp));
+            damage -= absorbed;
+        }
+        // Puis l'armure gagnée en route, qui tient tout le combat.
+        var armored = Math.Min(target.Armor, damage);
+        if (armored > 0)
+        {
+            target.Armor -= armored;
+            _events.Add(new DamageAbsorbed(CurrentTick, target.Id, armored, target.TempHp + target.Armor));
+            damage -= armored;
+        }
+        return damage;
     }
 
     /// <summary>Les PV temporaires arrivés à échéance disparaissent.</summary>

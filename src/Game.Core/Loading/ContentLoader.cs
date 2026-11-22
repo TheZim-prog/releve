@@ -2,6 +2,7 @@ using Game.Core.Campaign;
 using Game.Core.Combat;
 using Game.Core.Progression;
 using Game.Core.Reputation;
+using Game.Core.World;
 using Game.Core.Scenarios;
 
 namespace Game.Core.Loading;
@@ -16,6 +17,9 @@ internal static class ContentLoader
 {
     private const string ProgressionFile = "progression.json";
     private const string ReputationFile = "reputation.json";
+    private const string MapFile = "world/map.json";
+    private const string EventsFile = "world/events.json";
+    private const string WorldRulesFile = "world/rules.json";
 
     public static GameContent Load(string dataDirectory)
     {
@@ -56,11 +60,49 @@ internal static class ContentLoader
             }
         }
 
+        var (world, events, worldRules) = World(files, units, quests);
+
         return new GameContent
         {
             Rules = rules, Skills = skills, Units = units, Heroes = heroes, Scenarios = scenarios, Reputation = reputation,
-            Quests = quests, Version = files.Version(),
+            Quests = quests, World = world, Events = events, WorldRules = worldRules, Version = files.Version(),
         };
+    }
+
+    /// <summary>
+    /// La carte du monde, ses événements et ses règles (data/world), ou rien si la carte manque. Chaque point d'intérêt
+    /// a un événement connu ; chaque quête a un lieu de mission de la carte ; la gravité n'ajoute que des unités connues.
+    /// </summary>
+    private static (WorldMap?, IReadOnlyDictionary<string, WorldEvent>, WorldRules?) World(DataFiles files,
+        IReadOnlyDictionary<string, UnitDefinition> units, IReadOnlyDictionary<string, QuestDefinition> quests)
+    {
+        if (!files.Exists(MapFile))
+            return (null, new Dictionary<string, WorldEvent>(), null);
+        var map = files.Load(MapFile, WorldMap.FromJson);
+        var events = files.Load(EventsFile, WorldEvent.ListFromJson).ToDictionary(e => e.Id);
+        var rules = files.Load(WorldRulesFile, WorldRules.FromJson);
+        DataFiles.InContext(WorldRulesFile, () =>
+        {
+            rules.ValidateAgainst(units);
+            return rules;
+        });
+        DataFiles.InContext(MapFile, () =>
+        {
+            if (map.Nodes.FirstOrDefault(n => n.Event is { } e && !events.ContainsKey(e)) is { } poi)
+                throw new ArgumentException($"Point of interest '{poi.Id}' has an unknown event '{poi.Event}'.");
+            return map;
+        });
+        foreach (var quest in quests.Values)
+        {
+            DataFiles.InContext($"quest '{quest.Id}'", () =>
+            {
+                if (quest.Site is null || map.Node(quest.Site) is not { Kind: MapNodeKind.Site })
+                    throw new ArgumentException($"Quest '{quest.Id}' needs a site of the world map (a mission place).");
+                quest.Gravity?.Validate(units);
+                return quest;
+            });
+        }
+        return (map, events, rules);
     }
 
     /// <summary>Les arbres et les héros prêts à jouer ; <c>null</c> pour un contenu sans progression (aucun <c>progression.json</c>).</summary>
