@@ -1,6 +1,7 @@
 // Structures : des objets de terrain destructibles, le « lieu » d'une protection (docs/design.md section 3). Elles
-// n'agissent pas, ne bougent pas, ne subissent pas d'états et ne se réparent pas ; personne ne traverse leur case, mais
-// on voit par-dessus. Valeurs d'essai, à ajuster en jouant.
+// n'agissent pas d'elles-mêmes, ne bougent pas, ne subissent pas d'états et ne se réparent pas ; personne ne traverse
+// leur case, mais on voit par-dessus. Leurs seules compétences sont réservées au script (un effondrement). Valeurs
+// d'essai, à ajuster en jouant.
 [
   {
     "id": "relay", "name": "Relais",
@@ -11,5 +12,17 @@
     "opportunityAttacksPerCycle": 0,
     "behavior": "inert",
     "skills": []
+  },
+  {
+    // Une façade qui menace de tomber : le script la fait s'effondrer (une fois), puis elle disparaît.
+    "id": "unstable-facade", "name": "Façade instable",
+    "isStructure": true,
+    "maxHp": 80, "initiative": 0, "mobility": 0,
+    "onDefeat": "removed",
+    "basicAttack": null,
+    "opportunityAttacksPerCycle": 0,
+    "behavior": "inert",
+    "maxActivations": 1,
+    "skills": ["collapse"]
   }
 ]

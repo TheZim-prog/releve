@@ -113,6 +113,8 @@ public sealed partial class CombatSimulation
                 Act(ordered, effect.Speaker, effect.Say);
             else if (effect.Lock is { } locked)
                 SetLock(locked);
+            else if (effect.Leave is { } leaving)
+                Leave(leaving, effect.Speaker, effect.Say);
             else
             {
                 var message = Show(effect.Speaker, effect.Say!, effect.Freeze);

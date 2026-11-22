@@ -1,0 +1,12 @@
+// Compétences du décor scénarisé : portées par des structures, déclenchées seulement par le script de mission.
+[
+  {
+    // Une façade qui s'effondre : zone chargée, affichée au sol, qui touche tout le monde (un dôme la bloque).
+    // Dégâts d'essai : de quoi tuer un civil qui reste dessous.
+    "id": "collapse", "name": "Effondrement",
+    "weight": "heavy", "range": 6, "minDamage": 40, "maxDamage": 50, "cooldownMs": 0,
+    "chargeMs": 2000,
+    "zone": { "shape": "square", "size": 1, "throughWalls": false },
+    "scriptOnly": true
+  }
+]

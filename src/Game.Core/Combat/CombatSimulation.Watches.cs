@@ -68,10 +68,13 @@ public sealed partial class CombatSimulation
         }
     }
 
-    /// <summary>Protection rapprochée : un adversaire attaque l'allié protégé ; le tir attend la fin de la source.</summary>
+    /// <summary>
+    /// Protection rapprochée : un adversaire attaque l'allié protégé ; le tir attend la fin de la source. Pas contre le
+    /// décor qui s'effondre (une structure), qui n'est pas un ennemi à abattre.
+    /// </summary>
     private void QueueProtectionShot(Unit attacker, SkillDefinition skill, Unit target)
     {
-        if (_watches.Count == 0 || !skill.IsOffensive)
+        if (_watches.Count == 0 || !skill.IsOffensive || attacker.IsStructure)
             return;
         foreach (var watch in _watches.Where(w => w.Ally == target.Id && AreOpponents(FindUnit(w.Owner)!, attacker)).ToList())
             _pendingReactions.Enqueue(() => Fire(watch, attacker));

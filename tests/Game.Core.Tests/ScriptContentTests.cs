@@ -16,6 +16,7 @@ public class ScriptContentTests(ITestOutputHelper output)
     [InlineData("scripts-imposed")]
     [InlineData("scripts-allies")]
     [InlineData("scripts-lock")]
+    [InlineData("scripts-collapse")]
     public void AScriptScenario_PlaysToTheEnd_AndReplays(string scenario)
     {
         var (sim, outcome) = PlayToTheEnd(new CombatLaunch(scenario, Array.Empty<HeroAssignment>()).BuildSetup(Content), scenario);
@@ -44,6 +45,24 @@ public class ScriptContentTests(ITestOutputHelper output)
             .Select(e => e switch { UnitMoved m => m.Unit, SkillUsed s => s.Unit, _ => (UnitId?)null })
             .OfType<UnitId>();
         Assert.All(actors, a => Assert.Contains(a, new[] { speedster, colossus }));
+    }
+
+    [Fact]
+    public void TheDome_SavesTheCivilians_FromTheCollapse_WhileTheKingpinLeaves()
+    {
+        var setup = new CombatLaunch("scripts-collapse", Array.Empty<HeroAssignment>()).BuildSetup(Content);
+        var kingpin = setup.Units.Single(u => u.Tag == "kingpin").Id;
+        var civilians = setup.Units.Where(u => u.Definition.IsCivilian).Select(u => u.Id).ToHashSet();
+
+        var (sim, _) = PlayToTheEnd(setup, "scripts-collapse");
+
+        Assert.Equal(civilians, sim.EventLog.OfType<HitBlocked>().Select(e => e.Unit).ToHashSet());
+        Assert.DoesNotContain(sim.EventLog, e => e is UnitDamaged d && civilians.Contains(d.Unit));
+        Assert.Contains(new UnitEscaped(0, kingpin), sim.EventLog);
+        // Le caïd parti, ses hommes restent : le combat continue jusqu'à eux.
+        Assert.True(sim.Outcome);
+        Assert.Contains(sim.EventLog, e => e is UnitRemoved r && setup.Units.Any(u => u.Id == r.Unit && u.Team == 1));
+        Assert.DoesNotContain(sim.EventLog, e => e is UnitFleeing f && f.Unit != kingpin && !civilians.Contains(f.Unit));
     }
 
     [Fact]

@@ -11,7 +11,8 @@ namespace Game.Core.Scripts;
 /// <item>des actions ordonnées (<see cref="Act"/>, au plus une par unité) : chaque unité fait la sienne aussitôt, sans
 /// attendre sa jauge ni la recharge de la compétence (pas si elle est hors de combat, étourdie ou en train de charger) ;
 /// sa jauge repart ensuite comme après toute action. <see cref="Say"/> est alors une réplique, dite juste avant ;</item>
-/// <item>le verrou (<see cref="Lock"/>), mis ou levé, seul dans son effet.</item>
+/// <item>le verrou (<see cref="Lock"/>), mis ou levé, seul dans son effet ;</item>
+/// <item>des départs (<see cref="Leave"/>) : ces unités quittent le combat, après la réplique éventuelle.</item>
 /// </list>
 /// Les effets suivants attendent qu'un effet qui fige le combat soit terminé.
 /// </summary>
@@ -40,4 +41,10 @@ public sealed record ScriptEffect
     /// restent sur place jusqu'à la levée.
     /// </summary>
     public bool? Lock { get; init; }
+
+    /// <summary>
+    /// Repères d'unités du jeu (pas des héros) qui quittent aussitôt le combat, enfuies (pas vaincues), ou <c>null</c>.
+    /// <see cref="Say"/> est alors une réplique, dite juste avant.
+    /// </summary>
+    public IReadOnlyList<string>? Leave { get; init; }
 }

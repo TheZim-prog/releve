@@ -85,8 +85,15 @@ public static class ScriptValidator
                 throw new ArgumentException("a speaker needs a text to say, and cannot be blank.");
             if (effect.Lock is not null)
             {
-                if (effect.Say is not null || effect.Freeze || effect.Impose is not null || effect.Act is not null)
+                if (effect.Say is not null || effect.Freeze || effect.Impose is not null || effect.Act is not null || effect.Leave is not null)
                     throw new ArgumentException("\"lock\" stands alone in its effect.");
+                continue;
+            }
+            if (effect.Leave is { } leaving)
+            {
+                if (effect.Freeze || effect.Impose is not null || effect.Act is not null)
+                    throw new ArgumentException("\"leave\" goes alone in its effect, with at most a line to say.");
+                ValidateLeaving(leaving, tags);
                 continue;
             }
             if (effect.Impose is not null && effect.Act is not null)
@@ -124,6 +131,8 @@ public static class ScriptValidator
                 throw new ArgumentException($"an action is {verb} an unknown unit tag '{action.Unit}'.");
             if (heroesOnly && !IsHero(unit))
                 throw new ArgumentException($"an action is {verb} '{action.Unit}', which is not a hero.");
+            if (unit.Definition.IsStructure && action.MoveTo is not null)
+                throw new ArgumentException($"the action {verb} '{action.Unit}' moves a structure, which never moves.");
             if (action.Skill is null && action.MoveTo is null)
                 throw new ArgumentException($"the action {verb} '{action.Unit}' needs a skill or a cell to move to.");
             if (action.Skill is null && (action.Target is not null || action.Cell is not null))
@@ -136,6 +145,23 @@ public static class ScriptValidator
                     ?? throw new ArgumentException($"'{action.Unit}' has no skill '{id}' to use.");
                 ValidateAim(action, skill, verb);
             }
+        }
+    }
+
+    /// <summary>Au moins une unité, chacune une fois, repérée et pas un héros (un héros ne quitte pas le combat sur ordre).</summary>
+    private static void ValidateLeaving(IReadOnlyList<string> leaving, IReadOnlyDictionary<string, UnitSetup> tags)
+    {
+        if (leaving.Count == 0 || leaving.Any(t => t is null) || leaving.Distinct().Count() != leaving.Count)
+            throw new ArgumentException("\"leave\" needs at least one unit tag, each once.");
+        foreach (var tag in leaving)
+        {
+            if (!tags.TryGetValue(tag, out var unit))
+                throw new ArgumentException($"\"leave\" names an unknown unit tag '{tag}'.");
+            if (IsHero(unit))
+                throw new ArgumentException($"\"leave\" names '{tag}', a hero: only the game's units leave on the script's word.");
+            // Partie, elle ne compterait plus pour la protection : l'objectif serait faussé.
+            if (unit.Definition.IsStructure || unit.IsProtected)
+                throw new ArgumentException($"\"leave\" names '{tag}', a structure or a unit to protect, which cannot run away.");
         }
     }
 

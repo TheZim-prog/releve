@@ -70,8 +70,9 @@ public sealed record UnitDefinition
     public bool IsCivilian { get; init; }
 
     /// <summary>
-    /// Structure : un objet de terrain destructible (le lieu d'une protection). Elle n'agit pas (comportement
-    /// <see cref="Behaviors.Inert"/>, ni initiative, ni mobilité, ni compétence), ne bouge pas et ne se fait pas déplacer,
+    /// Structure : un objet de terrain destructible (le lieu d'une protection). Elle n'agit pas d'elle-même (comportement
+    /// <see cref="Behaviors.Inert"/>, ni initiative, ni mobilité ; ses seules compétences sont réservées au script, comme
+    /// l'effondrement d'une façade), ne bouge pas et ne se fait pas déplacer,
     /// ne subit pas d'états, ne reçoit ni soin ni soutien. Personne ne traverse sa case, mais on voit par-dessus ; seuls
     /// les coups (et les zones qui touchent tout le monde) l'abîment. Faux par défaut.
     /// </summary>
@@ -86,6 +87,18 @@ public sealed record UnitDefinition
     /// Réservé aux unités IA.
     /// </summary>
     public int? FleeAtHpPercent { get; init; }
+
+    /// <summary>
+    /// Ce qu'une structure peut porter : une compétence réservée au script qui frappe (une unité ou une zone) en la
+    /// laissant où elle est, sans rien poser, préparer ni déplacer d'allié (ni mouvement, ni invocation, ni dôme, ni
+    /// garde, ni surveillance, ni chaîne, ni obstacle, ni décor pris, ni sauvetage, ni réanimation, ni frappe coordonnée).
+    /// </summary>
+    private static bool FitsAStructure(SkillDefinition? skill) =>
+        skill is
+        {
+            ScriptOnly: true, SelfMove: null, Summon: null, CreatesDome: false, Guard: null, Watch: null, Chain: null,
+            Raises: null, Scenery: null, IsRescue: false, RevivesAlly: false, CallsAllyStrikes: false,
+        };
 
     /// <summary>Instance de cette unité pour un combat.</summary>
     public UnitSetup ToSetup(UnitId id, int team, Cell position, int initialGauge = 0, StatPoints? points = null) =>
@@ -126,11 +139,11 @@ public sealed record UnitDefinition
                            || Initiative == 0 || Mobility == 0))
             throw new ArgumentException(
                 $"Unit '{Id}': a civilian flees ('{Behaviors.Flee}', so it can act and move), has no skill or opportunity attack, and is lost (removed) at 0 HP.");
-        if (IsStructure && (Behavior != Behaviors.Inert || Initiative != 0 || Mobility != 0 || Skills is not { Count: 0 }
+        if (IsStructure && (Behavior != Behaviors.Inert || Initiative != 0 || Mobility != 0 || !Skills.All(FitsAStructure)
                             || BasicAttack is not null || OpportunityAttacksPerCycle != 0 || OnDefeat != DefeatOutcome.Removed
                             || Passive is not null || FleeAtHpPercent is not null || Lure is not null || DefeatBlast is not null))
             throw new ArgumentException(
-                $"Unit '{Id}': a structure never acts ('{Behaviors.Inert}', no initiative, mobility, skill, passive or opportunity attack) and is destroyed (removed) at 0 HP.");
+                $"Unit '{Id}': a structure never acts on its own ('{Behaviors.Inert}', no initiative, mobility, passive or opportunity attack, only skills reserved to the script that strike without moving it or setting anything up) and is destroyed (removed) at 0 HP.");
         Lure?.Validate(Id);
         // Un leurre est un gadget : posé par une compétence, il agit seul et disparaît à 0 PV.
         if (Lure is not null && (Behavior is null || OnDefeat != DefeatOutcome.Removed || BasicAttack is not null))

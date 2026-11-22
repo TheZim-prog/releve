@@ -1,0 +1,60 @@
+// Essai des scripts de mission : un décor qui s'effondre et un vilain qui file, comme à la fin du scripté de la première
+// mission du prologue. Sous le verrou, le caïd fait tomber une façade sur des civils (zone chargée affichée au sol) ; le
+// colosse doit poser son dôme sur eux pendant que le caïd quitte le combat. La façade tombée, le verrou est levé : les
+// civils fuient, et il reste les sbires à finir (le caïd n'est pas leur chef : ils restent).
+{
+  "id": "scripts-collapse",
+  "name": "Script : effondrement et fuite",
+  "seed": 205,
+  "mapId": "street",
+  "units": [
+    { "hero": "prologue-colossus", "team": 0, "x": 4, "y": 2, "tag": "colossus" },
+    { "hero": "prologue-speedster", "team": 0, "x": 2, "y": 4 },
+    { "hero": "prologue-fighter", "team": 0, "x": 3, "y": 5 },
+    { "hero": "prologue-tech", "team": 0, "x": 1, "y": 3 },
+
+    { "unit": "unstable-facade", "team": 2, "x": 7, "y": 2, "tag": "facade" },
+    { "unit": "civilian", "team": 2, "x": 6, "y": 1 },
+    { "unit": "civilian", "team": 2, "x": 7, "y": 1 },
+    { "unit": "civilian", "team": 2, "x": 8, "y": 1 },
+
+    { "unit": "kingpin", "team": 1, "x": 12, "y": 2, "tag": "kingpin" },
+    { "unit": "brawler", "team": 1, "x": 10, "y": 4 },
+    { "unit": "brawler", "team": 1, "x": 11, "y": 5 },
+    { "unit": "gunner", "team": 1, "x": 15, "y": 3 }
+  ],
+  "script": [
+    {
+      "id": "briefing",
+      "do": [
+        { "lock": true },
+        { "speaker": "Tech", "say": "Le caïd est acculé. Attention aux civils sous la façade.", "freeze": true }
+      ]
+    },
+    {
+      "id": "collapse",
+      "when": { "after": "briefing" },
+      "do": [ { "speaker": "Le caïd", "say": "Occupez-vous plutôt d'eux !",
+                "act": [ { "unit": "facade", "skill": "collapse", "cell": { "x": 7, "y": 1 } } ] } ]
+    },
+    {
+      "id": "dome",
+      "when": { "after": "collapse" },
+      "do": [ { "say": "La façade va tomber : la zone est au sol. Colosse : ton dôme sur les civils, en (7, 1) !",
+                "impose": [ { "unit": "colossus", "skill": "dome", "cell": { "x": 7, "y": 1 } } ] } ]
+    },
+    {
+      "id": "escape",
+      "when": { "after": "dome" },
+      "do": [ { "speaker": "Le caïd", "say": "On se reverra !", "leave": ["kingpin"] } ]
+    },
+    {
+      "id": "free",
+      "when": { "after": "escape", "unitDown": "facade" },
+      "do": [
+        { "lock": false },
+        { "speaker": "Tech", "say": "Les civils sont saufs, mais il a filé. Occupez-vous de ses hommes !", "freeze": true }
+      ]
+    }
+  ]
+}

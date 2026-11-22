@@ -65,7 +65,8 @@ commandés par le jeu, pas des héros) doivent rester debout ; une seule à terr
 comment elles réagissent : `"behavior": "basic"` pour qu'elles se défendent, `"behavior": "cautious"` pour qu'elles
 reculent loin des ennemis quand on les attaque (sans jamais frapper). Les ennemis les visent en priorité quand ils
 peuvent les frapper. Pour protéger un **lieu**, on protège une structure : un type d'unité avec `"isStructure": true`
-(comportement `inert`, initiative et mobilité à 0, ni compétence ni attaque d'opportunité, retirée à 0 PV). Elle ne
+(comportement `inert`, initiative et mobilité à 0, ni attaque d'opportunité ni compétence sauf celles réservées au
+script, retirée à 0 PV). Elle ne
 bouge pas, ne subit pas d'états, ne se répare pas ; personne ne traverse sa case, mais on voit par-dessus.
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
@@ -136,6 +137,21 @@ allié qui n'agit **que** sur ordre, donner `"behavior": "scripted"` à son entr
 marqué n'est pas jouable, et il ne suffit pas à éviter la défaite si tous les autres tombent (`behavior` remplace le
 comportement de n'importe quelle unité, renforts compris, s'il convient à son type). Une compétence marquée `"scriptOnly": true` (comme le Tir traître du caïd)
 n'est jamais choisie par l'IA d'elle-même. Exemple jouable : « Script : allié et coups scénarisés ».
+
+**Faire partir une unité** : un effet `"leave"` fait quitter le combat aux unités du jeu repérées (pas aux héros),
+aussitôt, comme un fuyard qui atteint le bord : enfuies, pas vaincues (elles ne comptent plus pour une élimination, et
+un chef qui part ainsi entraîne ses sbires) ; `say` y est une réplique dite juste avant :
+`{ "speaker": "Le caïd", "say": "On se reverra !", "leave": ["kingpin"] }`.
+
+**Faire s'effondrer le décor** : une structure peut porter des compétences réservées au script (`"scriptOnly": true`,
+dans `skills/scenery.json`), qu'elle n'utilise que sur un ordre `"act"`. La Façade instable (`unstable-facade`) a
+l'Effondrement : une zone chargée qui touche tout le monde, affichée au sol, bloquée par un dôme. Elle ne sert qu'une
+fois (`"maxActivations": 1`) puis disparaît, ce qu'un déclencheur `unitDown` peut attendre pour passer à la suite.
+Une telle compétence frappe sans déplacer la structure ni rien poser (le jeu refuse au lancement un mouvement, une
+invocation, un dôme…). Attention : si l'ordre échoue (case visée hors de portée ou de vue après une retouche de la
+carte), la structure ne tombe pas, et un verrou levé par sa chute ne le serait jamais ; les tests des scénarios
+d'essai le vérifient (aucun ordre du script ne doit échouer).
+Exemple jouable : « Script : effondrement et fuite » (le dôme du colosse sauve les civils pendant que le caïd file).
 
 **Verrouiller le combat** (tutoriel) : un effet `{ "lock": true }`, seul dans son effet, met le verrou ;
 `{ "lock": false }` le lève. Sous le verrou, le temps s'écoule (les jauges se remplissent), mais personne n'agit hors

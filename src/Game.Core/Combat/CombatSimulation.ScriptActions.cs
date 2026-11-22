@@ -46,6 +46,24 @@ public sealed partial class CombatSimulation
     }
 
     /// <summary>
+    /// Ces unités quittent aussitôt le combat, après la réplique éventuelle : retirées, enfuies et non vaincues (comme un
+    /// fuyard qui atteint le bord ; un chef qui part ainsi entraîne ses sbires). Absente ou déjà hors de combat :
+    /// <see cref="ScriptedActionFailed"/>, et le script continue.
+    /// </summary>
+    private void Leave(IReadOnlyList<string> tags, string? speaker, string? say)
+    {
+        if (say is not null)
+            Show(speaker, say, freezes: false);
+        foreach (var tag in tags)
+        {
+            if (Tagged(tag) is { Status: UnitStatus.Active } unit)
+                Escape(unit);
+            else
+                _events.Add(new ScriptedActionFailed(CurrentTick, tag, Tagged(tag)?.Id));
+        }
+    }
+
+    /// <summary>
     /// Une activation valide qui fait l'action, ou <c>null</c> s'il n'y en a aucune : sur place d'abord, puis depuis
     /// chaque case atteignable (dans l'ordre du calcul des chemins, déterministe) quand le déplacement est libre.
     /// <paramref name="scriptOrder"/> : un ordre du script, sans attendre la jauge ni la recharge.
