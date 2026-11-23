@@ -361,6 +361,9 @@ public class CampaignSessionTests
         Assert.Equal(24, alice.Last<LobbyState>().Campaign!.Hour);
         alice.Say(new ChooseQuest("q"));
         Assert.Equal(new RequestRefused(RequestRefusal.UnknownQuest), alice.Received[^1]);
+        // Rien au panneau : elle attend une demi-journée.
+        alice.Say(new WaitHalfDay());
+        Assert.Equal(36, CampaignStore.Load(campaign.File).Players.Single().Hour);
         // Le héros a reçu l'XP de la quête (20, ou 10 si elle est perdue), et le pot ses matériaux si elle est gagnée.
         var over = alice.Last<CombatOver>();
         var hero = Assert.Single(saved.Heroes);

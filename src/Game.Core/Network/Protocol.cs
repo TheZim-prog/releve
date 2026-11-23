@@ -59,6 +59,7 @@ public static class Protocol
 [JsonDerivedType(typeof(EquipHero), "equipHero")]
 [JsonDerivedType(typeof(TravelTo), "travelTo")]
 [JsonDerivedType(typeof(ResolveEvent), "resolveEvent")]
+[JsonDerivedType(typeof(WaitHalfDay), "waitHalfDay")]
 public abstract record ClientMessage;
 
 /// <summary>
@@ -109,6 +110,12 @@ public sealed record TravelTo(string Place) : ClientMessage;
 /// <see cref="EventInfo.Options"/>, ou passer son chemin (<c>null</c>).
 /// </summary>
 public sealed record ResolveEvent(int? Option) : ClientMessage;
+
+/// <summary>
+/// Au QG : le joueur attend une demi-journée (sa date avance, ses héros se reposent), par exemple quand son panneau est
+/// vide (cf. docs/design.md 4.7).
+/// </summary>
+public sealed record WaitHalfDay : ClientMessage;
 
 // --- Serveur → client ---
 

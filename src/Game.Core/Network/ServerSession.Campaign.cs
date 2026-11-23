@@ -89,6 +89,20 @@ public sealed partial class ServerSession
         BroadcastLobby();
     }
 
+    /// <summary>Le joueur attend une demi-journée au QG : sa date avance, ses héros vivants se reposent.</summary>
+    private void WaitFor(Player player)
+    {
+        if (!InCampaignLobby(player))
+            return;
+        if (_content.Heroes?.Rules is not { } rules)
+        {
+            player.Peer!.Send(new RequestRefused(RequestRefusal.NoCampaign));
+            return;
+        }
+        SaveOrTell(player, state => Calendar.PassTime(state, player.Uid, Calendar.HalfDay, Array.Empty<string>(), rules));
+        BroadcastLobby();
+    }
+
     /// <summary>Le joueur part avec l'un de ses héros vivants, ou reste au QG.</summary>
     private void DeployFor(Player player, string? heroId)
     {

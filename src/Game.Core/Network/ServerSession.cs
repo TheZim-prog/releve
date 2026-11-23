@@ -107,6 +107,9 @@ public sealed partial class ServerSession
             case ResolveEvent resolve:
                 ResolveFor(player, resolve.Option);
                 break;
+            case WaitHalfDay:
+                WaitFor(player);
+                break;
         }
     }
 

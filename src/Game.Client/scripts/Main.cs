@@ -233,6 +233,7 @@ public partial class Main : Node
         hq.QuestChosen += quest => _client?.Send(new ChooseQuest(quest));
         hq.HeroDeployed += hero => _client?.Send(new DeployHero(hero));
         hq.StartPressed += () => _client?.Send(new StartCombatRequest());
+        hq.WaitPressed += () => _client?.Send(new WaitHalfDay());
         hq.AcademyPressed += ShowAcademy;
         hq.AcademyAvailable = _content.Heroes is not null;
         hq.LeavePressed += () => ShowMenu();

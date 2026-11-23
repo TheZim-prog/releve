@@ -38,6 +38,7 @@ public partial class HqScreen : Control
     public event Action<string?>? QuestChosen;
     public event Action<string?>? HeroDeployed;
     public event Action? StartPressed;
+    public event Action? WaitPressed;
     public event Action? AcademyPressed;
     public event Action? LeavePressed;
 
@@ -69,6 +70,7 @@ public partial class HqScreen : Control
 
         _start = Ui.Button("Lancer la quête", () => StartPressed?.Invoke(), 48);
         column.AddChild(_start);
+        column.AddChild(Ui.Button("Attendre une demi-journée (tes héros se reposent)", () => WaitPressed?.Invoke(), 36));
         if (AcademyAvailable)
             column.AddChild(Ui.Button("Académie (créer tes héros)", () => AcademyPressed?.Invoke(), 36));
         column.AddChild(Ui.Button("Quitter le QG", () => LeavePressed?.Invoke(), 36));
