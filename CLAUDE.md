@@ -85,10 +85,10 @@ On construit la campagne avant de finir le prologue (dont les missions passent p
    - 5a ✅ **Cœur** (`Game.Core/World`, `data/world/`) : carte, événements (scène à choix, test du meilleur héros), trajet (`Travel`), gravité par crochet (`GravityStep` : renforts, civils perdus, compte à rebours), bonus de quête (`QuestModifiers` : jauge, armure, stats).
    - 5b ✅ **Serveur** (`ServerSession.Travel.cs`) : la phase de trajet entre le lancement d'une quête et son combat (`TravelTo`, `ResolveEvent`), décidée par le joueur qui a choisi la quête ; tirages à graine ; trajet gardé dans la sauvegarde et repris au redémarrage.
    - 5c ✅ **Client** (`MapScreen`, `WorldMapView`) : l'écran du trajet (carte, événement, choix), entre le QG et le combat.
-6. **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur (`docs/design.md` 4.3 et 4.7).
+6. ✅ **Quêtes en parallèle** en réseau, calendrier propre à chaque joueur (`docs/design.md` 4.3 et 4.7).
    - 6a ✅ **Calendrier** (`Calendar`) : date de chaque joueur, durée et jour de parution des quêtes en données, panneau propre à chacun (une quête jouée le quitte), départ à la date la plus avancée du groupe, repos en jours. L'échéance du chapitre viendra avec le chapitre 1.
-   - 6b **Groupes en parallèle** (serveur) : un joueur accepte une quête (le chef), d'autres le rejoignent ; plusieurs groupes en route ou en combat en même temps ; une quête acceptée est prise ; le chef qui part dissout le groupe.
-   - 6c **Client** : groupes au QG, et chaque groupe voit son trajet et son combat.
+   - 6b ✅ **Groupes en parallèle** (`ServerSession.Groups.cs`, `ServerSession.Combat.cs`) : un joueur accepte une quête (le chef), d'autres le rejoignent ; plusieurs groupes en route ou en combat en même temps, chacun son combat et sa pause ; une quête acceptée est prise ; le chef qui part dissout le groupe ; les trajets sauvegardés reforment leurs groupes.
+   - 6c ✅ **Client** (`GroupPanel`) : groupes au QG (accepter, rejoindre, quitter, lancer), et chaque groupe voit son trajet et son combat.
 
 Ensuite : la mission 2 du prologue (`docs/design.md` 6.2) et la fin du prologue.
 

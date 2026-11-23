@@ -6,9 +6,9 @@ using Godot;
 namespace Game.Client;
 
 /// <summary>
-/// Le QG d'une partie avec campagne (affichage minimal, à polir plus tard) : la réputation du groupe, le panneau de
-/// quêtes (n'importe qui choisit celle du groupe), le héros que chacun déploie (ou reste au QG), l'académie, et le
-/// lancement de la quête.
+/// Le QG d'une partie avec campagne (affichage minimal, à polir plus tard) : ta date, la réputation du groupe, les
+/// groupes et le panneau de quêtes (<see cref="GroupPanel"/>), le héros que tu déploies, les joueurs, l'attente,
+/// l'académie.
 /// </summary>
 public partial class HqScreen : Control
 {
@@ -16,11 +16,9 @@ public partial class HqScreen : Control
     private readonly int _me;
     private readonly string _hostInfo;
     private Label _campaign = null!;
-    private VBoxContainer _board = null!;
-    private Label _quest = null!;
+    private GroupPanel _groups = null!;
     private VBoxContainer _heroes = null!;
-    private Label _group = null!;
-    private Button _start = null!;
+    private Label _players = null!;
     private Label _status = null!;
 
     public HqScreen(GameContent content, int me, string hostInfo)
@@ -35,7 +33,9 @@ public partial class HqScreen : Control
     {
     }
 
-    public event Action<string?>? QuestChosen;
+    public event Action<string>? QuestAccepted;
+    public event Action<int>? GroupJoined;
+    public event Action? GroupLeft;
     public event Action<string?>? HeroDeployed;
     public event Action? StartPressed;
     public event Action? WaitPressed;
@@ -47,32 +47,30 @@ public partial class HqScreen : Control
 
     public override void _Ready()
     {
-        var column = Ui.CenteredColumn(this, 620);
+        var column = Ui.CenteredColumn(this, 680, scrolling: true);
         column.AddChild(Ui.Text("QG", 32, HorizontalAlignment.Center));
         if (_hostInfo.Length > 0)
             column.AddChild(Ui.Text(_hostInfo, 14, HorizontalAlignment.Center));
         _campaign = Ui.Text("", 16, HorizontalAlignment.Center);
         column.AddChild(_campaign);
 
-        column.AddChild(Ui.Text("Panneau de quêtes", 20));
-        _board = new VBoxContainer();
-        _board.AddThemeConstantOverride("separation", 6);
-        column.AddChild(_board);
-        _quest = Ui.Text("", 15);
-        column.AddChild(_quest);
+        _groups = new GroupPanel(_content, _me);
+        _groups.QuestAccepted += quest => QuestAccepted?.Invoke(quest);
+        _groups.GroupJoined += group => GroupJoined?.Invoke(group);
+        _groups.GroupLeft += () => GroupLeft?.Invoke();
+        _groups.StartPressed += () => StartPressed?.Invoke();
+        column.AddChild(_groups);
 
         column.AddChild(Ui.Text("Ton héros pour la quête", 20));
         _heroes = new VBoxContainer();
         _heroes.AddThemeConstantOverride("separation", 6);
         column.AddChild(_heroes);
-        _group = Ui.Text("", 15);
-        column.AddChild(_group);
+        _players = Ui.Text("", 15);
+        column.AddChild(_players);
 
-        _start = Ui.Button("Lancer la quête", () => StartPressed?.Invoke(), 48);
-        column.AddChild(_start);
         column.AddChild(Ui.Button("Attendre une demi-journée (tes héros se reposent)", () => WaitPressed?.Invoke(), 36));
         if (AcademyAvailable)
-            column.AddChild(Ui.Button("Académie (créer tes héros)", () => AcademyPressed?.Invoke(), 36));
+            column.AddChild(Ui.Button("Académie (créer et entraîner tes héros)", () => AcademyPressed?.Invoke(), 36));
         column.AddChild(Ui.Button("Quitter le QG", () => LeavePressed?.Invoke(), 36));
         _status = Ui.Text("", 15, HorizontalAlignment.Center);
         column.AddChild(_status);
@@ -93,37 +91,8 @@ public partial class HqScreen : Control
                          + (campaign.LastQuest is { } last ? $"\n{CampaignTexts.LastQuest(last)}" : "")
                          + (campaign.LastEvent is { } road ? $"\nEn route : {TripTexts.Outcome(_content, road)}" : "")
                          + (CampaignTexts.Memorial(campaign.Heroes) is { Length: > 0 } memorial ? $"\n{memorial}" : "");
-        RefreshBoard(campaign);
+        _groups.Refresh(lobby, campaign);
         RefreshHeroes(lobby, campaign);
-
-        var going = lobby.Players.Count(p => p.Deployed is not null);
-        _start.Disabled = campaign.ChosenQuest is null || going == 0;
-        _start.Text = campaign.ChosenQuest is null ? "Lancer la quête (choisissez-en une)"
-            : going == 0 ? "Lancer la quête (personne ne part)"
-            : $"Lancer la quête ({going} héros)";
-    }
-
-    private void RefreshBoard(CampaignInfo campaign)
-    {
-        foreach (var child in _board.GetChildren())
-            child.QueueFree();
-        foreach (var quest in campaign.Board)
-        {
-            var chosen = quest.Id == campaign.ChosenQuest;
-            var id = quest.Id;
-            var button = Ui.Button($"{quest.Name}  —  {Difficulty(quest.Difficulty)}, {CampaignTexts.Duration(quest.DurationHours)}, {quest.Xp} XP{Materials(quest)}",
-                () => QuestChosen?.Invoke(chosen ? null : id), 38);
-            if (chosen)
-                button.Modulate = Ui.Taken;
-            _board.AddChild(button);
-        }
-        _quest.Text = campaign.Board.FirstOrDefault(q => q.Id == campaign.ChosenQuest) is { } picked
-            ? $"{picked.Description} (jusqu'à {picked.Slots} héros)"
-            // Choisie par un joueur plus avancé : elle n'est pas encore à ce panneau-ci (partir y fera sauter).
-            : campaign.ChosenQuest is { } other && _content.Quests.TryGetValue(other, out var ahead)
-                ? $"Quête choisie : {ahead.Name} (pas encore parue à ta date : partir t'y fera sauter). {ahead.Description}"
-            : campaign.Board.Count == 0 ? "Aucune quête au panneau pour l'instant."
-            : "Aucune quête choisie : n'importe qui peut en choisir une.";
     }
 
     private void RefreshHeroes(LobbyState lobby, CampaignInfo campaign)
@@ -145,17 +114,11 @@ public partial class HqScreen : Control
             _heroes.AddChild(button);
         }
 
-        var names = campaign.Heroes.ToDictionary(h => h.Id, h => h.Name);
-        _group.Text = "Le groupe : " + string.Join(", ", lobby.Players.Select(p =>
-            p.Name + (p.Id == _me ? " (toi)" : "") + $" ({CampaignTexts.Date(p.Hour)})"
-            + (p.Deployed is { } heroId ? $" avec {names.GetValueOrDefault(heroId, heroId)}" : " — reste au QG")
-            + (p.Connected ? "" : " — déconnecté")));
+        _players.Text = "Les joueurs : " + string.Join(", ", lobby.Players.Select(p =>
+            p.Name + (p.Id == _me ? " (toi)" : "") + $" ({CampaignTexts.Date(p.Hour)})" + (p.Connected ? "" : " — déconnecté")));
     }
 
     private string ArchetypeName(string archetype) => _content.Units.TryGetValue(archetype, out var unit) ? unit.Name : archetype;
-
-    private static string Materials(QuestInfo quest) =>
-        quest.Materials.Values.Sum() is var total and > 0 ? $", {total} matériaux" : "";
 
     public static string Difficulty(QuestDifficulty difficulty) => difficulty switch
     {

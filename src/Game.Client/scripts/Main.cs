@@ -230,7 +230,9 @@ public partial class Main : Node
             return;
         }
         var hq = new HqScreen(_content, me, HostInfo());
-        hq.QuestChosen += quest => _client?.Send(new ChooseQuest(quest));
+        hq.QuestAccepted += quest => _client?.Send(new AcceptQuest(quest));
+        hq.GroupJoined += group => _client?.Send(new JoinGroup(group));
+        hq.GroupLeft += () => _client?.Send(new LeaveGroup());
         hq.HeroDeployed += hero => _client?.Send(new DeployHero(hero));
         hq.StartPressed += () => _client?.Send(new StartCombatRequest());
         hq.WaitPressed += () => _client?.Send(new WaitHalfDay());

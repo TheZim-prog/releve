@@ -34,7 +34,8 @@ public static class CampaignStore
         if (state.Format != CampaignState.CurrentFormat)
             throw new InvalidDataException($"Campaign save '{path}' has format {state.Format}; this game reads format {CampaignState.CurrentFormat}.");
         if (state.Players is null || state.Heroes is null || state.Materials is null
-            || state.DoneQuests is null || state.KnownPois is null || state.ExhaustedPois is null
+            || state.DoneQuests is null || state.KnownPois is null || state.ExhaustedPois is null || state.Trips is null
+            || state.Trips.Any(t => t?.Quest is null || t.Heroes is null || t.Path is null)
             || state.Players.Any(p => p is null || !PlayerIdentity.IsValid(p.Uid) || p.Name is null)
             || state.Heroes.Any(h => h?.Id is null || h.Name is null || h.Owner is null || h.Sheet?.Archetype is null
                                      || h.Sheet.Learned is null || h.Sheet.Equipped is null))
@@ -45,7 +46,8 @@ public static class CampaignStore
     /// <summary>
     /// Une sauvegarde d'un format plus ancien, mise au format courant, d'étape en étape. Format 1 → 2 : les chutes d'un
     /// héros (« falls ») deviennent des demi-chutes (« halfFalls »). Format 2 → 3 : le repos se compte en heures, et non
-    /// plus en quêtes (« questsRested » est oublié : chacun repart de zéro).
+    /// plus en quêtes (« questsRested » est oublié : chacun repart de zéro). Format 3 → 4 : le trajet en cours (« trip »,
+    /// peut-être vide) devient le premier des trajets des groupes (« trips »).
     /// </summary>
     private static JsonNode Migrated(JsonNode json)
     {
@@ -67,6 +69,12 @@ public static class CampaignStore
             foreach (var hero in heroes)
                 hero.Remove("questsRested");
             save["format"] = 3;
+        }
+        if (save["format"]?.GetValue<int>() == 3)
+        {
+            if (save.Remove("trip", out var trip) && trip is not null)
+                save["trips"] = new JsonArray(trip);
+            save["format"] = 4;
         }
         return save;
     }

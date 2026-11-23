@@ -143,7 +143,8 @@ public sealed class NetworkCombat : ICombatSession
     {
         get
         {
-            var away = _players.Where(p => !p.Connected).Select(p => p.Name).ToList();
+            // Seulement ceux de ce combat : au QG, d'autres groupes ont leurs propres absents.
+            var away = _players.Where(p => !p.Connected && Mirror.Launch.Heroes.Any(h => h.Player == p.Id)).Select(p => p.Name).ToList();
             if (_pausedBy is { } by)
                 return $"PAUSE ({NameOf(by)})";
             return away.Count > 0 ? $"En attente de {string.Join(", ", away)}" : "PAUSE";

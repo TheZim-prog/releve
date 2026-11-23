@@ -52,7 +52,9 @@ public static class Protocol
 [JsonDerivedType(typeof(SendCommand), "command")]
 [JsonDerivedType(typeof(SetPause), "pause")]
 [JsonDerivedType(typeof(RecruitHero), "recruit")]
-[JsonDerivedType(typeof(ChooseQuest), "chooseQuest")]
+[JsonDerivedType(typeof(AcceptQuest), "acceptQuest")]
+[JsonDerivedType(typeof(JoinGroup), "joinGroup")]
+[JsonDerivedType(typeof(LeaveGroup), "leaveGroup")]
 [JsonDerivedType(typeof(DeployHero), "deployHero")]
 [JsonDerivedType(typeof(SpendStatPoint), "spendStatPoint")]
 [JsonDerivedType(typeof(LearnSkill), "learnSkill")]
@@ -75,7 +77,10 @@ public sealed record JoinRequest(string Name, string PlayerUid, int ProtocolVers
 /// <summary>Au salon : choisir un héros, ou le laisser (<c>null</c>).</summary>
 public sealed record PickHero(UnitId? Unit) : ClientMessage;
 
-/// <summary>Au salon : lancer le combat (chaque joueur doit avoir choisi un héros).</summary>
+/// <summary>
+/// Au salon : lancer le combat (chaque joueur doit avoir choisi un héros). Au QG : le chef lance la quête de son groupe
+/// (chacun de ses joueurs doit y déployer un héros).
+/// </summary>
 public sealed record StartCombatRequest : ClientMessage;
 
 /// <summary>En combat : une commande pour son héros (ou une unité qu'il domine).</summary>
@@ -87,8 +92,17 @@ public sealed record SetPause(bool Paused) : ClientMessage;
 /// <summary>Au salon, avec une campagne : recruter un héros à l'académie (cf. <see cref="Campaign.Academy"/>).</summary>
 public sealed record RecruitHero(Campaign.Recruit Recruit) : ClientMessage;
 
-/// <summary>Au QG (salon d'une campagne) : choisir la quête que le groupe va jouer (n'importe quel joueur), ou aucune.</summary>
-public sealed record ChooseQuest(string? QuestId) : ClientMessage;
+/// <summary>
+/// Au QG (salon d'une campagne) : accepter une quête de son panneau ; le joueur devient le chef d'un nouveau groupe (il
+/// lance, et valide en route), que d'autres peuvent rejoindre (cf. docs/design.md 4.3). La quête est alors prise.
+/// </summary>
+public sealed record AcceptQuest(string QuestId) : ClientMessage;
+
+/// <summary>Au QG : rejoindre ce groupe, tant qu'il n'est pas parti et qu'il reste de la place.</summary>
+public sealed record JoinGroup(int GroupId) : ClientMessage;
+
+/// <summary>Au QG : quitter son groupe avant le départ ; si c'est le chef, le groupe se dissout et la quête revient au panneau.</summary>
+public sealed record LeaveGroup : ClientMessage;
 
 /// <summary>Au QG : partir en quête avec l'un de ses héros vivants, ou rester au QG (<c>null</c>).</summary>
 public sealed record DeployHero(string? HeroId) : ClientMessage;
@@ -180,9 +194,9 @@ public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Her
 public sealed record LobbyState(string ScenarioId, IReadOnlyList<PlayerInfo> Players, CampaignInfo? Campaign = null) : ServerMessage;
 
 /// <summary>
-/// Ce que le QG montre de la campagne : la réputation du groupe et son palier, le résultat de la dernière quête
-/// (<c>null</c> avant la première depuis le lancement du serveur), les héros des joueurs (vus par le destinataire :
-/// <see cref="HeroInfo.Mine"/> marque les siens), le panneau de quêtes et celle qui est choisie, et le pot commun.
+/// Ce que le QG montre de la campagne, vu par son destinataire : la réputation et son palier, sa dernière quête
+/// (<c>null</c> avant la première depuis le lancement du serveur), les héros des joueurs (<see cref="HeroInfo.Mine"/>
+/// marque les siens), son panneau de quêtes, les groupes formés et le sien, et le pot commun.
 /// </summary>
 public sealed record CampaignInfo
 {
@@ -194,7 +208,11 @@ public sealed record CampaignInfo
     public QuestResult? LastQuest { get; init; }
     public IReadOnlyList<HeroInfo> Heroes { get; init; } = Array.Empty<HeroInfo>();
     public IReadOnlyList<QuestInfo> Board { get; init; } = Array.Empty<QuestInfo>();
-    public string? ChosenQuest { get; init; }
+    /// <summary>Les groupes : ceux qui se forment au QG, et ceux qui sont en route ou en combat.</summary>
+    public IReadOnlyList<GroupInfo> Groups { get; init; } = Array.Empty<GroupInfo>();
+
+    /// <summary>Le groupe du destinataire, ou <c>null</c>.</summary>
+    public int? MyGroup { get; init; }
     public IReadOnlyDictionary<string, int> Materials { get; init; } = new Dictionary<string, int>();
 
     /// <summary>Les points d'intérêt de la carte découverts, et ceux déjà visités (épuisés).</summary>
@@ -202,7 +220,7 @@ public sealed record CampaignInfo
 
     public IReadOnlyList<string> ExhaustedPois { get; init; } = Array.Empty<string>();
 
-    /// <summary>Le trajet en cours vers la quête lancée, ou <c>null</c> (au QG, ou en combat).</summary>
+    /// <summary>Le trajet de son groupe, ou <c>null</c> (au QG, ou en combat).</summary>
     public TripInfo? Trip { get; init; }
 
     /// <summary>
@@ -287,8 +305,20 @@ public enum RequestRefusal
     /// <summary>Quête inconnue du panneau.</summary>
     UnknownQuest,
 
-    /// <summary>Lancement impossible : aucune quête choisie.</summary>
-    NoQuestChosen,
+    /// <summary>Le joueur n'est dans aucun groupe (pour le quitter, ou lancer sa quête).</summary>
+    NotInGroup,
+
+    /// <summary>Le joueur est déjà dans un groupe : il doit d'abord le quitter.</summary>
+    AlreadyInGroup,
+
+    /// <summary>Ce groupe n'existe pas, ou il est déjà parti.</summary>
+    UnknownGroup,
+
+    /// <summary>Seul le chef du groupe (celui qui a accepté la quête) la lance.</summary>
+    NotTheLeader,
+
+    /// <summary>Un autre groupe a déjà accepté cette quête.</summary>
+    QuestTaken,
 
     /// <summary>Ce héros n'est pas à ce joueur (ou n'existe pas).</summary>
     NotYourHero,
@@ -296,10 +326,7 @@ public enum RequestRefusal
     /// <summary>Ce héros ne peut pas partir (mort).</summary>
     HeroUnavailable,
 
-    /// <summary>Lancement impossible : personne ne part en quête.</summary>
-    NoHeroDeployed,
-
-    /// <summary>Lancement impossible : plus de héros que la quête n'en accueille.</summary>
+    /// <summary>Plus de héros que la quête n'en accueille (le groupe est complet).</summary>
     TooManyHeroes,
 
     /// <summary>Aucun trajet en cours.</summary>

@@ -7,7 +7,7 @@ namespace Game.Core.World;
 /// <summary>
 /// Un trajet vers une quête (docs/design.md 4) : le lieu où se trouve le groupe, le chemin parcouru, les crochets faits
 /// (la gravité de la mission), le bonus gagné pour la quête, et l'événement du point d'intérêt où il vient d'arriver,
-/// en attente d'un choix. Gardé dans la sauvegarde (cf. <see cref="CampaignState.Trip"/>) avec les héros partis, le
+/// en attente d'un choix. Gardé dans la sauvegarde (cf. <see cref="CampaignState.Trips"/>) avec les héros partis, le
 /// joueur qui décide et l'état du hasard de ses tests : un trajet interrompu reprend là où il en était.
 /// </summary>
 public sealed record Trip
@@ -116,7 +116,9 @@ public static class Travel
             PendingEvent = poi && !state.ExhaustedPois.Contains(node.Id) ? node.Event : null,
         };
         var known = poi && !state.KnownPois.Contains(node.Id) ? state with { KnownPois = state.KnownPois.Append(node.Id).ToList() } : state;
-        return (Discover(known, map, node.Id), next);
+        // Visité, il est épuisé dès l'arrivée : un autre groupe en route n'y trouvera plus rien, même avant ce choix-ci.
+        var visited = next.PendingEvent is not null ? Exhausted(known, node.Id) : known;
+        return (Discover(visited, map, node.Id), next);
     }
 
     /// <summary>
@@ -175,7 +177,7 @@ public static class Travel
     /// <summary>
     /// Résout l'événement en attente : l'option <paramref name="option"/> (son rang parmi <see cref="Options"/>), ou
     /// <c>null</c> pour passer son chemin. Un test réussit si <paramref name="roll"/> (de 0 à 99, tiré par le serveur) est
-    /// sous la chance du meilleur héros. Le point d'intérêt est alors épuisé, et les effets appliqués : à la campagne
+    /// sous la chance du meilleur héros. Le point d'intérêt (épuisé dès l'arrivée) l'est en tout cas, et les effets appliqués : à la campagne
     /// (matériaux, réputation dans ses bornes, chutes) et au trajet (bonus de quête). <c>null</c> si rien n'attend ou si
     /// l'option n'existe pas.
     /// </summary>
@@ -188,7 +190,7 @@ public static class Travel
         ArgumentNullException.ThrowIfNull(context);
         if (trip.PendingEvent != worldEvent.Id)
             return null;
-        var exhausted = state with { ExhaustedPois = state.ExhaustedPois.Append(trip.Current).ToList() };
+        var exhausted = Exhausted(state, trip.Current);
         var done = trip with { PendingEvent = null };
         if (option is not { } index)
             return (exhausted, done, new EventOutcome(worldEvent.Id, null, null, null, EventEffects.None));
@@ -224,6 +226,10 @@ public static class Travel
         var reputation = context.Reputation is { } scale ? scale.Clamp(state.Reputation + effects.Reputation) : state.Reputation;
         return Injuries.Hurt(state with { Materials = materials, Reputation = reputation }, hurt, effects.HalfFalls, context.Progression);
     }
+
+    /// <summary>Ce point d'intérêt est épuisé (une fois : un trajet d'avant ce changement l'épuise en résolvant son événement).</summary>
+    private static CampaignState Exhausted(CampaignState state, string poi) =>
+        state.ExhaustedPois.Contains(poi) ? state : state with { ExhaustedPois = state.ExhaustedPois.Append(poi).ToList() };
 
     /// <summary>Les points d'intérêt voisins de ce lieu deviennent connus.</summary>
     private static CampaignState Discover(CampaignState state, WorldMap map, string at)

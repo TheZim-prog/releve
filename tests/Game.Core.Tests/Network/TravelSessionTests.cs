@@ -53,13 +53,18 @@ public class TravelSessionTests
     private static long SeedWhere(bool success) =>
         Enumerable.Range(0, 1000).First(s => new DeterministicRandom((ulong)s).NextInt(0, 99) < 50 == success);
 
-    /// <summary>Alice (qui choisit la quête et déploie son héros) et Bob (resté au QG) ; Alice lance : le trajet commence.</summary>
-    private static (ServerSession Session, FakeClient Alice, FakeClient Bob) OnTheRoad(TempCampaign campaign, long seed = 0)
+    /// <summary>
+    /// Alice accepte la quête (elle est chef de son groupe) et déploie son héros ; Bob reste au QG, ou la rejoint avec
+    /// le sien (<paramref name="bobJoins"/>) ; Alice lance : le trajet commence.
+    /// </summary>
+    private static (ServerSession Session, FakeClient Alice, FakeClient Bob) OnTheRoad(TempCampaign campaign, long seed = 0, bool bobJoins = false)
     {
         var session = campaign.Session(WorldContent(), new Fixed(seed));
         var alice = Joined(session, "Alice");
         var bob = Joined(session, "Bob");
         RecruitAndDeploy(alice);
+        if (bobJoins)
+            RecruitAndJoin(bob, group: 1);
         alice.Say(new StartCombatRequest());
         return (session, alice, bob);
     }
@@ -72,7 +77,7 @@ public class TravelSessionTests
     public void LaunchingAQuest_StartsTheTrip_DecidedByTheOneWhoChoseIt()
     {
         using var campaign = new TempCampaign();
-        var (session, alice, bob) = OnTheRoad(campaign);
+        var (session, alice, bob) = OnTheRoad(campaign, bobJoins: true);
 
         Assert.Null(session.Simulation);
         var trip = Trip(bob);
@@ -86,17 +91,19 @@ public class TravelSessionTests
     }
 
     [Fact]
-    public void DuringTheTrip_TheHqWaits()
+    public void DuringTheTrip_ItsPlayersAreAway_WhileTheOthersStillUseTheHq()
     {
         using var campaign = new TempCampaign();
         var (_, alice, bob) = OnTheRoad(campaign);
 
         alice.Say(new DeployHero(null));
         Assert.Equal(new RequestRefused(RequestRefusal.NotInLobby), alice.Received[^1]);
-        bob.Say(new StartCombatRequest());
-        Assert.Equal(new RequestRefused(RequestRefusal.NotInLobby), bob.Received[^1]);
         bob.Say(new RecruitHero(Rookie));
-        Assert.Equal(new RequestRefused(RequestRefusal.NotInLobby), bob.Received[^1]);
+        Assert.Single(bob.Last<LobbyState>().Campaign!.Heroes, h => h.Mine);
+        Assert.Null(bob.Last<LobbyState>().Campaign!.Trip); // pas son trajet
+        Assert.Equal(GroupPhase.Travelling, Assert.Single(bob.Last<LobbyState>().Campaign!.Groups).Phase);
+        bob.Say(new TravelTo("street"));
+        Assert.Equal(new RequestRefused(RequestRefusal.NotTravelling), bob.Received[^1]);
     }
 
     [Fact]
@@ -179,10 +186,10 @@ public class TravelSessionTests
     }
 
     [Fact]
-    public void WhenTheValidatorLeaves_AnotherPlayerDecides_UntilTheyComeBack()
+    public void WhenTheValidatorLeaves_AnotherPlayerOfTheGroupDecides_UntilTheyComeBack()
     {
         using var campaign = new TempCampaign();
-        var (session, alice, bob) = OnTheRoad(campaign);
+        var (session, alice, bob) = OnTheRoad(campaign, bobJoins: true);
 
         session.Disconnect(alice);
         Assert.Equal(2, Trip(bob).Validator); // Alice garde sa place, Bob décide
@@ -208,7 +215,7 @@ public class TravelSessionTests
         CampaignStore.Save(saved with { Heroes = saved.Heroes.Select(h => h with { HalfFalls = 5 }).ToList() }, campaign.File);
         var session = campaign.Session(WorldContent());
         var alice = Joined(session, "Alice");
-        alice.Say(new ChooseQuest("q"));
+        alice.Say(new AcceptQuest("q"));
         alice.Say(new DeployHero(hero));
         alice.Say(new StartCombatRequest());
         alice.Say(new TravelTo("poi"));
@@ -217,9 +224,11 @@ public class TravelSessionTests
 
         var after = CampaignStore.Load(campaign.File);
         Assert.True(after.Heroes.Single().IsDead);
-        Assert.Null(after.Trip);
+        Assert.Empty(after.Trips);
         var lobby = alice.Last<LobbyState>();
         Assert.Null(lobby.Campaign!.Trip);
+        Assert.Empty(lobby.Campaign.Groups); // le groupe est rentré, la quête revient au panneau
+        Assert.Single(lobby.Campaign.Board);
         Assert.Equal("S'échauffer", lobby.Campaign.LastEvent!.Option); // ce qui l'a tué reste affiché
         Assert.Null(lobby.Players.Single().Deployed);
         Assert.Null(session.Simulation);
@@ -245,23 +254,24 @@ public class TravelSessionTests
         alice.Say(new ResolveEvent(null));
         alice.Say(new TravelTo("street"));
         Assert.Equal(1, alice.Last<CombatState>().Launch.GravityLevel);
-        Assert.Null(CampaignStore.Load(campaign.File).Trip); // arrivé, le trajet n'est plus dans la sauvegarde
+        Assert.Empty(CampaignStore.Load(campaign.File).Trips); // arrivé, le trajet n'est plus dans la sauvegarde
     }
 
     [Fact]
     public void AHeroWhosePlayerIsAway_IsPlayedByTheAi_OnArrival()
     {
         using var campaign = new TempCampaign();
-        OnTheRoad(campaign);
+        OnTheRoad(campaign, bobJoins: true);
 
         // Le serveur redémarre, et seul Bob revient : c'est lui qui décide, et le héros d'Alice part quand même.
         var session = campaign.Session(WorldContent());
         var bob = Joined(session, "Bob");
+        Assert.Equal("hero-2", bob.Last<LobbyState>().Players.Single().Deployed); // il retrouve le sien
         bob.Say(new TravelTo("street"));
 
         var launch = bob.Last<CombatState>().Launch;
-        Assert.Single(launch.Deployed!);
-        Assert.Empty(launch.Heroes); // personne ne le joue : l'IA
+        Assert.Equal(2, launch.Deployed!.Count);
+        Assert.Single(launch.Heroes); // celui d'Alice, personne ne le joue : l'IA
         Assert.False(session.IsPaused);
     }
 
@@ -271,11 +281,11 @@ public class TravelSessionTests
         using var campaign = new TempCampaign();
         OnTheRoad(campaign);
         var saved = CampaignStore.Load(campaign.File);
-        CampaignStore.Save(saved with { Trip = saved.Trip! with { Current = "gone" } }, campaign.File);
+        CampaignStore.Save(saved.WithTrip("q", saved.TripTo("q")! with { Current = "gone" }), campaign.File);
 
         var session = campaign.Session(WorldContent());
 
-        Assert.Null(CampaignStore.Load(campaign.File).Trip);
+        Assert.Empty(CampaignStore.Load(campaign.File).Trips);
         Assert.Null(Joined(session, "Alice").Last<LobbyState>().Campaign!.Trip);
     }
 }

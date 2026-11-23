@@ -3,86 +3,91 @@ using Game.Core.World;
 
 namespace Game.Core.Network;
 
-// Le trajet d'une quête (docs/design.md 4) : entre son lancement au QG et son combat, le groupe va de lieu en lieu sur la
-// carte du monde. Le joueur qui a choisi la quête valide les pas et les choix des événements (4.2b) ; s'il n'est pas là,
-// le premier joueur connecté le remplace, pour que le groupe ne reste jamais bloqué. Le trajet est dans la sauvegarde :
-// un serveur qui redémarre le reprend là où il en était, et chaque joueur y retrouve son héros parti.
+// Le trajet d'une quête (docs/design.md 4) : entre son lancement au QG et son combat, chaque groupe va de lieu en lieu
+// sur la carte du monde. Son chef valide les pas et les choix des événements (4.2b) ; s'il n'est pas là, le premier
+// joueur connecté du groupe le remplace, pour que le groupe ne reste jamais bloqué. Les trajets sont dans la
+// sauvegarde : un serveur qui redémarre reforme leurs groupes, et chaque joueur y retrouve son héros parti.
 public sealed partial class ServerSession
 {
-    /// <summary>L'identifiant du joueur qui a choisi la quête, ou <c>null</c>.</summary>
-    private string? _questChooser;
-
-    /// <summary>Ce qu'a donné le dernier événement du trajet (montré au QG jusqu'au trajet suivant), ou <c>null</c>.</summary>
-    private EventOutcome? _lastEvent;
-
-    private Trip? CurrentTrip => _campaign?.State.Trip;
-
-    /// <summary>Un trajet ou un combat est en cours : le QG attend, et un joueur qui part garde sa place.</summary>
-    private bool InProgress => Simulation is not null || CurrentTrip is not null;
-
-    private Player? Validator =>
-        _players.Find(p => p.Uid == CurrentTrip?.Chooser && p.Peer is not null) ?? _players.Find(p => p.Peer is not null);
+    /// <summary>Ce qu'a donné le dernier événement du trajet de chaque joueur (montré jusqu'à son pas suivant), par identifiant.</summary>
+    private readonly Dictionary<string, EventOutcome> _lastEvents = new();
 
     /// <summary>La quête se rejoint par la carte : il y a une carte, et la quête y a son lieu.</summary>
     private bool HasRoute(QuestDefinition quest) => _content.World is not null && _content.WorldRules is not null && quest.Site is not null;
 
+    /// <summary>Le joueur qui décide en route : le chef s'il est là, sinon le premier joueur connecté du groupe.</summary>
+    private Player? ValidatorOf(Party party) =>
+        _players.Find(p => p.Uid == party.Leader && p.Peer is not null)
+        ?? party.Members.Select(uid => _players.Find(p => p.Uid == uid && p.Peer is not null)).FirstOrDefault(p => p is not null);
+
     /// <summary>
-    /// Au lancement du serveur, le trajet de la sauvegarde reprend ; s'il ne peut plus continuer (les données ont changé :
-    /// quête, lieu ou événement disparus, lieu de la mission plus joignable), il est abandonné.
+    /// Au lancement du serveur, chaque trajet de la sauvegarde reforme son groupe (son chef, et les joueurs de ses
+    /// héros) ; un trajet qui ne peut plus continuer (les données ont changé : quête, lieu ou événement disparus, lieu de
+    /// la mission plus joignable) est abandonné.
     /// </summary>
-    private void ResumeTrip()
+    private void ResumeTrips()
     {
-        if (CurrentTrip is not { } trip)
+        if (_campaign is null)
             return;
-        var quest = _content.Quests.GetValueOrDefault(trip.Quest);
-        var usable = quest is not null && HasRoute(quest) && quest.Site == trip.Site && _content.World!.Node(trip.Current) is not null
-                     && (trip.PendingEvent is { } e ? _content.Events.ContainsKey(e) : Travel.Moves(_content.World, trip).Count > 0);
-        if (usable)
-            _questId = trip.Quest;
-        else
-            _campaign!.Update(state => state with { Trip = null });
+        foreach (var trip in _campaign.State.Trips)
+        {
+            var quest = _content.Quests.GetValueOrDefault(trip.Quest);
+            var usable = quest is not null && HasRoute(quest) && quest.Site == trip.Site && _content.World!.Node(trip.Current) is not null
+                         && (trip.PendingEvent is { } e ? _content.Events.ContainsKey(e) : Travel.Moves(_content.World, trip).Count > 0)
+                         && trip.Heroes.All(id => _campaign.State.Heroes.Any(h => h.Id == id));
+            if (!usable)
+            {
+                _campaign.Update(state => state.WithTrip(trip.Quest, null));
+                continue;
+            }
+            var owners = OwnersOf(trip.Heroes.Select(id => _campaign.State.Heroes.First(h => h.Id == id)));
+            var party = new Party(_nextPartyId++, quest!, trip.Chooser ?? owners[0]);
+            party.Members.AddRange(owners.Where(uid => uid != party.Leader));
+            _parties.Add(party);
+        }
     }
 
     /// <summary>
-    /// Le groupe quitte le QG vers le lieu de la quête, à la date la plus avancée de ses joueurs (les voisins du QG sont
+    /// Le groupe quitte le QG vers le lieu de sa quête, à la date la plus avancée de ses joueurs (les voisins du QG sont
     /// découverts) ; le trajet est sauvegardé.
     /// </summary>
-    private void Depart(Player player, QuestDefinition quest, IReadOnlyList<CampaignHero> heroes)
+    private void Depart(Player leader, Party party, IReadOnlyList<CampaignHero> heroes)
     {
+        var quest = party.Quest;
         var (state, trip) = Travel.Start(Leaving(_campaign!.State, quest, heroes), _content.World!, quest.Id, quest.Site!);
         trip = trip with
         {
             Heroes = heroes.Select(h => h.Id).ToList(),
-            Chooser = _questChooser ?? player.Uid,
+            Chooser = party.Leader,
             RandomState = (ulong)_random.NextInt64(),
         };
-        SaveOrTell(player, _ => state with { Trip = trip });
-        _lastEvent = null;
+        SaveOrTell(leader, _ => state.WithTrip(quest.Id, trip));
+        ForgetRoadNews(party);
         BroadcastLobby();
     }
 
     private void TravelFor(Player player, string? place)
     {
-        if (!OnTheRoad(player, out var trip))
+        if (!OnTheRoad(player, out var party, out var trip))
             return;
         if (place is null || Travel.Move(_campaign!.State, _content.World!, trip, place) is not { } moved)
         {
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotAMove));
             return;
         }
-        // Arrivé, le trajet s'efface de la sauvegarde : quoi qu'il arrive au lancement du combat, le QG ne reste pas bloqué.
+        // Arrivé, le trajet s'efface de la sauvegarde : quoi qu'il arrive au lancement du combat, rien ne reste bloqué.
         var arrived = moved.Trip.Arrived;
-        SaveOrTell(player, _ => moved.State with { Trip = arrived ? null : moved.Trip });
-        _lastEvent = null;
+        SaveOrTell(player, _ => moved.State.WithTrip(party.Quest.Id, arrived ? null : moved.Trip));
+        ForgetRoadNews(party);
         if (arrived)
-            Arrive(moved.Trip);
+            Arrive(party, moved.Trip);
         else
             BroadcastLobby();
     }
 
     private void ResolveFor(Player player, int? option)
     {
-        if (!OnTheRoad(player, out var trip))
+        if (!OnTheRoad(player, out var party, out var trip))
             return;
         var worldEvent = trip.PendingEvent is { } id ? _content.Events.GetValueOrDefault(id) : null;
         var travellers = Travellers(trip);
@@ -96,37 +101,41 @@ public sealed partial class ServerSession
             player.Peer!.Send(new RequestRefused(RequestRefusal.UnknownOption));
             return;
         }
-        // Tous les héros sont morts en route : il n'y a plus personne pour la quête, le trajet s'arrête.
+        // Tous les héros sont morts en route : il n'y a plus personne pour la quête, le trajet s'arrête (cf. 4.2b).
         var anyoneLeft = trip.Heroes.Any(h => resolved.State.Heroes.Any(c => c.Id == h && !c.IsDead));
-        SaveOrTell(player, _ => resolved.State with { Trip = anyoneLeft ? resolved.Trip with { RandomState = random.State } : null });
-        _lastEvent = resolved.Outcome;
+        SaveOrTell(player, _ => resolved.State.WithTrip(party.Quest.Id, anyoneLeft ? resolved.Trip with { RandomState = random.State } : null));
+        foreach (var uid in party.Members)
+            _lastEvents[uid] = resolved.Outcome;
         UndeployTheDead();
         if (!anyoneLeft)
-            ForgetTheAbsent();
+            Disband(party);
         BroadcastLobby();
     }
 
-    /// <summary>Le joueur peut décider sur la route : un trajet est en cours, et c'est lui qui valide.</summary>
-    private bool OnTheRoad(Player player, out Trip trip)
+    /// <summary>Le joueur peut décider sur la route : son groupe est en route, et c'est lui qui valide.</summary>
+    private bool OnTheRoad(Player player, out Party party, out Trip trip)
     {
-        trip = CurrentTrip!;
-        if (CurrentTrip is null)
+        party = PartyOf(player.Uid)!;
+        trip = party is null ? null! : _campaign?.State.TripTo(party.Quest.Id)!;
+        if (party is null || trip is null)
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotTravelling));
-        else if (Validator != player)
+        else if (ValidatorOf(party) != player)
             player.Peer!.Send(new RequestRefused(RequestRefusal.NotTheValidator));
-        return CurrentTrip is not null && Validator == player;
+        return party is not null && trip is not null && ValidatorOf(party) == player;
     }
 
     /// <summary>
     /// Arrivé au lieu de la quête : le combat se lance avec les héros encore en vie (ceux dont le joueur n'est pas là
     /// sont joués par l'IA), la gravité des crochets (celle de la quête, sinon la règle de son objectif principal) et le
-    /// bonus gagné en route. S'il ne peut pas se lancer, tout le monde sait pourquoi, et le groupe rentre.
+    /// bonus gagné en route. S'il ne peut pas se lancer, tout le groupe sait pourquoi, et rentre.
     /// </summary>
-    private void Arrive(Trip trip)
+    private void Arrive(Party party, Trip trip)
     {
         UndeployTheDead();
-        var heroes = trip.Heroes.Select(id => _campaign!.State.Heroes.First(h => h.Id == id)).Where(h => !h.IsDead).ToList();
-        if (ChosenQuest is { } quest && heroes.Count > 0)
+        var quest = party.Quest;
+        var travelled = trip.Heroes.Select(id => _campaign!.State.Heroes.First(h => h.Id == id)).ToList();
+        var heroes = travelled.Where(h => !h.IsDead).ToList();
+        if (heroes.Count > 0)
         {
             var objectives = _content.Scenarios[quest.Scenario].Objectives ?? Objectives.ObjectiveDefinition.Default;
             var launch = LaunchOf(quest, heroes) with
@@ -135,36 +144,36 @@ public sealed partial class ServerSession
                 GravityLevel = trip.Gravity,
                 Modifiers = trip.Modifiers,
             };
-            if (Build(launch, reason => Broadcast(new RequestRefused(reason))) is { } setup)
+            var members = _players.Where(p => party.Members.Contains(p.Uid)).ToList();
+            if (Build(launch, reason => members.ForEach(p => p.Peer?.Send(new RequestRefused(reason)))) is { } setup)
             {
                 // Les joueurs de tous les héros partis, même morts en route : ils ont fait le voyage.
-                var party = PartyOf(trip.Heroes.Select(id => _campaign!.State.Heroes.First(h => h.Id == id)));
-                LaunchQuest(quest, heroes, launch, setup, party);
+                LaunchQuest(party, heroes, launch, setup, OwnersOf(travelled));
                 return;
             }
         }
-        ForgetTheAbsent();
+        Disband(party);
         BroadcastLobby();
     }
 
-    /// <summary>Hors combat et hors trajet, les joueurs partis entre-temps quittent la partie (comme à la fin d'un combat).</summary>
-    private void ForgetTheAbsent()
+    /// <summary>Le groupe rentre sans avoir joué sa quête : il se dissout, et la quête revient au panneau.</summary>
+    private void Disband(Party party)
     {
-        if (!InProgress)
-            _players.RemoveAll(p => p.Peer is null);
+        _parties.Remove(party);
+        ForgetTheAbsent();
     }
 
-    /// <summary>Un héros mort en route ne part plus (son joueur reste au QG).</summary>
-    private void UndeployTheDead()
+    /// <summary>Le groupe repart : le dernier événement n'est plus d'actualité.</summary>
+    private void ForgetRoadNews(Party party)
     {
-        var dead = _campaign!.State.Heroes.Where(h => h.IsDead).Select(h => h.Id).ToHashSet();
-        foreach (var player in _players.Where(p => p.Deployed is { } hero && dead.Contains(hero)))
-            player.Deployed = null;
+        foreach (var uid in party.Members)
+            _lastEvents.Remove(uid);
     }
 
-    /// <summary>Le héros que ce joueur a sur le trajet en cours, ou <c>null</c>.</summary>
+    /// <summary>Le héros que ce joueur a sur un trajet en cours, ou <c>null</c>.</summary>
     private string? HeroOnTheRoad(string uid) =>
-        CurrentTrip?.Heroes.FirstOrDefault(id => _campaign!.State.Heroes.Any(h => h.Id == id && h.Owner == uid && !h.IsDead));
+        _campaign?.State.Trips.SelectMany(t => t.Heroes)
+            .FirstOrDefault(id => _campaign.State.Heroes.Any(h => h.Id == id && h.Owner == uid && !h.IsDead));
 
     /// <summary>Les héros vivants du trajet, tels que la route les voit (fiche de campagne, unité de combat).</summary>
     private IReadOnlyList<Traveller> Travellers(Trip trip) =>
@@ -177,16 +186,16 @@ public sealed partial class ServerSession
     private Travel.Context RouteContext() =>
         new(_content.Rules, _content.WorldRules!, _content.Heroes!.Rules, _content.Reputation?.Scale);
 
-    /// <summary>Le trajet en cours, tel que le QG le montre (les options possibles, avec le libellé de leur test).</summary>
-    private TripInfo? TripSummary()
+    /// <summary>Le trajet du groupe, tel que ses joueurs le voient (les options possibles, avec le libellé de leur test), ou <c>null</c>.</summary>
+    private TripInfo? TripSummary(Party party)
     {
-        if (CurrentTrip is not { } trip)
+        if (_campaign?.State.TripTo(party.Quest.Id) is not { } trip)
             return null;
         var travellers = Travellers(trip);
         EventInfo? pending = null;
         if (trip.PendingEvent is { } id && _content.Events.GetValueOrDefault(id) is { } worldEvent)
         {
-            var options = Travel.Options(worldEvent, travellers, _campaign!.State)
+            var options = Travel.Options(worldEvent, travellers, _campaign.State)
                 .Select(o => new OptionInfo(o.Label, o.Test is { } test && travellers.Count > 0
                     ? _content.WorldRules!.LabelOf(Travel.BestAt(test, travellers, _content.Rules, _content.WorldRules).Chance)
                     : null))
@@ -196,7 +205,7 @@ public sealed partial class ServerSession
         return new TripInfo
         {
             Quest = trip.Quest, Site = trip.Site, Current = trip.Current, Path = trip.Path, Gravity = trip.Gravity,
-            Modifiers = trip.Modifiers, Validator = Validator?.Id,
+            Modifiers = trip.Modifiers, Validator = ValidatorOf(party)?.Id,
             Moves = Travel.Moves(_content.World!, trip).Select(n => n.Id).ToList(),
             Event = pending,
         };

@@ -40,9 +40,11 @@ public class CampaignSessionTests
     /// <summary>
     /// Le contenu d'une campagne de test : l'archétype « hero » et son arbre (<see cref="ProgressionTestKit"/>), le combat
     /// de test à héros fixes, et la quête « q » (scénario « street »). Avec une carte (<paramref name="world"/>), la quête
-    /// se joue au lieu « street », avec sa propre gravité, et les règles de la carte sont celles du jeu.
+    /// se joue au lieu « street », avec sa propre gravité, et les règles de la carte sont celles du jeu. Avec
+    /// <paramref name="secondQuest"/>, une quête « q2 » de plus, sur le même scénario (pour deux groupes en même temps).
     /// </summary>
-    internal static GameContent CampaignContent(WorldMap? world = null, IReadOnlyDictionary<string, WorldEvent>? events = null)
+    internal static GameContent CampaignContent(WorldMap? world = null, IReadOnlyDictionary<string, WorldEvent>? events = null,
+        bool secondQuest = false)
     {
         var civilian = Unit(0, 2, 0, 0).Definition with
         {
@@ -57,6 +59,16 @@ public class CampaignSessionTests
         };
         var catalog = new HeroCatalog(ProgressionTestKit.Rules, units, ProgressionTestKit.Skills, new[] { ProgressionTestKit.Tree },
             Array.Empty<HeroSheet>());
+        var quest = new QuestDefinition
+        {
+            Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 20, DurationHours = 24,
+            Site = world is null ? null : "street",
+            // La sienne, pas celle des règles du jeu (dont les renforts n'existent pas ici) : un voyou par crochet.
+            Gravity = world is null ? null : new GravityStep { ExtraUnits = new[] { "thug" } },
+        };
+        var quests = new Dictionary<string, QuestDefinition> { ["q"] = quest };
+        if (secondQuest)
+            quests["q2"] = quest with { Id = "q2", Name = "Autre quête" };
         return new GameContent
         {
             Rules = Content.Rules,
@@ -66,16 +78,7 @@ public class CampaignSessionTests
             {
                 ["test"] = Content.Scenarios["test"], ["street"] = ScenarioDefinition.FromJson(QuestScenarioJson),
             },
-            Quests = new Dictionary<string, QuestDefinition>
-            {
-                ["q"] = new()
-                {
-                    Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 20, DurationHours = 24,
-                    Site = world is null ? null : "street",
-                    // La sienne, pas celle des règles du jeu (dont les renforts n'existent pas ici) : un voyou par crochet.
-                    Gravity = world is null ? null : new GravityStep { ExtraUnits = new[] { "thug" } },
-                },
-            },
+            Quests = quests,
             Reputation = ReputationRules,
             World = world,
             Events = events ?? new Dictionary<string, WorldEvent>(),
@@ -118,12 +121,22 @@ public class CampaignSessionTests
         return client;
     }
 
-    /// <summary>Le joueur recrute un héros, et le déploie pour la quête « q ».</summary>
-    internal static string RecruitAndDeploy(FakeClient client)
+    /// <summary>Le joueur recrute un héros, accepte la quête « q » (il est le chef de son groupe) et y déploie son héros.</summary>
+    internal static string RecruitAndDeploy(FakeClient client, string quest = "q")
     {
         client.Say(new RecruitHero(Rookie));
         var hero = client.Last<LobbyState>().Campaign!.Heroes.Last(h => h.Mine).Id;
-        client.Say(new ChooseQuest("q"));
+        client.Say(new AcceptQuest(quest));
+        client.Say(new DeployHero(hero));
+        return hero;
+    }
+
+    /// <summary>Le joueur recrute un héros, rejoint ce groupe et y déploie son héros.</summary>
+    internal static string RecruitAndJoin(FakeClient client, int group)
+    {
+        client.Say(new RecruitHero(Rookie));
+        var hero = client.Last<LobbyState>().Campaign!.Heroes.Last(h => h.Mine).Id;
+        client.Say(new JoinGroup(group));
         client.Say(new DeployHero(hero));
         return hero;
     }
@@ -189,12 +202,12 @@ public class CampaignSessionTests
 
         alice.Say(new RecruitHero(Rookie));
         Assert.Equal(new RequestRefused(RequestRefusal.NoCampaign), alice.Received[^1]);
-        alice.Say(new ChooseQuest("q"));
+        alice.Say(new AcceptQuest("q"));
         Assert.Equal(new RequestRefused(RequestRefusal.NoCampaign), alice.Received[^1]);
     }
 
     [Fact]
-    public void TheBoard_ListsTheQuests_AndAnyPlayerChoosesOne()
+    public void APlayerAcceptsAQuestOfTheBoard_FormingAGroup_AndTheQuestIsTaken()
     {
         using var campaign = new TempCampaign();
         var session = campaign.Session();
@@ -207,12 +220,20 @@ public class CampaignSessionTests
         {
             Materials = alice.Last<LobbyState>().Campaign!.Board.Single().Materials,
         }, alice.Last<LobbyState>().Campaign!.Board.Single());
-        bob.Say(new ChooseQuest("nope"));
+        bob.Say(new AcceptQuest("nope"));
         Assert.Equal(new RequestRefused(RequestRefusal.UnknownQuest), bob.Received[^1]);
-        bob.Say(new ChooseQuest("q"));
+        bob.Say(new AcceptQuest("q"));
 
-        Assert.Equal("q", alice.Last<LobbyState>().Campaign!.ChosenQuest);
-        Assert.Equal("street", alice.Last<LobbyState>().ScenarioId);
+        var seen = alice.Last<LobbyState>().Campaign!;
+        var group = Assert.Single(seen.Groups);
+        Assert.Equal((1, "q", "Bob", GroupPhase.Forming, 3), (group.Id, group.Quest, group.Leader, group.Phase, group.Slots));
+        Assert.Equal(new[] { "Bob" }, group.Members);
+        Assert.Empty(seen.Board); // prise
+        Assert.Null(seen.MyGroup);
+        Assert.Equal(1, bob.Last<LobbyState>().Campaign!.MyGroup);
+        Assert.Equal(("street", ""), (bob.Last<LobbyState>().ScenarioId, alice.Last<LobbyState>().ScenarioId));
+        alice.Say(new AcceptQuest("q"));
+        Assert.Equal(new RequestRefused(RequestRefusal.QuestTaken), alice.Received[^1]);
     }
 
     [Fact]
@@ -234,7 +255,7 @@ public class CampaignSessionTests
     }
 
     [Fact]
-    public void AQuest_NeedsAChoiceAndADeployedHero_BeforeLaunching()
+    public void AQuest_NeedsAGroupAndItsHeroes_BeforeLaunching()
     {
         using var campaign = new TempCampaign();
         var session = campaign.Session();
@@ -242,10 +263,10 @@ public class CampaignSessionTests
         alice.Join("Alice");
 
         alice.Say(new StartCombatRequest());
-        Assert.Equal(new RequestRefused(RequestRefusal.NoQuestChosen), alice.Received[^1]);
-        alice.Say(new ChooseQuest("q"));
+        Assert.Equal(new RequestRefused(RequestRefusal.NotInGroup), alice.Received[^1]);
+        alice.Say(new AcceptQuest("q"));
         alice.Say(new StartCombatRequest());
-        Assert.Equal(new RequestRefused(RequestRefusal.NoHeroDeployed), alice.Received[^1]);
+        Assert.Equal(new RequestRefused(RequestRefusal.HeroesMissing), alice.Received[^1]);
         Assert.Null(session.Simulation);
     }
 
@@ -259,10 +280,13 @@ public class CampaignSessionTests
         alice.Join("Alice");
         bob.Join("Bob"); // Bob reste au QG
         RecruitAndDeploy(alice);
-
         bob.Say(new StartCombatRequest());
+        Assert.Equal(new RequestRefused(RequestRefusal.NotInGroup), bob.Received[^1]);
 
-        var state = bob.Last<CombatState>();
+        alice.Say(new StartCombatRequest());
+
+        Assert.Empty(bob.Received.OfType<CombatState>()); // ce combat n'est pas le sien
+        var state = alice.Last<CombatState>();
         Assert.Equal("street", state.Launch.ScenarioId);
         var mirror = new CombatMirror(CampaignContent(), state);
         var rookie = mirror.Simulation.Get(3); // après le civil et le voyou du scénario
@@ -284,7 +308,7 @@ public class CampaignSessionTests
         }, campaign.File);
         var session = campaign.Session();
         var alice = Joined(session, "Alice");
-        alice.Say(new ChooseQuest("q"));
+        alice.Say(new AcceptQuest("q"));
         alice.Say(new DeployHero(hero));
 
         alice.Say(new StartCombatRequest());
@@ -321,7 +345,7 @@ public class CampaignSessionTests
         CampaignStore.Save(saved with { Heroes = saved.Heroes.Select(h => h with { HalfFalls = 4 }).ToList() }, campaign.File);
         var session = campaign.Session();
         var alice = Joined(session, "Alice");
-        alice.Say(new ChooseQuest("q"));
+        alice.Say(new AcceptQuest("q"));
         alice.Say(new DeployHero(hero));
 
         // Alice ne donne aucun ordre : son héros finit à terre (défaite).
@@ -357,9 +381,9 @@ public class CampaignSessionTests
         Assert.Equal(new CampaignPlayer(UidOf("Alice"), "Alice", 24), Assert.Single(saved.Players));
         Assert.Equal(new[] { "q" }, saved.DoneQuests);
         Assert.Empty(alice.Last<LobbyState>().Campaign!.Board);
-        Assert.Null(alice.Last<LobbyState>().Campaign!.ChosenQuest);
+        Assert.Empty(alice.Last<LobbyState>().Campaign!.Groups); // jouée : son groupe s'est dissous
         Assert.Equal(24, alice.Last<LobbyState>().Campaign!.Hour);
-        alice.Say(new ChooseQuest("q"));
+        alice.Say(new AcceptQuest("q"));
         Assert.Equal(new RequestRefused(RequestRefusal.UnknownQuest), alice.Received[^1]);
         // Rien au panneau : elle attend une demi-journée.
         alice.Say(new WaitHalfDay());

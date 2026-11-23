@@ -11,7 +11,7 @@ namespace Game.Core.Campaign;
 public sealed record CampaignState
 {
     /// <summary>Version du format de sauvegarde ; une sauvegarde d'un autre format est refusée.</summary>
-    public const int CurrentFormat = 3;
+    public const int CurrentFormat = 4;
 
     public int Format { get; init; } = CurrentFormat;
 
@@ -39,8 +39,18 @@ public sealed record CampaignState
     /// <summary>Les quêtes déjà jouées (gagnées ou perdues) : elles ont quitté le panneau de tout le monde (cf. 4.3).</summary>
     public IReadOnlyList<string> DoneQuests { get; init; } = Array.Empty<string>();
 
-    /// <summary>Le trajet en cours vers une quête, ou <c>null</c> : ce qu'il a déjà coûté est sauvegardé, lui aussi.</summary>
-    public World.Trip? Trip { get; init; }
+    /// <summary>
+    /// Les trajets en cours, un par groupe en route vers sa quête (cf. 4.3) : ce qu'ils ont déjà coûté est sauvegardé,
+    /// eux aussi.
+    /// </summary>
+    public IReadOnlyList<World.Trip> Trips { get; init; } = Array.Empty<World.Trip>();
+
+    /// <summary>Le trajet vers cette quête, ou <c>null</c>.</summary>
+    public World.Trip? TripTo(string quest) => Trips.FirstOrDefault(t => t.Quest == quest);
+
+    /// <summary>Le trajet vers sa quête mis à jour (ou commencé) ; sans trajet (<paramref name="trip"/> <c>null</c>), celui vers <paramref name="quest"/> s'efface.</summary>
+    public CampaignState WithTrip(string quest, World.Trip? trip) =>
+        this with { Trips = Trips.Where(t => t.Quest != quest).Concat(trip is null ? Array.Empty<World.Trip>() : new[] { trip }).ToList() };
 
     /// <summary>Une nouvelle campagne : personne encore, la réputation de départ, le prologue.</summary>
     public static CampaignState New(ReputationScale scale)

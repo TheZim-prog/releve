@@ -36,11 +36,14 @@ public static class Texts
         Game.Core.Network.RequestRefusal.UnknownOption => "Ce choix n'est plus possible.",
         Game.Core.Network.RequestRefusal.CampaignUnavailable => "La campagne n'a pas pu être sauvegardée (disque plein ?) : rien n'a changé.",
         Game.Core.Network.RequestRefusal.UnknownQuest => "Quête inconnue.",
-        Game.Core.Network.RequestRefusal.NoQuestChosen => "Choisissez d'abord une quête.",
+        Game.Core.Network.RequestRefusal.NotInGroup => "Tu n'es dans aucun groupe : accepte une quête ou rejoins un groupe.",
+        Game.Core.Network.RequestRefusal.AlreadyInGroup => "Tu es déjà dans un groupe : quitte-le d'abord.",
+        Game.Core.Network.RequestRefusal.UnknownGroup => "Ce groupe n'existe plus, ou il est déjà parti.",
+        Game.Core.Network.RequestRefusal.NotTheLeader => "Seul le chef du groupe lance la quête.",
+        Game.Core.Network.RequestRefusal.QuestTaken => "Un autre groupe a déjà accepté cette quête.",
         Game.Core.Network.RequestRefusal.NotYourHero => "Ce héros n'est pas à toi.",
         Game.Core.Network.RequestRefusal.HeroUnavailable => "Ce héros ne peut pas partir.",
-        Game.Core.Network.RequestRefusal.NoHeroDeployed => "Personne ne part : choisissez vos héros.",
-        Game.Core.Network.RequestRefusal.TooManyHeroes => "Trop de héros pour cette quête.",
+        Game.Core.Network.RequestRefusal.TooManyHeroes => "Ce groupe est complet : la quête n'accueille pas plus de héros.",
         _ => $"Refusé ({reason}).",
     };
 

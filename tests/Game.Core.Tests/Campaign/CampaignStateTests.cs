@@ -130,12 +130,34 @@ public class CampaignStateTests
                 { "format": 2, "players": [ { "uid": "uid-a", "name": "Alice", "hour": 0 } ],
                   "heroes": [ { "id": "hero-1", "name": "Rempart", "owner": "uid-a", "halfFalls": 3, "questsRested": 1,
                                 "sheet": { "id": "hero-1", "archetype": "colossus", "level": 1, "learned": [], "equipped": [] } } ],
-                  "materials": {}, "reputation": 0, "chapter": 0 }
+                  "materials": {}, "reputation": 0, "chapter": 0,
+                  "trip": { "quest": "q", "site": "s", "current": "hq", "path": [ "hq" ], "heroes": [ "hero-1" ] } }
                 """);
 
-            var hero = CampaignStore.Load(path).Heroes.Single();
+            var loaded = CampaignStore.Load(path);
 
-            Assert.Equal((3, 0), (hero.HalfFalls, hero.HoursRested));
+            Assert.Equal((3, 0), (loaded.Heroes.Single().HalfFalls, loaded.Heroes.Single().HoursRested));
+            Assert.Equal("q", Assert.Single(loaded.Trips).Quest); // le trajet devient celui d'un groupe
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void ASaveOfTheThirdFormat_WithoutATrip_IsConverted()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(path, """
+                { "format": 3, "players": [], "heroes": [], "materials": {}, "reputation": 0, "chapter": 0, "trip": null }
+                """);
+
+            var loaded = CampaignStore.Load(path);
+
+            Assert.Equal((CampaignState.CurrentFormat, 0), (loaded.Format, loaded.Trips.Count));
         }
         finally
         {

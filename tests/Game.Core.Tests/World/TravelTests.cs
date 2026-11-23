@@ -105,6 +105,20 @@ public class TravelTests
     }
 
     [Fact]
+    public void APointIsExhausted_AsSoonAsAGroupArrives_SoASecondGroupFindsNothing()
+    {
+        var (state, first) = StartAndMove(Party().State, "poi");
+        Assert.Equal("car", first.PendingEvent);
+        Assert.Equal(new[] { "poi" }, state.ExhaustedPois);
+
+        var (_, second) = StartAndMove(state, "poi"); // un autre groupe, avant que le premier ait choisi
+
+        Assert.Null(second.PendingEvent);
+        var (after, _, _) = Travel.Resolve(state, first, Car, option: null, roll: 0, Party().Travellers, Rules)!.Value;
+        Assert.Equal(new[] { "poi" }, after.ExhaustedPois); // une seule fois
+    }
+
+    [Fact]
     public void ATest_IsTriedByTheBestHero_AndSucceedsUnderTheChance()
     {
         var (state, travellers) = Party();

@@ -251,7 +251,7 @@ public partial class Main
             _devQuest = null; // un trajet repris est en cours : la quête demandée n'est pas lancée
             if (campaign.Trip is null)
             {
-                _client?.Send(new ChooseQuest(quest));
+                _client?.Send(new AcceptQuest(quest));
                 _client?.Send(new DeployHero(campaign.Heroes.FirstOrDefault(h => h.Mine && !h.IsDead)?.Id));
                 _client?.Send(new StartCombatRequest());
             }
