@@ -11,7 +11,7 @@ namespace Game.Core.Campaign;
 public sealed record CampaignState
 {
     /// <summary>Version du format de sauvegarde ; une sauvegarde d'un autre format est refusée.</summary>
-    public const int CurrentFormat = 2;
+    public const int CurrentFormat = 3;
 
     public int Format { get; init; } = CurrentFormat;
 
@@ -35,6 +35,9 @@ public sealed record CampaignState
 
     /// <summary>Les points d'intérêt déjà visités : épuisés, ils ne donnent plus rien (mais on peut y passer).</summary>
     public IReadOnlyList<string> ExhaustedPois { get; init; } = Array.Empty<string>();
+
+    /// <summary>Les quêtes déjà jouées (gagnées ou perdues) : elles ont quitté le panneau de tout le monde (cf. 4.3).</summary>
+    public IReadOnlyList<string> DoneQuests { get; init; } = Array.Empty<string>();
 
     /// <summary>Le trajet en cours vers une quête, ou <c>null</c> : ce qu'il a déjà coûté est sauvegardé, lui aussi.</summary>
     public World.Trip? Trip { get; init; }
@@ -81,7 +84,8 @@ public sealed record CampaignPlayer(string Uid, string Name, int Hour);
 /// <summary>
 /// Un héros de joueur : sa fiche (archétype, niveau, points, compétences, cf. 2.6 et 2.7), son expérience, ses chutes
 /// en demi-chutes (cf. 1.4 : une chute secourue par un coéquipier compte pour moitié ; trop de chutes, et il meurt
-/// vraiment), les quêtes que le groupe a terminées sans lui depuis sa dernière récupération (le repos), et s'il est mort.
+/// vraiment), les heures passées par son joueur sans qu'il parte depuis sa dernière récupération (le repos, cf. 4.7), et
+/// s'il est mort.
 /// </summary>
 public sealed record CampaignHero
 {
@@ -99,8 +103,8 @@ public sealed record CampaignHero
     /// <summary>Ses chutes non récupérées, en demi-chutes (une chute = 2, une chute secourue = 1).</summary>
     public int HalfFalls { get; init; }
 
-    /// <summary>Quêtes terminées par le groupe sans lui depuis sa dernière récupération de chute.</summary>
-    public int QuestsRested { get; init; }
+    /// <summary>Heures de repos (son joueur avance sans lui) depuis sa dernière récupération de chute, ou son dernier départ.</summary>
+    public int HoursRested { get; init; }
 
     public bool IsDead { get; init; }
 }

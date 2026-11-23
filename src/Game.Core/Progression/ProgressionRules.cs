@@ -41,8 +41,8 @@ public sealed record ProgressionRules
     /// <summary>Chutes (non récupérées) qui tuent un héros pour de bon (docs/design.md 1.4).</summary>
     public required int FallsBeforeDeath { get; init; }
 
-    /// <summary>Quêtes que le groupe termine sans un héros pour qu'il récupère une chute (le repos au QG).</summary>
-    public required int QuestsToRecoverFall { get; init; }
+    /// <summary>Jours passés par son joueur sans qu'un héros parte, pour qu'il récupère une chute (le repos au QG).</summary>
+    public required int DaysToRecoverFall { get; init; }
 
     /// <summary>Le niveau que donne cette XP totale (au plus le niveau maximum).</summary>
     public int LevelFor(int xp) => 1 + XpToReach.Count(needed => xp >= needed);
@@ -81,8 +81,8 @@ public sealed record ProgressionRules
         }
         if (DefeatXpPercent is < 0 or > 100)
             throw new ArgumentException("defeatXpPercent must be between 0 and 100.");
-        if (FallsBeforeDeath < 1 || QuestsToRecoverFall < 1)
-            throw new ArgumentException("fallsBeforeDeath and questsToRecoverFall must be at least 1.");
+        if (FallsBeforeDeath < 1 || DaysToRecoverFall < 1)
+            throw new ArgumentException("fallsBeforeDeath and daysToRecoverFall must be at least 1.");
         if (ActiveSlots is null || ActiveSlots.Count == 0 || ActiveSlots.Any(s => s is null) || ActiveSlots[0].FromLevel != 1)
             throw new ArgumentException("Active slots must be given from level 1.");
         for (var i = 0; i < ActiveSlots.Count; i++)

@@ -54,6 +54,17 @@ public static class CampaignTexts
         return passive is null ? id : $"{passive.Name} (passif{(passive.Planned ? ", à venir" : "")})";
     }
 
+    /// <summary>« jour 3, après-midi » : une date de la campagne (les quêtes durent des demi-journées).</summary>
+    public static string Date(int hour) =>
+        $"jour {Game.Core.Campaign.Calendar.DayOf(hour) + 1}, {(hour % Game.Core.Campaign.Calendar.HoursPerDay < Game.Core.Campaign.Calendar.HalfDay ? "matin" : "après-midi")}";
+
+    /// <summary>« 1,5 j » : une durée en heures, par demi-journées.</summary>
+    public static string Duration(int hours)
+    {
+        var halves = hours / Game.Core.Campaign.Calendar.HalfDay;
+        return halves % 2 == 0 ? $"{halves / 2} j" : $"{halves / 2},5 j";
+    }
+
     /// <summary>« Pot commun : 9 matériaux » (une sorte pour l'instant).</summary>
     public static string Pot(IReadOnlyDictionary<string, int> materials) =>
         $"Pot commun : {materials.Values.Sum()} matériaux";

@@ -70,7 +70,7 @@ public class CampaignSessionTests
             {
                 ["q"] = new()
                 {
-                    Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 20,
+                    Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 20, DurationHours = 24,
                     Site = world is null ? null : "street",
                     // La sienne, pas celle des règles du jeu (dont les renforts n'existent pas ici) : un voyou par crochet.
                     Gravity = world is null ? null : new GravityStep { ExtraUnits = new[] { "thug" } },
@@ -203,7 +203,7 @@ public class CampaignSessionTests
         alice.Join("Alice");
         bob.Join("Bob");
 
-        Assert.Equal(new QuestInfo("q", "Quête", "", QuestDifficulty.Easy, 20, new Dictionary<string, int>(), 3) with
+        Assert.Equal(new QuestInfo("q", "Quête", "", QuestDifficulty.Easy, 20, new Dictionary<string, int>(), 3, DurationHours: 24) with
         {
             Materials = alice.Last<LobbyState>().Campaign!.Board.Single().Materials,
         }, alice.Last<LobbyState>().Campaign!.Board.Single());
@@ -353,7 +353,14 @@ public class CampaignSessionTests
         Assert.Equal((2, "Neutres", (int?)2), Summary(alice));
         var saved = CampaignStore.Load(campaign.File);
         Assert.Equal(2, saved.Reputation);
-        Assert.Equal(new CampaignPlayer(UidOf("Alice"), "Alice", 0), Assert.Single(saved.Players));
+        // La quête a duré un jour pour Alice, et a quitté le panneau.
+        Assert.Equal(new CampaignPlayer(UidOf("Alice"), "Alice", 24), Assert.Single(saved.Players));
+        Assert.Equal(new[] { "q" }, saved.DoneQuests);
+        Assert.Empty(alice.Last<LobbyState>().Campaign!.Board);
+        Assert.Null(alice.Last<LobbyState>().Campaign!.ChosenQuest);
+        Assert.Equal(24, alice.Last<LobbyState>().Campaign!.Hour);
+        alice.Say(new ChooseQuest("q"));
+        Assert.Equal(new RequestRefused(RequestRefusal.UnknownQuest), alice.Received[^1]);
         // Le héros a reçu l'XP de la quête (20, ou 10 si elle est perdue), et le pot ses matériaux si elle est gagnée.
         var over = alice.Last<CombatOver>();
         var hero = Assert.Single(saved.Heroes);

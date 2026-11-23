@@ -421,7 +421,9 @@ public sealed partial class ServerSession
     /// </summary>
     private void BroadcastLobby()
     {
-        var players = _players.Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero, p.Deployed)).ToList();
+        var players = _players
+            .Select(p => new PlayerInfo(p.Id, p.Name, p.Peer is not null, p.Hero, p.Deployed, _campaign?.State.PlayerOf(p.Uid)?.Hour ?? 0))
+            .ToList();
         var scenario = IsCampaign ? ChosenQuest?.Scenario ?? "" : _scenarioId;
         foreach (var player in _players)
             player.Peer?.Send(new LobbyState(scenario, players, CampaignSummary(player.Uid)));

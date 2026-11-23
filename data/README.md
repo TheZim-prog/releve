@@ -92,7 +92,10 @@ toucher à la campagne.
 une par héros, dans l'ordre de leur déploiement ; prévoir cinq cases pour un groupe complet), rangé dans
 `scenarios/quests/`, puis une entrée dans un fichier de `quests/` : `id`, `name`, `description`, `scenario`,
 `difficulty` (`veryEasy`, `easy`, `hard`, `veryHard` : le libellé affiché), `xp` (reçue par chaque héros participant) et
-`materials` (versés au pot commun, ex. `{ "materials": 3 }`). Ces scénarios ne sont pas proposés en combat libre.
+`materials` (versés au pot commun, ex. `{ "materials": 3 }`), `durationHours` (sa durée, par demi-journées : 12, 24,
+36…) et `publishedDay` (le jour où elle paraît au panneau, 0 par défaut ; au moins une quête au jour 0). Un joueur voit
+au panneau les quêtes parues à sa date ; une quête jouée, gagnée ou perdue, le quitte pour tout le monde. Ces scénarios
+ne sont pas proposés en combat libre.
 
 **Régler l'XP et les niveaux** (`progression.json`) : `xpToReach` donne l'XP totale de chaque niveau, du 2e au dernier ;
 une quête gagnée donne son XP à chaque héros qui y est parti, et ses matériaux au pot commun ; perdue, seulement
@@ -111,7 +114,9 @@ rebours plus court) ; une quête peut le remplacer par sa propre `"gravity"`. Le
 
 **Régler les chutes** (`progression.json`) : chaque fois qu'un héros tombe à terre en quête, une chute (une demie si un
 coéquipier le secourt avant la fin : relevé, ou exfiltré). À `fallsBeforeDeath` chutes, il meurt pour de bon (il reste
-au mémorial du QG). Il en récupère une chaque fois que le groupe termine `questsToRecoverFall` quêtes sans lui.
+au mémorial du QG). Il en récupère une tous les `daysToRecoverFall` jours passés par son joueur sans qu'il parte en
+quête (chaque joueur a sa date, qu'une quête fait avancer de sa durée ; le groupe part à la date la plus avancée des
+siens).
 
 **Faire arriver des renforts** : une liste `"waves"` dans le scénario, par exemple
 `[ { "atMs": 20000, "units": [ { "unit": "brawler", "team": 1, "x": 17, "y": 3 } ] } ]`. Chaque vague arrive au

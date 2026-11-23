@@ -43,10 +43,13 @@ public sealed partial class ServerSession
             _campaign!.Update(state => state with { Trip = null });
     }
 
-    /// <summary>Le groupe quitte le QG vers le lieu de la quête (ses voisins sont découverts) ; le trajet est sauvegardé.</summary>
+    /// <summary>
+    /// Le groupe quitte le QG vers le lieu de la quête, à la date la plus avancée de ses joueurs (les voisins du QG sont
+    /// découverts) ; le trajet est sauvegardé.
+    /// </summary>
     private void Depart(Player player, QuestDefinition quest, IReadOnlyList<CampaignHero> heroes)
     {
-        var (state, trip) = Travel.Start(_campaign!.State, _content.World!, quest.Id, quest.Site!);
+        var (state, trip) = Travel.Start(Leaving(_campaign!.State, quest, heroes), _content.World!, quest.Id, quest.Site!);
         trip = trip with
         {
             Heroes = heroes.Select(h => h.Id).ToList(),
@@ -134,7 +137,9 @@ public sealed partial class ServerSession
             };
             if (Build(launch, reason => Broadcast(new RequestRefused(reason))) is { } setup)
             {
-                LaunchQuest(quest, heroes, launch, setup);
+                // Les joueurs de tous les héros partis, même morts en route : ils ont fait le voyage.
+                var party = PartyOf(trip.Heroes.Select(id => _campaign!.State.Heroes.First(h => h.Id == id)));
+                LaunchQuest(quest, heroes, launch, setup, party);
                 return;
             }
         }

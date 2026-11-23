@@ -14,9 +14,10 @@
 
   // Chutes (docs/design.md 1.4) : chaque fois qu'un héros tombe à terre en quête, une chute (une demie si un coéquipier
   // le secourt avant la fin : relevé, ou exfiltré). À ce nombre de chutes, il meurt pour de bon. Il en récupère une
-  // chaque fois que le groupe termine ce nombre de quêtes sans lui (le repos au QG ; viendront les jours et l'infirmerie).
+  // tous les "daysToRecoverFall" jours passés par son joueur sans qu'il parte en quête (le repos au QG ; viendra
+  // l'infirmerie). Partir en quête remet ce compte à zéro.
   "fallsBeforeDeath": 3,
-  "questsToRecoverFall": 2,
+  "daysToRecoverFall": 2,
 
   // Points de stats : un par niveau gagné (19 au niveau 20).
   "statPointsPerLevel": 1,

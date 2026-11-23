@@ -6,8 +6,7 @@ namespace Game.Core.Campaign;
 /// Les chutes des héros et leur mort différée (docs/design.md 1.4). Compté en demi-chutes : chaque fois qu'un héros
 /// tombe à terre en quête, une chute (2), une demie (1) si un coéquipier le secourt avant la fin (relevé, ou exfiltré
 /// par le Sauvetage éclair). À <see cref="ProgressionRules.FallsBeforeDeath"/> chutes, il meurt pour de bon. Le repos
-/// les efface lentement : un héros récupère une chute chaque fois que le groupe termine
-/// <see cref="ProgressionRules.QuestsToRecoverFall"/> quêtes sans lui (un repos sans chute à récupérer ne s'accumule pas).
+/// les efface lentement, au fil des jours (cf. <see cref="Calendar"/>).
 /// </summary>
 public static class Injuries
 {
@@ -31,7 +30,7 @@ public static class Injuries
 
     /// <summary>
     /// La campagne après une quête : ses héros (<paramref name="halfFallsByHero"/>, même sans chute) prennent leurs
-    /// chutes, et meurent s'ils en ont trop ; les autres héros vivants se reposent.
+    /// chutes, et meurent s'ils en ont trop ; partis, leur repos repart de zéro.
     /// </summary>
     public static CampaignState Apply(CampaignState state, IReadOnlyDictionary<string, int> halfFallsByHero, ProgressionRules rules)
     {
@@ -39,9 +38,7 @@ public static class Injuries
         ArgumentNullException.ThrowIfNull(halfFallsByHero);
         ArgumentNullException.ThrowIfNull(rules);
         var heroes = state.Heroes.Select(hero =>
-            hero.IsDead ? hero
-            : halfFallsByHero.TryGetValue(hero.Id, out var halves) ? Fallen(hero, halves, rules)
-            : Rested(hero, rules));
+            !hero.IsDead && halfFallsByHero.TryGetValue(hero.Id, out var halves) ? Fallen(hero, halves, rules) with { HoursRested = 0 } : hero);
         return state with { Heroes = heroes.ToList() };
     }
 
@@ -55,23 +52,13 @@ public static class Injuries
             return state;
         return state with
         {
-            Heroes = state.Heroes.Select(h => heroIds.Contains(h.Id) && !h.IsDead ? Fallen(h, halves, rules) with { QuestsRested = h.QuestsRested } : h).ToList(),
+            Heroes = state.Heroes.Select(h => heroIds.Contains(h.Id) && !h.IsDead ? Fallen(h, halves, rules) : h).ToList(),
         };
     }
 
     private static CampaignHero Fallen(CampaignHero hero, int halves, ProgressionRules rules)
     {
         var total = hero.HalfFalls + halves;
-        return hero with { HalfFalls = total, QuestsRested = 0, IsDead = total >= HalfFallsToDeath(rules) };
-    }
-
-    private static CampaignHero Rested(CampaignHero hero, ProgressionRules rules)
-    {
-        if (hero.HalfFalls == 0)
-            return hero with { QuestsRested = 0 };
-        var rested = hero.QuestsRested + 1;
-        return rested < rules.QuestsToRecoverFall
-            ? hero with { QuestsRested = rested }
-            : hero with { HalfFalls = Math.Max(0, hero.HalfFalls - HalvesPerFall), QuestsRested = 0 };
+        return hero with { HalfFalls = total, IsDead = total >= HalfFallsToDeath(rules) };
     }
 }

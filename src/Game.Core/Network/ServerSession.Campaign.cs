@@ -10,8 +10,11 @@ public sealed partial class ServerSession
 {
     private string? _questId;
 
-    /// <summary>La quête en cours et les héros de campagne qui y sont partis, ou <c>null</c>.</summary>
-    private (QuestDefinition Quest, IReadOnlyList<(string Hero, UnitId Unit)> Deployed)? _questInCombat;
+    /// <summary>
+    /// La quête en cours, ses héros de campagne en combat, et les joueurs partis (même ceux dont le héros est mort en
+    /// route : ils avancent de sa durée), ou <c>null</c>.
+    /// </summary>
+    private (QuestDefinition Quest, IReadOnlyList<(string Hero, UnitId Unit)> Deployed, IReadOnlyList<string> Party)? _questInCombat;
 
     /// <summary>Ce qu'a rapporté la dernière quête depuis le lancement du serveur, ou <c>null</c>.</summary>
     private QuestResult? _lastQuest;
@@ -75,7 +78,8 @@ public sealed partial class ServerSession
     {
         if (!InCampaignLobby(player))
             return;
-        if (questId is not null && !_content.Quests.ContainsKey(questId))
+        // Seulement une quête de son panneau : parue à sa date, pas encore jouée.
+        if (questId is not null && Calendar.Board(_campaign!.State, _content.Quests.Values, player.Uid).All(q => q.Id != questId))
         {
             player.Peer!.Send(new RequestRefused(RequestRefusal.UnknownQuest));
             return;
@@ -114,10 +118,23 @@ public sealed partial class ServerSession
         if (Build(launch, reason => player.Peer!.Send(new RequestRefused(reason))) is not { } setup)
             return;
         if (HasRoute(quest))
+        {
             Depart(player, quest, heroes);
-        else
-            LaunchQuest(quest, heroes, launch, setup);
+            return;
+        }
+        SaveOrTell(player, state => Leaving(state, quest, heroes));
+        LaunchQuest(quest, heroes, launch, setup, PartyOf(heroes));
     }
+
+    /// <summary>
+    /// Les joueurs de ces héros partent ensemble : chacun saute à la date la plus avancée d'entre eux, jamais avant la
+    /// parution de la quête (cf. 4.7).
+    /// </summary>
+    private CampaignState Leaving(CampaignState state, QuestDefinition quest, IReadOnlyList<CampaignHero> heroes) =>
+        _content.Heroes?.Rules is { } rules ? Calendar.Depart(state, PartyOf(heroes), quest, rules) : state;
+
+    /// <summary>Les joueurs de ces héros.</summary>
+    private static IReadOnlyList<string> PartyOf(IEnumerable<CampaignHero> heroes) => heroes.Select(h => h.Owner).Distinct().ToList();
 
     /// <summary>Le combat de ce lancement, ou <c>null</c> si les données ne permettent plus un héros (dit à <paramref name="tell"/>).</summary>
     private CombatSetup? Build(CombatLaunch launch, Action<RequestRefusal> tell)
@@ -134,12 +151,13 @@ public sealed partial class ServerSession
     }
 
     /// <summary>Le combat de la quête commence (au départ du QG, ou à l'arrivée au bout du trajet).</summary>
-    private void LaunchQuest(QuestDefinition quest, IReadOnlyList<CampaignHero> heroes, CombatLaunch launch, CombatSetup setup)
+    private void LaunchQuest(QuestDefinition quest, IReadOnlyList<CampaignHero> heroes, CombatLaunch launch, CombatSetup setup,
+        IReadOnlyList<string> party)
     {
         foreach (var assignment in launch.Heroes)
             _players.Single(p => p.Id == assignment.Player).Hero = assignment.Unit;
         var scenario = _content.Scenarios[quest.Scenario];
-        _questInCombat = (quest, heroes.Select((h, i) => (h.Id, scenario.DeployedUnitId(i))).ToList());
+        _questInCombat = (quest, heroes.Select((h, i) => (h.Id, scenario.DeployedUnitId(i))).ToList(), party);
         _lastEvent = null; // ce que la route a donné n'appartient plus qu'à la quête d'avant
         Launch(launch, setup);
         // Un joueur parti en route garde sa place : le combat l'attend.
@@ -222,14 +240,15 @@ public sealed partial class ServerSession
 
     /// <summary>
     /// La quête terminée laisse à la campagne, en une sauvegarde : son bilan de réputation (s'il y a des règles), l'XP et
-    /// les niveaux de ses héros, ses matériaux au pot si elle est gagnée, puis les chutes de ses héros (et leur mort) et
-    /// le repos des autres. Un héros mort n'est plus déployé.
+    /// les niveaux de ses héros, ses matériaux au pot si elle est gagnée, puis les chutes de ses héros (et leur mort) ;
+    /// ses joueurs avancent de sa durée (leurs autres héros se reposent), et elle quitte le panneau de tout le monde. Un
+    /// héros mort n'est plus déployé.
     /// </summary>
     private void RecordInCampaign(CombatSimulation simulation)
     {
         if (_campaign is null || _questInCombat is not { } inCombat || simulation.Outcome is not { } victory)
             return;
-        var (quest, deployed) = inCombat;
+        var (quest, deployed, party) = inCombat;
         var heroIds = deployed.Select(d => d.Hero).ToList();
         var halfFalls = deployed.ToDictionary(d => d.Hero,
             d => simulation.FindUnit(d.Unit) is { } unit ? Injuries.HalfFallsOf(unit.Falls, unit.RescuedFalls) : 0);
@@ -240,10 +259,14 @@ public sealed partial class ServerSession
         {
             if (report is not null)
                 state = state.WithMissionReport(report, _content.Reputation!.Scale);
-            return progression is null
-                ? state
-                : Injuries.Apply(QuestRewards.Grant(state, quest, heroIds, victory, progression), halfFalls, progression);
+            state = state with { DoneQuests = state.DoneQuests.Append(quest.Id).ToList() };
+            if (progression is null)
+                return state;
+            state = Injuries.Apply(QuestRewards.Grant(state, quest, heroIds, victory, progression), halfFalls, progression);
+            return Calendar.Return(state, party, quest.DurationHours, heroIds, progression);
         });
+        if (_questId == quest.Id)
+            _questId = null; // jouée : elle n'est plus au panneau
         // Seulement une fois sauvegardé : le QG ne doit pas annoncer des récompenses qui n'ont pas été versées.
         var deaths = _campaign.State.Heroes.Where(h => h.IsDead && alive.Contains(h.Id)).ToList();
         _lastQuest = new QuestResult(quest.Name, victory, report?.Total ?? 0,
@@ -275,14 +298,14 @@ public sealed partial class ServerSession
                 HalfFalls: h.HalfFalls,
                 HalfFallsToDeath: progression is null ? 0 : Injuries.HalfFallsToDeath(progression)))
             .ToList();
-        var board = _content.Quests.Values
-            .OrderBy(q => q.Difficulty).ThenBy(q => q.Name)
+        var board = Calendar.Board(state, _content.Quests.Values, viewer)
             .Select(q => new QuestInfo(q.Id, q.Name, q.Description, q.Difficulty, q.Xp, q.Materials,
-                _content.Scenarios[q.Scenario].HeroSlots!.Count))
+                _content.Scenarios[q.Scenario].HeroSlots!.Count, q.DurationHours))
             .ToList();
         return new CampaignInfo
         {
             Reputation = state.Reputation,
+            Hour = state.PlayerOf(viewer)?.Hour ?? 0,
             Tier = _content.Reputation?.Scale.TierOf(state.Reputation).Name ?? "",
             LastQuest = _lastQuest,
             Heroes = heroes,

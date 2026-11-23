@@ -121,6 +121,29 @@ public class CampaignStateTests
     }
 
     [Fact]
+    public void ASaveOfTheSecondFormat_IsConverted_ItsRestInQuestsForgotten()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(path, """
+                { "format": 2, "players": [ { "uid": "uid-a", "name": "Alice", "hour": 0 } ],
+                  "heroes": [ { "id": "hero-1", "name": "Rempart", "owner": "uid-a", "halfFalls": 3, "questsRested": 1,
+                                "sheet": { "id": "hero-1", "archetype": "colossus", "level": 1, "learned": [], "equipped": [] } } ],
+                  "materials": {}, "reputation": 0, "chapter": 0 }
+                """);
+
+            var hero = CampaignStore.Load(path).Heroes.Single();
+
+            Assert.Equal((3, 0), (hero.HalfFalls, hero.HoursRested));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ADamagedSave_IsRefused()
     {
         var path = Path.Combine(Path.GetTempPath(), $"campaign-{Guid.NewGuid():N}.json");

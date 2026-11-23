@@ -59,6 +59,9 @@ internal static class ContentLoader
                 });
             }
         }
+        // Le panneau n'est jamais vide au départ (docs/design.md 4.7).
+        if (quests.Count > 0 && quests.Values.All(q => q.PublishedDay > 0))
+            throw new ArgumentException("data/quests: at least one quest must be published on day 0.");
 
         var (world, events, worldRules) = World(files, units, quests);
 

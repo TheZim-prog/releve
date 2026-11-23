@@ -16,7 +16,7 @@ public class QuestDefinitionTests
         }
         """;
 
-    private static readonly QuestDefinition Quest = new() { Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 10 };
+    private static readonly QuestDefinition Quest = new() { Id = "q", Name = "Quête", Scenario = "street", Difficulty = QuestDifficulty.Easy, Xp = 10, DurationHours = 24 };
 
     [Fact]
     public void AHeroSlot_MustBeAFreeWalkableCell()

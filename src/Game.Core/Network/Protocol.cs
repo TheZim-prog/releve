@@ -161,9 +161,10 @@ public sealed record JoinRefused(JoinRefusal Reason) : ServerMessage;
 
 /// <summary>
 /// Un joueur, son héros éventuel (l'unité qu'il joue), s'il est connecté (en combat, un déconnecté garde sa place), et,
-/// au QG, le héros de campagne qu'il déploie (<paramref name="Deployed"/>, ou <c>null</c> : il reste au QG).
+/// au QG, le héros de campagne qu'il déploie (<paramref name="Deployed"/>, ou <c>null</c> : il reste au QG) et sa date
+/// (<paramref name="Hour"/>, en heures depuis le début de la campagne).
 /// </summary>
-public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Hero, string? Deployed = null);
+public sealed record PlayerInfo(int Id, string Name, bool Connected, UnitId? Hero, string? Deployed = null, int Hour = 0);
 
 /// <summary>
 /// Les joueurs, envoyé à chaque changement (arrivée, départ, choix de héros, fin de combat), au salon comme en combat ;
@@ -180,6 +181,9 @@ public sealed record CampaignInfo
 {
     public required int Reputation { get; init; }
     public required string Tier { get; init; }
+
+    /// <summary>La date du destinataire, en heures depuis le début de la campagne (cf. <see cref="Campaign.Calendar"/>).</summary>
+    public int Hour { get; init; }
     public QuestResult? LastQuest { get; init; }
     public IReadOnlyList<HeroInfo> Heroes { get; init; } = Array.Empty<HeroInfo>();
     public IReadOnlyList<QuestInfo> Board { get; init; } = Array.Empty<QuestInfo>();
@@ -212,7 +216,7 @@ public sealed record QuestResult(string Quest, bool Victory, int Reputation, int
 
 /// <summary>Une quête du panneau, telle que le QG la montre ; <paramref name="Slots"/> : combien de héros peuvent y partir.</summary>
 public sealed record QuestInfo(string Id, string Name, string Description, Campaign.QuestDifficulty Difficulty, int Xp,
-    IReadOnlyDictionary<string, int> Materials, int Slots);
+    IReadOnlyDictionary<string, int> Materials, int Slots, int DurationHours = 0);
 
 /// <summary>
 /// Un héros de la campagne, tel que le QG le montre ; <paramref name="Owner"/> : le nom de son joueur. Son XP, celle

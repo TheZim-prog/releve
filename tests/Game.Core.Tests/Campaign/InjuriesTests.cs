@@ -4,13 +4,13 @@ using Game.Core.Tests.Progression;
 
 namespace Game.Core.Tests.Campaign;
 
-/// <summary>Chutes, mort et repos des héros, avec la progression de test (3 chutes tuent, 2 quêtes de repos en rendent une).</summary>
+/// <summary>Chutes et mort des héros, avec la progression de test (3 chutes tuent) ; le repos est dans <see cref="CalendarTests"/>.</summary>
 public class InjuriesTests
 {
     private static readonly ProgressionRules Rules = ProgressionTestKit.Rules;
 
     /// <summary>Deux héros d'Alice (hero-1, hero-2), avec ces demi-chutes.</summary>
-    private static CampaignState Duo(int halfFalls1 = 0, int halfFalls2 = 0)
+    internal static CampaignState Duo(int halfFalls1 = 0, int halfFalls2 = 0)
     {
         var catalog = ProgressionTestKit.Catalog();
         var recruit = new Recruit("Héros", "hero", new[] { "a1", "a2", "a3" });
@@ -44,30 +44,14 @@ public class InjuriesTests
     }
 
     [Fact]
-    public void AHeroWhoStaysAtTheHq_RecoversAFall_EveryTwoQuests()
+    public void GoingOnAQuest_RestartsTheRest_OfThoseWhoWent()
     {
-        var going = new Dictionary<string, int> { ["hero-1"] = 0 };
-        var state = Duo(halfFalls2: 3);
+        var state = Duo(halfFalls1: 2, halfFalls2: 2);
+        state = state with { Heroes = state.Heroes.Select(h => h with { HoursRested = 30 }).ToList() };
 
-        state = Injuries.Apply(state, going, Rules);
-        Assert.Equal((3, 1), (Hero(state, "hero-2").HalfFalls, Hero(state, "hero-2").QuestsRested));
-        state = Injuries.Apply(state, going, Rules);
-        Assert.Equal((1, 0), (Hero(state, "hero-2").HalfFalls, Hero(state, "hero-2").QuestsRested));
-        state = Injuries.Apply(Injuries.Apply(state, going, Rules), going, Rules);
+        state = Injuries.Apply(state, new Dictionary<string, int> { ["hero-1"] = 0 }, Rules);
 
-        Assert.Equal(0, Hero(state, "hero-2").HalfFalls); // jamais en dessous de zéro
-    }
-
-    [Fact]
-    public void GoingOnAQuest_InterruptsTheRest_AndRestWithoutFallsIsNotBanked()
-    {
-        var state = Injuries.Apply(Duo(halfFalls2: 2), new Dictionary<string, int> { ["hero-1"] = 0 }, Rules);
-        Assert.Equal(1, Hero(state, "hero-2").QuestsRested);
-
-        state = Injuries.Apply(state, new Dictionary<string, int> { ["hero-2"] = 0 }, Rules);
-
-        Assert.Equal(0, Hero(state, "hero-2").QuestsRested);
-        Assert.Equal(0, Hero(state, "hero-1").QuestsRested); // sans chute, son repos ne s'accumule pas
+        Assert.Equal((0, 30), (Hero(state, "hero-1").HoursRested, Hero(state, "hero-2").HoursRested));
     }
 
     [Fact]

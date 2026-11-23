@@ -11,7 +11,7 @@ public class QuestRewardsTests
 
     private static readonly QuestDefinition Quest = new()
     {
-        Id = "q", Name = "Quête", Scenario = "s", Difficulty = QuestDifficulty.Easy, Xp = 60,
+        Id = "q", Name = "Quête", Scenario = "s", Difficulty = QuestDifficulty.Easy, Xp = 60, DurationHours = 24,
         Materials = new Dictionary<string, int> { ["materials"] = 3 },
     };
 

@@ -45,6 +45,12 @@ public sealed record QuestDefinition
     /// <summary>Ce qu'ajoute chaque niveau de gravité à cette quête, à la place de la règle de son objectif, ou <c>null</c>.</summary>
     public World.GravityStep? Gravity { get; init; }
 
+    /// <summary>Ce que dure la quête pour ceux qui y partent, en heures (par demi-journées : 12, 24, 36…, cf. 4.7).</summary>
+    public required int DurationHours { get; init; }
+
+    /// <summary>Le jour où elle paraît au panneau (0 : dès le début) ; un joueur la voit une fois ce jour atteint.</summary>
+    public int PublishedDay { get; init; }
+
     public static IReadOnlyList<QuestDefinition> ListFromJson(string json) =>
         DataJson.ValidateList(DataJson.Deserialize<List<QuestDefinition?>>(json), q => q.Validate(), q => q.Id, "quest");
 
@@ -56,6 +62,8 @@ public sealed record QuestDefinition
             throw new ArgumentException($"Quest '{Id}' has an unknown difficulty.");
         if (Xp < 0 || Materials is null || Materials.Values.Any(m => m < 0))
             throw new ArgumentException($"Quest '{Id}' cannot give negative rewards.");
+        if (DurationHours <= 0 || DurationHours % Calendar.HalfDay != 0 || PublishedDay < 0)
+            throw new ArgumentException($"Quest '{Id}' needs a duration in half-days (12, 24, 36… hours) and a publication day from 0.");
     }
 
     /// <summary>Son scénario existe et accueille des héros de joueurs.</summary>

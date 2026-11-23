@@ -14,7 +14,7 @@ public class TrainingTests
     {
         var state = CampaignState.New(CampaignStateTests.Scale).WithPlayer("uid-a", "Alice").WithPlayer("uid-b", "Bob");
         state = Academy.Enlist(state, Catalog, "uid-a", new Recruit("Héros", "hero", new[] { "a1", "a2", "a3" }));
-        var quest = new QuestDefinition { Id = "q", Name = "Q", Scenario = "s", Difficulty = QuestDifficulty.Easy, Xp = xp };
+        var quest = new QuestDefinition { Id = "q", Name = "Q", Scenario = "s", Difficulty = QuestDifficulty.Easy, Xp = xp, DurationHours = 24 };
         return QuestRewards.Grant(state, quest, new[] { "hero-1" }, victory: true, Catalog.Rules);
     }
 

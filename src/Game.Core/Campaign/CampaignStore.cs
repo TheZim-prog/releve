@@ -34,28 +34,40 @@ public static class CampaignStore
         if (state.Format != CampaignState.CurrentFormat)
             throw new InvalidDataException($"Campaign save '{path}' has format {state.Format}; this game reads format {CampaignState.CurrentFormat}.");
         if (state.Players is null || state.Heroes is null || state.Materials is null
+            || state.DoneQuests is null || state.KnownPois is null || state.ExhaustedPois is null
             || state.Players.Any(p => p is null || !PlayerIdentity.IsValid(p.Uid) || p.Name is null)
             || state.Heroes.Any(h => h?.Id is null || h.Name is null || h.Owner is null || h.Sheet?.Archetype is null
                                      || h.Sheet.Learned is null || h.Sheet.Equipped is null))
-            throw new InvalidDataException($"Campaign save '{path}' is incomplete or damaged (players, heroes, materials).");
+            throw new InvalidDataException($"Campaign save '{path}' is incomplete or damaged (players, heroes, materials, lists).");
         return state;
     }
 
     /// <summary>
-    /// Une sauvegarde d'un format plus ancien, mise au format courant. Format 1 → 2 : les chutes d'un héros (« falls »)
-    /// deviennent des demi-chutes (« halfFalls »).
+    /// Une sauvegarde d'un format plus ancien, mise au format courant, d'étape en étape. Format 1 → 2 : les chutes d'un
+    /// héros (« falls ») deviennent des demi-chutes (« halfFalls »). Format 2 → 3 : le repos se compte en heures, et non
+    /// plus en quêtes (« questsRested » est oublié : chacun repart de zéro).
     /// </summary>
     private static JsonNode Migrated(JsonNode json)
     {
-        if (json is not JsonObject save || save["format"]?.GetValue<int>() != 1)
+        if (json is not JsonObject save)
             return json;
-        foreach (var hero in save["heroes"]?.AsArray().OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+        var heroes = save["heroes"]?.AsArray().OfType<JsonObject>().ToList() ?? new List<JsonObject>();
+        if (save["format"]?.GetValue<int>() == 1)
         {
-            var falls = hero["falls"]?.GetValue<int>() ?? 0;
-            hero.Remove("falls");
-            hero["halfFalls"] = Injuries.HalvesPerFall * falls;
+            foreach (var hero in heroes)
+            {
+                var falls = hero["falls"]?.GetValue<int>() ?? 0;
+                hero.Remove("falls");
+                hero["halfFalls"] = Injuries.HalvesPerFall * falls;
+            }
+            save["format"] = 2;
         }
-        save["format"] = 2;
+        if (save["format"]?.GetValue<int>() == 2)
+        {
+            foreach (var hero in heroes)
+                hero.Remove("questsRested");
+            save["format"] = 3;
+        }
         return save;
     }
 

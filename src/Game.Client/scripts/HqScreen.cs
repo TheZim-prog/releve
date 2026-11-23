@@ -86,7 +86,8 @@ public partial class HqScreen : Control
     {
         if (lobby.Campaign is not { } campaign)
             return;
-        _campaign.Text = $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0}). {CampaignTexts.Pot(campaign.Materials)}"
+        _campaign.Text = $"Ta date : {CampaignTexts.Date(campaign.Hour)}. "
+                         + $"Réputation du groupe : {campaign.Tier} ({campaign.Reputation:+0;-0;0}). {CampaignTexts.Pot(campaign.Materials)}"
                          + (campaign.LastQuest is { } last ? $"\n{CampaignTexts.LastQuest(last)}" : "")
                          + (campaign.LastEvent is { } road ? $"\nEn route : {TripTexts.Outcome(_content, road)}" : "")
                          + (CampaignTexts.Memorial(campaign.Heroes) is { Length: > 0 } memorial ? $"\n{memorial}" : "");
@@ -108,7 +109,7 @@ public partial class HqScreen : Control
         {
             var chosen = quest.Id == campaign.ChosenQuest;
             var id = quest.Id;
-            var button = Ui.Button($"{quest.Name}  —  {Difficulty(quest.Difficulty)}, {quest.Xp} XP{Materials(quest)}",
+            var button = Ui.Button($"{quest.Name}  —  {Difficulty(quest.Difficulty)}, {CampaignTexts.Duration(quest.DurationHours)}, {quest.Xp} XP{Materials(quest)}",
                 () => QuestChosen?.Invoke(chosen ? null : id), 38);
             if (chosen)
                 button.Modulate = Ui.Taken;
@@ -116,6 +117,10 @@ public partial class HqScreen : Control
         }
         _quest.Text = campaign.Board.FirstOrDefault(q => q.Id == campaign.ChosenQuest) is { } picked
             ? $"{picked.Description} (jusqu'à {picked.Slots} héros)"
+            // Choisie par un joueur plus avancé : elle n'est pas encore à ce panneau-ci (partir y fera sauter).
+            : campaign.ChosenQuest is { } other && _content.Quests.TryGetValue(other, out var ahead)
+                ? $"Quête choisie : {ahead.Name} (pas encore parue à ta date : partir t'y fera sauter). {ahead.Description}"
+            : campaign.Board.Count == 0 ? "Aucune quête au panneau pour l'instant."
             : "Aucune quête choisie : n'importe qui peut en choisir une.";
     }
 
@@ -140,7 +145,7 @@ public partial class HqScreen : Control
 
         var names = campaign.Heroes.ToDictionary(h => h.Id, h => h.Name);
         _group.Text = "Le groupe : " + string.Join(", ", lobby.Players.Select(p =>
-            p.Name + (p.Id == _me ? " (toi)" : "")
+            p.Name + (p.Id == _me ? " (toi)" : "") + $" ({CampaignTexts.Date(p.Hour)})"
             + (p.Deployed is { } heroId ? $" avec {names.GetValueOrDefault(heroId, heroId)}" : " — reste au QG")
             + (p.Connected ? "" : " — déconnecté")));
     }
